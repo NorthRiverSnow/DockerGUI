@@ -18,7 +18,20 @@ Docker を画面から操作するデスクトップアプリ。コンテナの�
 
 | ファイル | 内容 |
 | -------- | ---- |
-<!-- docs のファイルと内容を並べる。無いなら、この節ごと消す -->
+| `docs/overview.md` | 概要。何を作るか、対象環境、対象にしないもの、用語 |
+| `docs/design-policy.md` | 設計方針。技術選定の理由と、守る原則 |
+| `docs/design.md` | 設計。層の分け方、ディレクトリ、モジュールの責務 |
+| `docs/spec/common.md` | 全画面に共通する約束 |
+| `docs/spec/connection.md` | 接続と診断 |
+| `docs/spec/containers.md` | コンテナ |
+| `docs/spec/logs.md` | ログ |
+| `docs/spec/terminal.md` | 端末 |
+| `docs/spec/images.md` | イメージ |
+| `docs/spec/volumes-networks.md` | ボリュームとネットワーク |
+| `docs/spec/compose.md` | Compose |
+| `docs/spec/settings.md` | 設定 |
+
+**仕様を書くときは Skill の `spec-writing`。** 状態とボタンの抜けを出さないための手順。
 
 **設計を変えるときは docs も直す。** 実装と docs が食い違ったら docs が正。
 

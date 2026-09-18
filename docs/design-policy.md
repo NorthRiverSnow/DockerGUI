@@ -38,7 +38,7 @@ Windows で確認できないことに対して、次の 3 つで備える。
 | lint と整形 | oxlint と oxfmt（Vite+ に同梱） | ESLint と Prettier を別途入れずに済む |
 | 画面部品の確認 | Storybook | Electron を起動せずに、コンテナが 1 つも無いときや失敗したときの見た目を確認できる |
 | ログの記録 | `electron-log` | OS ごとの置き場所の判定、ファイルの回転、renderer からの転送を自分で書かずに済む |
-| 端末の表示 | `@xterm/xterm` | 端末の制御文字を解釈して画面に出す部分を自分で書かずに済む |
+| ターミナルの表示 | `@xterm/xterm` | ターミナルの制御文字を解釈して画面に出す部分を自分で書かずに済む |
 | エンジンとの通信 | Engine API を叩く自作の薄い層 | 下に理由を書く |
 | Compose | `docker compose` を子プロセスとして実行する | Compose は Engine API に無く、CLI のプラグインとして提供されている。子プロセスとして実行する以外に道がない |
 

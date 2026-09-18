@@ -6,7 +6,7 @@
 # DockerGUI
 
 Docker を画面から操作するデスクトップアプリ。コンテナの起動・停止・ログ確認といった、
-毎日繰り返す操作を端末に打ち込まずに済ませる。macOS と、Windows の WSL 環境で動かす。
+毎日繰り返す操作をターミナルに打ち込まずに済ませる。macOS と、Windows の WSL 環境で動かす。
 
 ## 言語
 
@@ -25,7 +25,7 @@ Docker を画面から操作するデスクトップアプリ。コンテナの�
 | `docs/spec/connection.md` | 接続と診断 |
 | `docs/spec/containers.md` | コンテナ |
 | `docs/spec/logs.md` | ログ |
-| `docs/spec/terminal.md` | 端末 |
+| `docs/spec/terminal.md` | ターミナル |
 | `docs/spec/images.md` | イメージ |
 | `docs/spec/volumes-networks.md` | ボリュームとネットワーク |
 | `docs/spec/compose.md` | Compose |

@@ -1,0 +1,8 @@
+# Python が実行時に書き出すキャッシュ
+__pycache__/
+
+# ビルドの出力先（docs/design/directories.md）
+out/
+
+# vp install が入れる依存
+node_modules/

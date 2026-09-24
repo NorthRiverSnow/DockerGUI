@@ -30,6 +30,7 @@ Docker を画面から操作するデスクトップアプリ。コンテナの�
 | `docs/spec/images.md` | イメージ |
 | `docs/spec/volumes-networks.md` | ボリュームとネットワーク |
 | `docs/spec/compose.md` | Compose |
+| `docs/spec/disk.md` | ディスク（使われていないデータの削除） |
 | `docs/spec/settings.md` | 設定 |
 
 - 仕様を書くときは Skill の `spec-writing` を読む

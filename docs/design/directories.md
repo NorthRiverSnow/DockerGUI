@@ -76,7 +76,7 @@ screens/containers
 
 **why: 1 つの画面を直すとき、Model・View・Controller を一緒に直すことが多い。**
 main と違い、renderer には層を越える読み込みの向きの決まりが Model・View・Controller の 3 つしか無く
-（`design-policy.md` の原則 13）、ファイルの名前で分かる。
+（`design-policy.md` の原則 14）、ファイルの名前で分かる。
 
 **2 つ以上の画面で使う部品は、`components` に置く**（一覧、確認の画面、状態バーなど）。
 1 つの画面でしか使わない部品は、その画面のディレクトリに置く。

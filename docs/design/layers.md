@@ -98,7 +98,7 @@ IPC を越えるときに型の検査は働かないので、食い違いは動�
 
 ## renderer の中の組み立て
 
-renderer は Model・View・Controller に分ける（原則 13）。
+renderer は Model・View・Controller に分ける（原則 14）。
 
 | 部分 | 持つもの |
 | --- | --- |

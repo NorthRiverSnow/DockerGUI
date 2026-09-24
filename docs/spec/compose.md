@@ -377,7 +377,7 @@ stateDiagram-v2
 （開発機で確認。`-f /tmp/dg-compose/docker-compose.yml` を別の場所から実行しても、
 プロジェクトの名前は設定ファイルのあるフォルダの名前 `dg-compose` になった）。
 
-**Windows では、Windows のパスを WSL のパスに直してから渡す。** 変換の手段は `design.md`。
+**Windows では、Windows のパスを WSL のパスに直してから渡す。** 変換の手段は `docs/design/windows.md`。
 
 ## 失敗の見せ方
 

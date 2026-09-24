@@ -21,7 +21,7 @@ Docker を画面から操作するデスクトップアプリ。コンテナの�
 | --- | --- |
 | `docs/overview.md` | 概要。何を作るか、対象環境、対象にしないもの、用語 |
 | `docs/design-policy.md` | 設計方針。技術選定の理由、使うコマンド、守る原則 |
-| `docs/design.md`（未作成） | 設計。層の分け方、ディレクトリ、モジュールの責務 |
+| `docs/design/layers.md` | 設計。層の分け方。設計の docs の一覧もここにある |
 | `docs/spec/common.md` | 全画面に共通する約束 |
 | `docs/spec/connection.md` | 接続と診断 |
 | `docs/spec/containers.md` | コンテナ |

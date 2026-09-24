@@ -154,7 +154,7 @@ macOS では colima のように `/var/run/docker.sock` を使わない構成が
 | 接続先 | DockerGUI がつないでいるエンジン（「Docker の構成」を参照） |
 | Engine API | エンジンが提供する HTTP の API。DockerGUI は Engine API を直接呼び出す |
 | コンテキスト | Docker CLI が持つ接続先の設定。`docker context ls` で並ぶもの |
-| 接続方式 | エンジンに繋ぐ経路。「ソケット」と「子プロセス」の 2 つがある（`design.md` を参照） |
+| 接続方式 | エンジンに繋ぐ経路。「ソケット」と「子プロセス」の 2 つがある（`design/main.md` を参照） |
 | ディストロ | WSL の中に入っている Linux の環境。`wsl.exe -l` で並ぶもの |
 | 診断 | 接続に失敗したときに、何を試して何が失敗したかを調べて表示する機能 |
 | 追従 | ログの画面で、新しい行が出たら自動で末尾まで表示を進めること |

@@ -78,6 +78,7 @@ Docker を画面から操作するデスクトップアプリ。コンテナの�
 | `is〜` | 真偽を返す | `isDone` `isEmpty` |
 | `read〜(stored)` | 保存された、形が保証されない値を読む | `readConfig` `readSaved` |
 | `SCREAMING_SNAKE` | モジュールの定数 | `RETRY_LIMIT` `DEFAULT_DIR` |
+| `kind` | 判別に使う項目（どの種類の値かを表す）。`type` は TypeScript の `type` と読み違えるので使わない | `{ kind: "expected" }` |
 
 ### コメント
 

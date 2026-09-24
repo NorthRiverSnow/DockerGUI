@@ -17,7 +17,8 @@
 │  │  ├── convert              変換層
 │  │  ├── engine-api           Engine API 層
 │  │  ├── os                   OS の窓口
-│  │  └── log                  ログの記録。どの層からも呼ぶ
+│  │  ├── log                  ログの記録。どの層からも呼ぶ
+│  │  └── failures             例外を失敗の値に直す関数。どの層からも呼ぶ
 │  ├── preload                  preload
 │  │  └── index.ts             window.api を renderer に渡す
 │  ├── shared                   main・preload・renderer で共有する型

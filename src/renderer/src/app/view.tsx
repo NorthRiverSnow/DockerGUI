@@ -1,4 +1,5 @@
-import { AppShell, Divider, NavLink, Title } from "@mantine/core";
+import { AppShell, Divider, Group, NavLink, Text, Title } from "@mantine/core";
+import type { ConnectionState } from "../../../shared/connection";
 import type { AppMessages } from "./messages";
 import type { Target } from "./model";
 
@@ -15,6 +16,7 @@ const TARGETS_BELOW_DIVIDER: Target[] = ["diagnostics", "settings"];
 
 export function AppView(props: {
   selectedTarget: Target;
+  connection: ConnectionState | undefined;
   messages: AppMessages;
   onSelectTarget: (target: Target) => void;
 }) {
@@ -29,7 +31,11 @@ export function AppView(props: {
 
   return (
     <AppShell header={{ height: 48 }} navbar={{ width: 200, breakpoint: 0 }} padding="md">
-      <AppShell.Header />
+      <AppShell.Header>
+        <Group h="100%" px="md">
+          {props.connection && <Text size="sm">{props.messages.statusLine(props.connection)}</Text>}
+        </Group>
+      </AppShell.Header>
       <AppShell.Navbar p="xs">
         {TARGETS_ABOVE_DIVIDER.map(targetLink)}
         <Divider my="xs" />

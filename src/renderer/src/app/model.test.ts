@@ -11,4 +11,12 @@ describe("nextAppState", () => {
 
     expect(next.selectedTarget).toBe("images");
   });
+
+  it("main から届いた接続の状態を、アプリ全体の状態に入れる", () => {
+    const connection = { kind: "connected", engineName: "colima" } as const;
+
+    const next = nextAppState(INITIAL_APP_STATE, { kind: "connectionStateReceived", connection });
+
+    expect(next.connection).toEqual(connection);
+  });
 });

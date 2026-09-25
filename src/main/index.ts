@@ -1,5 +1,8 @@
 import { join } from "node:path";
 import { app, BrowserWindow } from "electron";
+import { createConnection } from "./features/connection/connection";
+import { registerRequestHandler, sendNotification } from "./ipc/ipc";
+import { runProcess } from "./os/process";
 
 function createMainWindow(): void {
   const window = new BrowserWindow({
@@ -24,8 +27,24 @@ function createMainWindow(): void {
   }
 }
 
+const connection = createConnection({
+  runProcess,
+  now: Date.now,
+  onStateChanged: (state) => {
+    for (const window of BrowserWindow.getAllWindows()) {
+      sendNotification(window.webContents, "connection:connectionStateChanged", state);
+    }
+  },
+});
+
+registerRequestHandler("connection:getConnectionState", () => ({
+  ok: true,
+  value: connection.state(),
+}));
+
 void app.whenReady().then(() => {
   createMainWindow();
+  void connection.connect();
 });
 
 app.on("window-all-closed", () => {

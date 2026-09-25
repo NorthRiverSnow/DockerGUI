@@ -26,6 +26,7 @@
 │     ├── index.html            画面の入口
 │     └── src
 │        ├── main.tsx           React を起動する
+│        ├── app                アプリ全体の Model・View・Controller と App
 │        ├── api                main の窓口
 │        ├── screens            画面ごとに 1 つのディレクトリ
 │        │  ├── containers     コンテナの画面の Model・View・Controller
@@ -90,6 +91,10 @@ screens/containers
 **why: 1 つの画面を直すとき、Model・View・Controller を一緒に直すことが多い。**
 main と違い、renderer には層を越える読み込みの向きの決まりが Model・View・Controller の 3 つしか無く
 （`design-policy.md` の原則 14）、ファイルの名前で分かる。
+
+**アプリ全体の Model と Controller は `app` に置く**（`renderer.md` の「アプリ全体の状態」）。
+画面のディレクトリと同じファイルの分け方にし、`screen.tsx` の代わりに、アプリの一番上の部品を `app.tsx` に置く。
+`app` は `screens` に入れない。**画面ではなく、画面を並べる側だから。**
 
 **2 つ以上の画面で使う部品は `components` に、2 つ以上の画面で使う文の関数は `messages` に置く**（一覧、確認の画面、状態バー、待たせるときの文など）。
 1 つの画面でしか使わない部品は、その画面のディレクトリに置く。

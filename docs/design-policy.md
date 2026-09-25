@@ -150,6 +150,10 @@ Storybook が担うのは、Electron を起動せずに、コンテナが 1 つ�
 **各ステップの終了条件は、`vp check` と `vp test` と `vp run lint:css` が、すべて正常終了すること。**
 `vp run lint:css` は、stylelint を呼ぶタスク。stylelint は Vite+ に同梱されていないので、`vp check` に含まれない。
 
+**`vp install` の後に、`postinstall` が Electron の本体を入れる**（`package.json` の `postinstall` で `install-electron` を実行する）。
+Electron 44 は、パッケージを入れたときには本体をダウンロードしない。
+pnpm が依存を入れ直して Electron のパッケージの置き場所が変わると、新しい置き場所に本体が無い状態になり、`vp run dev` が起動できない（開発機で確認）。
+
 ## 守る原則 — 構成と安全
 
 ### 1. エンジンへの接続は main が独占する
@@ -387,6 +391,9 @@ Vite+ の型検査が使う TypeScript の版は確かめていないので、zo
 ただし、左右で書いた CSS をあとから書き換えると、全部の画面を直すことになる。最初から行の始まりと終わりで書けば、コストはほとんどかからない。
 
 **上下の余白は、`margin-top` のままでよい。** 上から下へ行を重ねる向きは、日本語でも英語でも右から左に書く言語でも同じ。
+
+**幅と高さも、`width` と `height` のままでよい。** 右から左に書く言語でも、幅は幅のまま。
+`inline-size` のような書き方は縦書きのためのもので、原則 15 の目的には関わらない。
 
 **CSS の中の左右の指定は、検査で見つける。** `stylelint-use-logical` が、表の「使わない」の列の指定を見つけると、`vp run lint:css` が失敗する。
 

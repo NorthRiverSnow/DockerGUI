@@ -12,7 +12,7 @@ renderer を Model・View・Controller に分けることは、`design-policy.md
 | ファイル | 役 | 持つもの | main を呼ぶか | React を使うか |
 | --- | --- | --- | --- | --- |
 | `model.ts` | Model | 画面の状態の型。状態と出来事を受け取って次の状態を返す純関数 | 呼ばない | 使わない |
-| `messages.ts` | Model | 状態から、画面に出す文を作る純関数 | 呼ばない | 使わない |
+| `messages.ts` | Model | 状態から、画面に出す文を作る純関数。言語ごとに持つ | 呼ばない | 使わない |
 | `controller.ts` | Controller | 利用者の操作と、main から届いた知らせを受けて、Model に出来事を渡す React の hook。要素は返さない | **呼ぶ**（main の窓口を通して） | 使う |
 | `screen.tsx` | Controller と View をつなぐ | props で受け取った main の窓口とアプリ全体の状態を Controller に渡して呼び、Controller が返した状態と関数を View に props で渡す | 呼ばない（Controller が呼ぶ） | 使う |
 | `view.tsx` | View | screen から状態と関数を props で受け取り、要素を返す関数コンポーネント。自分の状態は持たない | 呼ばない | 使う |
@@ -51,9 +51,22 @@ function nextContainersState(state: ContainersState, event: ContainersEvent): Co
 **状態の名前から、画面に出す文を作る処理を、View から分ける**（`docs/spec/common.md` と各仕様の「画面に出す文」）。
 
 ```ts
-function statusLineOf(state: LogsState, containerName: string): string;
-// 「読み込み中」なら `web-1 のログを読み込んでいます…`
+type LogsMessages = {
+  statusLine: (state: LogsState, containerName: string) => string;
+  // …
+};
+
+const LOGS_MESSAGES: Record<Language, LogsMessages> = {
+  ja: {
+    statusLine: (state, name) => …, // 「読み込み中」なら `web-1 のログを読み込んでいます…`
+  },
+  en: {
+    statusLine: (state, name) => …, // 「読み込み中」なら `Loading logs for web-1…`
+  },
+};
 ```
+
+screen は、App から受け取った画面の言語で `LOGS_MESSAGES` から 1 つを選び、View に props で渡す（「画面の言語」）。
 
 **why: 画面に出す文は、仕様で 1 文ずつ決めてある。** 文に対象の名前が入っているか
 （`docs/spec/common.md` の「失敗の見せ方」と各仕様の表示の例）を、
@@ -115,13 +128,14 @@ main も Electron も起動せずに済む。
 | 開いているタブと、選んでいるタブ | 右の領域 | `common.md` の「ログとターミナルのタブ」 |
 | 絞り込みの入力 | 一覧を出す各画面 | `common.md` の「並び順と絞り込み」（対象を切り替えても消さない） |
 | 画面の切り替えの状態（タグの無いイメージを出すかなど） | 切り替えを持つ画面 | `settings.md` の「設定の画面に出すもの」 |
+| 画面の言語 | すべての画面 | `common.md` の「言語を選ぶ」 |
 
 アプリ全体の Controller も、Model（純関数）と Controller（hook）に分ける。
 **アプリの一番上の部品（App）がアプリ全体の Controller を呼び、状態を props で各画面の screen に渡す。**
 
 ```
 App                       アプリ全体の Controller を呼ぶ。main の窓口を作る
-├── 状態バー           接続の状態を props で受け取る
+├── 状態バー           接続の状態と、画面の言語を props で受け取る
 ├── 左の一覧           選んでいる対象を props で受け取る
 └── 右の領域           開いているタブと、選んでいるタブを props で受け取る
     └── 画面の screen  main の窓口と、使うアプリ全体の状態を props で受け取る
@@ -182,6 +196,49 @@ Model を「状態 + 出来事 → 次の状態」の純関数にしてあるの
 
 **`components` と同じく、2 つ目の画面で使うことになった時点で移す**（`directories.md` の「renderer は、画面ごとに分ける」）。
 
+## 画面の言語
+
+### 言語を決めるのは main
+
+**main が画面の言語（`"ja"` か `"en"`）を決め、renderer に渡す**（`ipc.md` の「共通の口（`stream` と `app`）」の `app:getLanguage`）。
+renderer は、OS の言語を自分で読まない。
+`Language` の型（`"ja" | "en"`）は、IPC で渡す値の型なので `src/shared` に置く（`ipc.md` の「形の正は `src/shared` のスキーマ」）。
+
+**why: メニューバーのメニューは main が作るので、main も画面の言語を知る必要がある。**
+main と renderer がそれぞれ OS の言語を読むと、2 つの判定が食い違ったときに、画面とメニューで言語が分かれる。
+
+**画面の言語は、アプリ全体の状態に入れる**（「アプリ全体の状態」）。
+App が画面の言語を props で各画面の screen に渡し、screen が画面の言語で文の組を選ぶ。
+
+### 文は、言語ごとの組を 1 つのファイルに並べる
+
+**画面ごとの `messages.ts` に、日本語の文の組と英語の文の組を並べる**（「画面に出す文は `messages.ts` に置く」の例）。
+多言語化のライブラリ（`i18next` など）は使わない。
+
+| 決めたこと | why |
+| --- | --- |
+| 文の組を `Record<Language, …>` の型にする | 英語の文を書き忘れると、型の検査（`vp check`）が失敗する。言語を追加したときも、`Language` の型に追加すれば、訳していない画面が型の検査ですべて見つかる |
+| 文を、値ではなく関数にする | 名前が文のどこに入るかが、日本語と英語で違う。英語の「1 line」と「2 lines」のような複数形の書き分けも、関数の中で書ける |
+| 日本語と英語を同じファイルに並べる | 日本語の文を直したときに、隣の英語の文も直すことに気づける。言語を追加する予定は無いので（`overview.md` の「対象にしないもの」）、言語ごとにファイルを分ける利点が無い |
+| ライブラリを使わない | ライブラリの利点は、翻訳する人がコードの外のファイルを直せること。翻訳を外の人に頼む予定は無い。加えて、React で使う部品（`react-i18next`）は Context を使う（「アプリ全体の状態」） |
+
+**`messages.test.ts` は、両方の言語で確かめる。** 文に対象の名前が入っているかを、言語ごとに確かめる。
+
+### 時刻と大きさの表記
+
+| 表記 | 作り方 |
+| --- | --- |
+| 一覧の時刻（「3 分前」「3 minutes ago」） | ブラウザに組み込まれた `Intl.RelativeTimeFormat` に、画面の言語を渡して作る |
+| 詳細とログの時刻（`2026-09-25 14:03:12`） | 自分で書いた関数で作る。`Intl.DateTimeFormat` は言語ごとに形を変えるので、言語によらず同じ形にする仕様（`common.md` の「表記」）に合わない |
+| 大きさ（「6.9 GB」） | 言語によらず同じ形。Docker CLI の表示に合わせる（`common.md` の「表記」） |
+
+### HTML の `lang` 属性
+
+**App が、画面の言語を `<html>` の `lang` 属性に入れる。** 画面の言語が変わるたびに入れ直す。
+
+**why: 同じ漢字でも、日本語と中国語で字の形が違う。** `lang` 属性が無いと、日本語の画面に中国語の字の形が出ることがある。
+画面を読み上げる OS の機能も、`lang` 属性で読み方の言語を決める。
+
 ## 例外になる画面
 
 ### ターミナルの本文は、Model に持たせない
@@ -209,3 +266,4 @@ Model が持つのは、ターミナルの画面の状態（`docs/spec/terminal.
 | 隠したターミナルを見せ直したときに、`@xterm/xterm` で行数と桁数を測り直す方法 | ターミナルを実装するとき |
 | ログの本文の、見えている範囲だけを描く方法 | ログの画面を実装するとき |
 | React が描き終えた時点を、確認を返す処理から知る方法 | ログの画面を実装するとき |
+| メニューバーのメニューの文を、main のどこに置くか | メニューを実装するとき |

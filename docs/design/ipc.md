@@ -306,6 +306,12 @@ main は renderer を信用しない（原則 1）。main の側でも、届い�
 | `stream:sendChunk` `stream:ackChunk` `stream:closeStream` `stream:endStream` | 「ストリーム」の表のとおり | 「ストリーム」の表のとおり | `design-policy.md` の原則 7、原則 8 |
 | `app:openAppLogFolder` | 操作 | DockerGUI のログのファイルがあるフォルダを、OS のファイルの画面で開く | ［ログのフォルダを開く］（`common.md` の「想定していない失敗」） |
 | `app:reportRendererError` | 操作 | renderer で起きた例外を main に送り、ログに書く | `design-policy.md` の原則 9 |
+| `app:getLanguage` | 要求 | 画面の言語の設定（自動 / 日本語 / English）と、画面の言語（`ja` か `en`）を返す。設定が「自動」なら、OS の言語から決めた言語を返す | `common.md` の「言語を選ぶ」 |
+| `app:setLanguage` | 操作 | 画面の言語の設定を変えて保存し、メニューバーのメニューを作り直す | 同じ |
+| `app:languageChanged` | 知らせ | 画面の言語が変わったことと、新しい設定と言語 | 同じ |
+
+**画面の言語は、`settings` の口で扱わない。** 画面の言語は、設定の画面の項目ではなく、設定を既定に戻すときも戻さない
+（`common.md` の「言語を選ぶ」）。`settings:updateSetting` と `settings:resetSettings` で扱うと、言語だけを例外にする処理が要る。
 
 **フォルダを開く口は、開くフォルダを main が決める。** renderer からフォルダの場所を受け取らない。
 
@@ -321,3 +327,4 @@ main は renderer を信用しない（原則 1）。main の側でも、届い�
 | `ipcRenderer.send` で送ったターミナルの入力が、送った順に main に届くか | ターミナルを実装するとき |
 | `sandbox` を有効にした renderer から、OS のクリップボードに書けるか | コピーを実装するとき |
 | 背圧の、まとめる時間の長さと、確認が返っていない送信の上限 | ログの画面を実装するとき |
+| main が OS の言語を読む方法（Electron の `app.getPreferredSystemLanguages()` を使えるか） | 画面の言語を実装するとき |

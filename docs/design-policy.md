@@ -277,6 +277,12 @@ main がログファイルを 1 本持つ。renderer で起きた失敗も main 
 利用者は 1 人で、同じ対象への同じ操作は重ならない（`spec/common.md` の「実行中は、同じ操作を受け付けない」）。
 資格情報を書かないのは、利用者がログをそのまま貼り付けるため。
 
+**ログの文は英語で書き、画面の言語によって変えない**（`spec/common.md` の「画面の言語」）。
+
+**why: 画面の言語に合わせると、言語を切り替えた前後で、1 本のファイルに 2 つの言語が混ざる。**
+英語に固定すると、Docker が返す英語の文や、失敗の `code` と同じ言語で並ぶ。
+英語で使う利用者から受け取ったログも、同じ形で読める。
+
 ### 12. 外から来る値は、入ってくる境目で検査する
 
 **形が保証されない値は、DockerGUI に入ってくる境目で 1 回だけ zod のスキーマで検査する。**
@@ -333,3 +339,21 @@ Vite+ の型検査が使う TypeScript の版は確かめていないので、zo
 加えて、テストの対象が Model と Controller に寄る。
 「壊れても動かしただけでは気づけないもの」（`CLAUDE.md`）は状態の遷移とイベントの結線であって、
 要素の見た目ではない。View に判断を置かなければ、見た目のテストを書かずに済む。
+
+### 15. CSS の余白と位置は、左右ではなく、行の始まりと終わりで指定する
+
+| 使わない | 使う |
+| --- | --- |
+| `margin-left` `margin-right` | `margin-inline-start` `margin-inline-end` |
+| `padding-left` `padding-right` | `padding-inline-start` `padding-inline-end` |
+| `border-left` `border-right` | `border-inline-start` `border-inline-end` |
+| `left` `right` | `inset-inline-start` `inset-inline-end` |
+| `text-align: left` `text-align: right` | `text-align: start` `text-align: end` |
+
+「行の始まり」は、文を書き始める側を指す。日本語と英語では左、アラビア語のように右から左に書く言語では右になる。
+
+**why: 右から左に書く言語を追加するときに、CSS を書き直さずに済む。**
+右から左に書く言語を出す予定は無い（`overview.md` の「対象にしないもの」）。
+ただし、左右で書いた CSS をあとから書き換えると、全部の画面を直すことになる。最初から行の始まりと終わりで書けば、コストはほとんどかからない。
+
+**上下の余白は、`margin-top` のままでよい。** 上から下へ行を重ねる向きは、日本語でも英語でも右から左に書く言語でも同じ。

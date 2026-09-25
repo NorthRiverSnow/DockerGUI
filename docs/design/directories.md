@@ -30,7 +30,8 @@
 │        ├── screens            画面ごとに 1 つのディレクトリ
 │        │  ├── containers     コンテナの画面の Model・View・Controller
 │        │  └── …
-│        └── components         2 つ以上の画面で使う部品
+│        ├── components         2 つ以上の画面で使う部品
+│        └── messages           2 つ以上の画面で使う文の関数
 ├── out                          ビルドの出力先。git には入れない
 ├── docs
 ├── electron.vite.config.ts      ビルドの設定
@@ -69,8 +70,11 @@ renderer は `src/renderer/index.html`）。
 screens/containers
 ├── model.ts           Model
 ├── model.test.ts      Model のテスト
+├── messages.ts        画面に出す文を作る関数（renderer.md）
+├── messages.test.ts   画面に出す文のテスト
 ├── controller.ts      Controller
 ├── controller.test.ts Controller のテスト
+├── screen.tsx         Controller を呼び、View に props で渡す（renderer.md）
 ├── view.tsx           View
 └── view.stories.tsx   View の Storybook（Storybook を入れた後）
 ```
@@ -79,7 +83,7 @@ screens/containers
 main と違い、renderer には層を越える読み込みの向きの決まりが Model・View・Controller の 3 つしか無く
 （`design-policy.md` の原則 14）、ファイルの名前で分かる。
 
-**2 つ以上の画面で使う部品は、`components` に置く**（一覧、確認の画面、状態バーなど）。
+**2 つ以上の画面で使う部品は `components` に、2 つ以上の画面で使う文の関数は `messages` に置く**（一覧、確認の画面、状態バー、待たせるときの文など）。
 1 つの画面でしか使わない部品は、その画面のディレクトリに置く。
 **2 つ目の画面で使うことになった時点で、`components` に移す。**
 

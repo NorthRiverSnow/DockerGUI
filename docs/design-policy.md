@@ -37,7 +37,7 @@ Windows で確認できないことに対して、次の 3 つで備える。
 | 見た目 | CSS Modules（Vite に同梱） | 部品ごとに CSS のファイルを分けられ、クラス名がほかの部品とぶつからない。Mantine の見た目もふつうの CSS なので、見た目の付け方が 1 つで済む |
 | CSS の検査 | stylelint 17 と `stylelint-use-logical` 2（17.15.0 と 2.1.3 で確認） | 原則 15 と原則 16 を検査で守らせる。Vite+ に同梱されていないので、別に入れる |
 | Electron のビルド | electron-vite 5（安定版）+ Vite 7 | main・preload・renderer の 3 つを 1 つの設定でビルドでき、preload を CommonJS で出力する設定を持つ |
-| テスト | Vitest（Vite+ に同梱） | 別途の導入が要らない |
+| テスト | Vitest 4（Vite+ 0.3.3 に同梱の 4.1.11） | 別途の導入が要らない |
 | lint と整形 | oxlint と oxfmt（Vite+ に同梱） | ESLint と Prettier を別途入れずに済む |
 | 画面部品の確認 | Storybook | Electron を起動せずに、コンテナが 1 つも無いときや失敗したときの見た目を確認できる |
 | ログの記録 | `electron-log` | OS ごとの置き場所の判定、ファイルの回転、renderer からの転送を自分で書かずに済む |
@@ -109,10 +109,13 @@ Vite 8 に対応した electron-vite 6 は beta しか出ていない。
 
 | Vite の出どころ | 版 | 使う場面 |
 | --- | --- | --- |
-| Vite+ に同梱 | 8 | `vp test` と `vp build` が内部で使う |
+| Vite+ に同梱 | 8 | `vp test` と `vp build` が内部で使う（Vite+ 0.3.3 で確認。`vp test` の Vitest は、Vite+ に同梱の Vite 8 を読み込む） |
 | プロジェクトの依存 | 7 | `electron-vite` が main・preload・renderer をビルドするときに使う |
 
 **アプリのビルドに `vp build` は使わない。** `vp run build` が `electron-vite build` を呼ぶ形にする。
+
+**プロジェクトの中の Vite を、Vite+ の Vite に置き換える設定（pnpm の `overrides`）を入れない。**
+`vp create` の雛形はこの設定を入れる。入れると、electron-vite にも Vite 8 が渡る。electron-vite 5 が受け付ける Vite は 7 まで（npm の登録情報の `peerDependencies` で確認）。
 
 ### Storybook を使う条件
 

@@ -35,9 +35,13 @@
 │        └── theme.ts           Mantine の見た目の設定（renderer.md）
 ├── out                          ビルドの出力先。git には入れない
 ├── docs
-├── electron.vite.config.ts      ビルドの設定
+├── electron.vite.config.ts      ビルドの設定（electron-vite）
+├── vite.config.ts               検査の設定（vp check）
+├── tsconfig.json                型の検査の設定
 ├── postcss.config.cjs           Mantine が使う、CSS の変換の設定
 ├── stylelint.config.mjs         CSS の検査の設定（design-policy.md の原則 15、原則 16）
+├── pnpm-workspace.yaml          インストール時のスクリプトを許すパッケージ
+├── pnpm-lock.yaml               依存の版を固定する。vp install が書く
 └── package.json
 ```
 
@@ -115,7 +119,4 @@ main・preload・renderer の 3 つのビルドの設定と、型検査の設定
 **why: 対象を動かしたり消したりしたときに、テストも一緒に動く。**
 テストを別のディレクトリにまとめると、対象を消したときにテストだけが残る。
 Vitest は、既定で `.test.ts` で終わるファイルを探すので、設定が要らない
-（Vitest 5 の文書で確認。既定の探し方は `**/*.{test,spec}.?(c|m)[jt]s?(x)`）。
-
-**Vite+ に同梱されている Vitest の版では、確かめていない。** 実装を始めるときに、
-`vp test` が隣に置いたテストを見つけることを確かめる。
+（Vite+ 0.3.3 に同梱の Vitest 4.1.11 で確認。`vp test` が、既定の探し方を `**/*.{test,spec}.?(c|m)[jt]s?(x)` と出力した）。

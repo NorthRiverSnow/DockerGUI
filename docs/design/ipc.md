@@ -310,8 +310,13 @@ main は renderer を信用しない（原則 1）。main の側でも、届い�
 | `app:setLanguage` | 操作 | 画面の言語の設定を変えて保存し、メニューバーのメニューを作り直す | 同じ |
 | `app:languageChanged` | 知らせ | 画面の言語が変わったことと、新しい設定と言語 | 同じ |
 
-**画面の言語は、`settings` の口で扱わない。** 画面の言語は、設定の画面の項目ではなく、設定を既定に戻すときも戻さない
-（`common.md` の「言語を選ぶ」）。`settings:updateSetting` と `settings:resetSettings` で扱うと、言語だけを例外にする処理が要る。
+| `app:getColorScheme` | 要求 | 配色の設定（自動 / ライト / ダーク）を返す | `common.md` の「配色を選ぶ」 |
+| `app:setColorScheme` | 操作 | 配色の設定を変えて保存し、Electron の `nativeTheme.themeSource` に入れる | 同じ |
+
+配色の知らせの口は置かない。配色が変わると、CSS の `prefers-color-scheme` が変わり、renderer はその変化で知る（`renderer.md` の「配色は main が決め、renderer は OS の配色として受け取る」）。
+
+**画面の言語と配色は、`settings` の口で扱わない。** 画面の言語と配色は、設定の画面の項目ではなく、設定を既定に戻すときも戻さない
+（`common.md` の「言語を選ぶ」）。`settings:updateSetting` と `settings:resetSettings` で扱うと、言語と配色だけを例外にする処理が要る。
 
 **フォルダを開く口は、開くフォルダを main が決める。** renderer からフォルダの場所を受け取らない。
 

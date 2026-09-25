@@ -65,7 +65,7 @@ Docker を画面から操作するデスクトップアプリ。コンテナの�
 
 ## コードを書く
 
-- コマンドは `vp` に統一する。`npm` `npx` などを直接実行しない。テストは `vp test`、検査は `vp check`。
+- コマンドは `vp` に統一する。`npm` `npx` などを直接実行しない。テストは `vp test`、検査は `vp check` と `vp run lint:css`。
   一覧は `design-policy.md` の「開発で使うコマンド」
 - コードの書き方（関数で書く、クラスの使いどころ、MVC の分け方）は `design-policy.md` の「守る原則 — コードの書き方」
 - 名前を付けるときは Skill の `naming-review` を読む

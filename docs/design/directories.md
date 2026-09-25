@@ -31,10 +31,13 @@
 │        │  ├── containers     コンテナの画面の Model・View・Controller
 │        │  └── …
 │        ├── components         2 つ以上の画面で使う部品
-│        └── messages           2 つ以上の画面で使う文の関数
+│        ├── messages           2 つ以上の画面で使う文の関数
+│        └── theme.ts           Mantine の見た目の設定（renderer.md）
 ├── out                          ビルドの出力先。git には入れない
 ├── docs
 ├── electron.vite.config.ts      ビルドの設定
+├── postcss.config.cjs           Mantine が使う、CSS の変換の設定
+├── stylelint.config.mjs         CSS の検査の設定（design-policy.md の原則 15、原則 16）
 └── package.json
 ```
 
@@ -76,6 +79,7 @@ screens/containers
 ├── controller.test.ts Controller のテスト
 ├── screen.tsx         Controller を呼び、View に props で渡す（renderer.md）
 ├── view.tsx           View
+├── view.module.css    View の見た目のうち、Mantine の props で書けないもの
 └── view.stories.tsx   View の Storybook（Storybook を入れた後）
 ```
 

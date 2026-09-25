@@ -33,6 +33,9 @@ Windows で確認できないことに対して、次の 3 つで備える。
 | 言語 | TypeScript | main・preload・renderer・テストを 1 つの言語で書ける。型検査を各ステップの終了条件にできる |
 | ツールチェーン | Vite+（`vp`） | パッケージ管理・テスト・lint・整形・タスク実行を 1 つのコマンドで行える |
 | 画面 | React | 資料が最も多く、詰まったときに調べがつく |
+| 画面の部品 | Mantine 9（9.6.2 で確認） | 下に理由を書く |
+| 見た目 | CSS Modules（Vite に同梱） | 部品ごとに CSS のファイルを分けられ、クラス名がほかの部品とぶつからない。Mantine の見た目もふつうの CSS なので、見た目の付け方が 1 つで済む |
+| CSS の検査 | stylelint 17 と `stylelint-use-logical` 2（17.15.0 と 2.1.3 で確認） | 原則 15 と原則 16 を検査で守らせる。Vite+ に同梱されていないので、別に入れる |
 | Electron のビルド | electron-vite 5（安定版）+ Vite 7 | main・preload・renderer の 3 つを 1 つの設定でビルドでき、preload を CommonJS で出力する設定を持つ |
 | テスト | Vitest（Vite+ に同梱） | 別途の導入が要らない |
 | lint と整形 | oxlint と oxfmt（Vite+ に同梱） | ESLint と Prettier を別途入れずに済む |
@@ -72,6 +75,31 @@ Tauri は配布するファイルが小さく、使うメモリも少ない。�
 作れなければ、ターミナルの経路だけ dockerode を使うかを判断し直す。
 dockerode でも子プロセスの経路は作れる——下で使う docker-modem は `http.Agent` を差し替えられ、
 接続の乗っ取りも同じ Agent を通る（docker-modem のソースで確認）。
+
+### 画面の部品に Mantine を使う理由
+
+**仕様で決めた振る舞いの多くを、自分で作らずに済む。**
+
+| 仕様で決めた振る舞い | 自分で作るときに要ること |
+| --- | --- |
+| 確認の画面（`spec/common.md` の「取り返しのつかない操作は、確認を挟む」） | 画面の後ろを押せなくする。キーボードの操作が確認の画面の外に移らないようにする。`Esc` で閉じる |
+| メニュー（配色と言語の選択、一覧の行のメニュー） | 矢印キーで項目を移る。メニューの外を押したら閉じる。画面の端で位置をずらす |
+| タブ、スケルトン、通知、コピーのボタン | 部品ごとの振る舞いと見た目 |
+| 配色（`spec/common.md` の「配色」） | すべての部品について、ライトとダークの 2 通りの色を決める |
+
+**why: 表の右の列は、動かして初めておかしいと気づく処理。** 自分で作ると、表示が崩れる箇所がその分だけ増える。
+ライブラリの部品は、多くの利用者が使って直してきたものを使える。
+
+| 候補 | 採らない理由 |
+| --- | --- |
+| 部品のライブラリを使わない | 表の右の列を、全部自分で作ることになる |
+| MUI | 見た目の付け方が Emotion（JavaScript の中に CSS を書く仕組み）で、自分で書く CSS Modules と 2 つの仕組みが混ざる。崩れたときに、どちらの仕組みで崩れたかを調べることになる |
+| shadcn/ui | Tailwind CSS と、パスの別名（`@/`）が要る。パスの別名は使わないと決めてある（`design/directories.md` の「共有する型は `src/shared` に置く」）。部品のソースコードがリポジトリに入り、部品の保守も自分ですることになる |
+
+**Mantine を使う代償を先に書く。**
+
+- **PostCSS（CSS を変換する道具）の設定が要る**（Mantine の Vite の手引きで確認）。`postcss` `postcss-preset-mantine` `postcss-simple-vars` を入れ、`postcss.config.cjs` を置く
+- **大きな版の更新は、ここ数年は年に 1 回ほど出ている**（8.0.0 が 2025 年 5 月、9.0.0 が 2026 年 3 月）。版はロックファイルで固定されるので、`vp update` を実行しない限り変わらない。大きな版に上げるときは、Storybook で状態ごとの見本を開いて、崩れた箇所を確かめる
 
 ### Vite が 2 つ入る理由と、2 つの Vite の役割の分担
 
@@ -117,8 +145,10 @@ Storybook が担うのは、Electron を起動せずに、コンテナが 1 つ�
 | テストの実行 | `vp test` |
 | 整形・lint・型検査をまとめて実行 | `vp check` |
 | 整形と lint の自動修正 | `vp check --fix` |
+| CSS の検査（原則 15、原則 16） | `vp run lint:css` |
 
-**各ステップの終了条件は、`vp check` と `vp test` の両方が正常終了すること。**
+**各ステップの終了条件は、`vp check` と `vp test` と `vp run lint:css` が、すべて正常終了すること。**
+`vp run lint:css` は、stylelint を呼ぶタスク。stylelint は Vite+ に同梱されていないので、`vp check` に含まれない。
 
 ## 守る原則 — 構成と安全
 
@@ -357,3 +387,38 @@ Vite+ の型検査が使う TypeScript の版は確かめていないので、zo
 ただし、左右で書いた CSS をあとから書き換えると、全部の画面を直すことになる。最初から行の始まりと終わりで書けば、コストはほとんどかからない。
 
 **上下の余白は、`margin-top` のままでよい。** 上から下へ行を重ねる向きは、日本語でも英語でも右から左に書く言語でも同じ。
+
+**CSS の中の左右の指定は、検査で見つける。** `stylelint-use-logical` が、表の「使わない」の列の指定を見つけると、`vp run lint:css` が失敗する。
+
+**Mantine の props で余白を指定するときも、`ms` `me` `ps` `pe` を使う**（`<Group ms="md">`）。
+`ml` `mr` `pl` `pr` は、左右の指定になる。
+props の中の指定は、stylelint では検査できない。検査する方法は、最初の画面を実装するときに決める。
+
+### 16. 見た目の値は、Mantine の CSS の変数で指定する
+
+**見た目の値は、Mantine の見た目の設定（`createTheme` で作る値。`design/renderer.md` の「部品と見た目」）の 1 か所で決める。**
+自分で書く CSS には値を書かず、Mantine の CSS の変数を使う。
+
+| 値 | 書かないもの | 使うもの |
+| --- | --- | --- |
+| 色 | `#1a1b1e` `rgb(…)` `white` | `var(--mantine-color-text)` など |
+| 余白（`margin` `padding` `gap`） | `13px` `0.8rem` | `var(--mantine-spacing-md)` など |
+| 字の大きさ | `15px` | `var(--mantine-font-size-sm)` など |
+| 角の丸み | `4px` | `var(--mantine-radius-sm)` など |
+
+**why: 値を画面の CSS に書くと、その画面だけ見た目がずれる。** `theme.ts` の値を変えても、画面の CSS に書いた値は変わらない。
+色は、配色を切り替えたときにその部分だけ色が変わらない（`spec/common.md` の「配色」）。
+Mantine の CSS の変数は、`theme.ts` の値と配色に合わせて値が変わる。
+
+**画面の CSS（`view.module.css`）に残るのは、どこにどう並べるかだけになる**（`design/renderer.md` の「部品と見た目」）。
+
+**値は、検査で見つける。** stylelint の標準の検査で、`vp run lint:css` が失敗するようにする。
+
+| 値 | stylelint の検査 |
+| --- | --- |
+| 色 | `color-no-hex`（16 進数の色）、`color-named`（`white` のような名前の色）、`function-disallowed-list`（`rgb()` `hsl()` などの関数） |
+| 余白、字の大きさ、角の丸み | `declaration-property-unit-allowed-list`（単位を付けた値を書けないようにする） |
+
+**ターミナルの本文の色は、`@xterm/xterm` の設定に JavaScript で渡す。** `@xterm/xterm` はコンテナの出力を自分で描くので、
+CSS のファイルに書いた色を使わない。色の値は Mantine の CSS の変数から読み出して渡し、配色が変わったら渡し直す
+（`design/renderer.md` の「ターミナルの本文の色は、JavaScript で渡す」）。

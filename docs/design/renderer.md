@@ -5,7 +5,7 @@ renderer を Model・View・Controller に分けることは、`design-policy.md
 
 ## 画面 1 つの組み立て
 
-**画面は機能ごとに 1 つ作り、画面 1 つを次の 6 つのファイルで作る**（`directories.md` の「renderer は、画面ごとに分ける」）。
+**画面は機能ごとに 1 つ作り、画面 1 つを次のファイルで作る**（`directories.md` の「renderer は、画面ごとに分ける」）。`view.module.css` だけは、要るときに置く。
 
 **main を呼ぶのは Controller だけ。** Model と View は main を呼ばない。
 
@@ -16,6 +16,7 @@ renderer を Model・View・Controller に分けることは、`design-policy.md
 | `controller.ts` | Controller | 利用者の操作と、main から届いた知らせを受けて、Model に出来事を渡す React の hook。要素は返さない | **呼ぶ**（main の窓口を通して） | 使う |
 | `screen.tsx` | Controller と View をつなぐ | props で受け取った main の窓口とアプリ全体の状態を Controller に渡して呼び、Controller が返した状態と関数を View に props で渡す | 呼ばない（Controller が呼ぶ） | 使う |
 | `view.tsx` | View | screen から状態と関数を props で受け取り、要素を返す関数コンポーネント。自分の状態は持たない | 呼ばない | 使う |
+| `view.module.css` | View の見た目 | Mantine の props で書けない見た目（「部品と見た目」） | 呼ばない | 使わない |
 | `view.stories.tsx` | View の確認 | 状態ごとの View の見本（Storybook を入れた後） | 呼ばない | 使う |
 
 **値の流れ**
@@ -129,13 +130,14 @@ main も Electron も起動せずに済む。
 | 絞り込みの入力 | 一覧を出す各画面 | `common.md` の「並び順と絞り込み」（対象を切り替えても消さない） |
 | 画面の切り替えの状態（タグの無いイメージを出すかなど） | 切り替えを持つ画面 | `settings.md` の「設定の画面に出すもの」 |
 | 画面の言語 | すべての画面 | `common.md` の「言語を選ぶ」 |
+| 配色の設定（自動 / ライト / ダーク） | 状態バー。配色のメニューで、選んでいる値を示す | `common.md` の「配色を選ぶ」 |
 
 アプリ全体の Controller も、Model（純関数）と Controller（hook）に分ける。
 **アプリの一番上の部品（App）がアプリ全体の Controller を呼び、状態を props で各画面の screen に渡す。**
 
 ```
 App                       アプリ全体の Controller を呼ぶ。main の窓口を作る
-├── 状態バー           接続の状態と、画面の言語を props で受け取る
+├── 状態バー           接続の状態と、配色の設定と、画面の言語を props で受け取る
 ├── 左の一覧           選んでいる対象を props で受け取る
 └── 右の領域           開いているタブと、選んでいるタブを props で受け取る
     └── 画面の screen  main の窓口と、使うアプリ全体の状態を props で受け取る
@@ -239,6 +241,62 @@ App が画面の言語を props で各画面の screen に渡し、screen が画
 **why: 同じ漢字でも、日本語と中国語で字の形が違う。** `lang` 属性が無いと、日本語の画面に中国語の字の形が出ることがある。
 画面を読み上げる OS の機能も、`lang` 属性で読み方の言語を決める。
 
+## 部品と見た目
+
+### Mantine の部品を、View から使う
+
+**View は、Mantine の部品を組み合わせて要素を返す**（`design-policy.md` の「画面の部品に Mantine を使う理由」）。
+2 つ以上の画面で同じ組み合わせを使うようになったら、`components` に移す（「2 つ以上の画面で使う部品」）。
+
+**App の一番外側に、Mantine の `MantineProvider` を置く。** Mantine の部品は、`MantineProvider` から見た目の設定を受け取る。
+見た目の設定（Mantine の `createTheme` で作る値）は、`src/renderer/src/theme.ts` に置く。
+
+**アプリ全体の見た目は、`theme.ts` で決める。アプリ共通の CSS のファイルは置かない。**
+
+| 置き場所 | 書くもの |
+| --- | --- |
+| `theme.ts`（アプリで 1 つ） | 色、余白の段階、字の大きさ、角の丸み、部品ごとの既定の props（すべてのボタンの大きさなど） |
+| 各画面の View | Mantine の部品を置き、props で種類や余白を選ぶ |
+| 各画面の `view.module.css` | props で書けない配置だけ。値は Mantine の CSS の変数で指定する（`design-policy.md` の原則 16） |
+
+**why: アプリ共通の CSS のファイルに書いたクラスは、どの画面の要素にも当たりうる。**
+ある画面のために直すと、別の画面が崩れることがある。画面を消したときに、消してよいクラスかどうかも分からなくなる。
+値を `theme.ts` の 1 か所に集め、配置だけを画面ごとに書けば、崩れる範囲を 1 つの画面の中に閉じ込められる。
+
+**`theme.ts` は、最初は 1 つのファイルにする。** 探している設定を見つけにくくなったら、`theme` のディレクトリに分ける。
+
+```
+theme
+├── index.ts       createTheme を 1 回だけ呼び、下の 2 つをまとめる。画面は index.ts だけを読み込む
+├── values.ts      色、余白の段階、字の大きさ、角の丸み
+└── components.ts  部品ごとの既定の props
+```
+
+**分けても、`createTheme` を呼ぶのは `index.ts` の 1 か所にする。** 見た目の値を決める場所が 1 つであることは変わらない。
+長くなりやすいのは部品ごとの既定の props で、使う部品の種類の数だけ増える。
+
+**`MantineProvider` は、中で React の Context を使う。** 「アプリ全体の状態」で決めた「Context を使わない」は、
+DockerGUI のアプリの状態の渡し方の決まりで、ライブラリの中で使われる Context は対象にしない。
+
+### 見た目は、Mantine の props か `view.module.css` に書く
+
+1. Mantine の部品の props で書ける見た目（余白、並べ方）は、props で書く（`<Group gap="sm" ms="md">`）
+2. props で書けない見た目だけを、`view.module.css` に書く
+
+**why: props で書くと、余白の大きさを Mantine の段階（`xs` から `xl`）から選ぶことになる。** 画面ごとに余白の大きさがばらつかない。
+
+### 配色は main が決め、renderer は OS の配色として受け取る
+
+**main が、配色の設定を Electron の `nativeTheme.themeSource` に入れる**（`"system"` `"light"` `"dark"` のどれか。`ipc.md` の `app:setColorScheme`）。
+`nativeTheme.themeSource` を変えると、CSS の `prefers-color-scheme`（CSS から OS の配色を読む仕組み）と、
+メニューの配色が切り替わる（Electron の文書で確認）。
+
+**renderer は、Mantine の配色を「自動」（`defaultColorScheme="auto"`）のまま使い、Mantine の配色を切り替える関数を呼ばない。**
+Mantine は `prefers-color-scheme` に合わせるので、main が `nativeTheme.themeSource` を変えれば、Mantine の部品の配色も変わる。
+
+**why: 配色を決める場所を、main の 1 つにする。** renderer が Mantine の配色を切り替えると、メニューの配色は変わらず、画面とメニューで配色が分かれる。
+加えて、Mantine は切り替えた配色をブラウザの保存領域（`localStorage`）に保存するので、配色を保存する場所が設定ファイルと 2 つになる。
+
 ## 例外になる画面
 
 ### ターミナルの本文は、Model に持たせない
@@ -249,6 +307,30 @@ Model が持つのは、ターミナルの画面の状態（`docs/spec/terminal.
 **why: `@xterm/xterm` は、受け取った制御文字を解釈しながら、自分の中に画面の中身を持つ。**
 出力を Model の状態にも持たせると、同じ中身を 2 箇所に持つことになる。
 加えて、出力が届くたびに React の描き直しが走り、大量の出力で画面が遅れる。
+
+### ターミナルの本文の色は、JavaScript で渡す
+
+**ターミナルの本文の色は、`@xterm/xterm` の設定（`theme`）に渡す**（`design-policy.md` の原則 16）。
+`theme` の各項目は、CSS と同じ書き方の色の文字列を受け取る（xterm.js の文書で確認）。
+
+```ts
+function terminalThemeOf(style: CSSStyleDeclaration): ITheme {
+  return {
+    background: style.getPropertyValue("--mantine-color-body"),
+    foreground: style.getPropertyValue("--mantine-color-text"),
+    red: style.getPropertyValue("--mantine-color-red-6"),
+    // …黒・緑・黄など 16 色と、カーソル、選んだ文字の背景も、Mantine の CSS の変数から読む
+  };
+}
+```
+
+`style` は、`getComputedStyle(document.documentElement)` で取る、画面の CSS の変数のいまの値。
+
+**配色が変わったら、`terminalThemeOf` で色を作り直して、`@xterm/xterm` に渡し直す。**
+配色が変わったことは、`prefers-color-scheme` の変化で知る。
+
+**why: 色の値を、Mantine の CSS の変数から読む。** 色の値をコードに直接書くと、Mantine の部品の色と食い違う。
+加えて、`design-policy.md` の原則 16（見た目の値は、Mantine の CSS の変数で指定する）を守れない。
 
 ### ログの本文は、見えている行だけを描く
 
@@ -267,3 +349,5 @@ Model が持つのは、ターミナルの画面の状態（`docs/spec/terminal.
 | ログの本文の、見えている範囲だけを描く方法 | ログの画面を実装するとき |
 | React が描き終えた時点を、確認を返す処理から知る方法 | ログの画面を実装するとき |
 | メニューバーのメニューの文を、main のどこに置くか | メニューを実装するとき |
+| `@xterm/xterm` に、作った後で `theme` を渡し直せるか。`terminalThemeOf` で読む Mantine の CSS の変数の名前 | ターミナルを実装するとき |
+| Storybook で、ライトとダークの見本を切り替える方法 | Storybook を入れるとき |

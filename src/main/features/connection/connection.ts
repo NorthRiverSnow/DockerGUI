@@ -14,6 +14,7 @@ import { CONTEXT_LIST_COMMAND, commandLineOf, type EngineTarget } from "./discov
 import {
   changeToEngineNotFound,
   changeToStopped,
+  checkIdleEngine,
   connectEngine,
   reconnectEngine,
   searchEngine,
@@ -23,6 +24,12 @@ import {
 
 /** 再接続を待つ時間。1 回目は first で、失敗するたびに倍にし、max で止める（docs/spec/connection.md の「再接続の繰り返し」）。 */
 const RECONNECT_DELAY_MS = { first: 1000, max: 30_000 };
+
+/**
+ * 接続していないエンジンを確かめる間隔と、1 回の確かめで応答を待つ時間（docs/design/main.md の「接続していないエンジンの確かめ方」）。
+ * TODO: 子プロセスの接続方式を作るステップで、子プロセスの経路では間隔を 30 秒にする（docs/spec/connection.md）
+ */
+const IDLE_CHECK_MS = { interval: 5000, answerTimeout: 2000 };
 
 export type Connection = {
   /** 接続先を探し、繋ぐ。止まっていて、起動する手段を知っていれば、起動してから繋ぐ。 */
@@ -64,6 +71,10 @@ export function createConnection(deps: ConnectionDeps): Connection {
     reconnectLoop: undefined,
     onDisconnected: (target) => void reconnectUntilSettled(connectionContext, target),
   };
+  deps.repeat(
+    () => checkIdleEngine(connectionContext, IDLE_CHECK_MS.answerTimeout),
+    IDLE_CHECK_MS.interval,
+  );
   return {
     connect: () => searchAndConnect(connectionContext),
     startEngine: () => startStoppedEngine(connectionContext),

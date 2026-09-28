@@ -14,6 +14,8 @@ export type ConnectionDeps = {
   sleep: (milliseconds: number) => Promise<void>;
   /** 再接続の 1 回で、エンジンの応答を待つ時間（docs/spec/connection.md の「再接続の繰り返し」）。 */
   reconnectTimeoutMs: number;
+  /** task を intervalMs ごとに実行し続ける。前の task が終わっていなくても、時間が来たら次を実行する。 */
+  repeat: (task: () => Promise<void>, intervalMs: number) => void;
   onStateChanged: (state: ConnectionState) => void;
 };
 

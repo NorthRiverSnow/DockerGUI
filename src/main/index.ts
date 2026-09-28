@@ -39,6 +39,9 @@ const connection = createConnection({
   sleep,
   // docs/spec/connection.md の「再接続の繰り返し」
   reconnectTimeoutMs: 10_000,
+  repeat: (task, intervalMs) => {
+    setInterval(() => void task(), intervalMs);
+  },
   onStateChanged: (state) => {
     for (const window of BrowserWindow.getAllWindows()) {
       sendNotification(window.webContents, "connection:connectionStateChanged", state);

@@ -1,6 +1,7 @@
 import type http from "node:http";
 import type { Failure } from "../../../shared/result";
 import { engineClientOf } from "../../engine-api/client";
+import { isEngineAnswering } from "../../engine-api/ping";
 import { negotiatedApiVersionOf } from "../../engine-api/version";
 import { socketAgentOf } from "../../os/agent";
 import {
@@ -142,6 +143,28 @@ export async function reconnectEngine(
     return "settled";
   }
   return "retry";
+}
+
+/**
+ * 停止中か接続不可のときに、target のエンジンが応答すれば、動作中・未接続にする。自動では繋がない
+ * （docs/spec/connection.md の「接続していないエンジンの状態は、定期的に確かめる」）。
+ * それ以外の状態のときと、応答を待つ間に状態が変わったときは、何もしない。
+ */
+export async function checkIdleEngine(
+  connectionContext: ConnectionContext,
+  answerTimeoutMs: number,
+): Promise<void> {
+  const { state, target } = connectionContext;
+  if ((state.kind !== "stopped" && state.kind !== "unavailable") || !target) {
+    return;
+  }
+  const agent = socketAgentOf(target.socketPath);
+  const answering = await isEngineAnswering(agent, answerTimeoutMs);
+  agent.destroy();
+  // why: 応答を待つ間に、利用者が［起動］や［再試行］を押して状態が変わっていることがある。変わった状態を上書きしない。
+  if (answering && connectionContext.state === state) {
+    changeState(connectionContext, { kind: "runningNotConnected", engineName: target.name });
+  }
 }
 
 /** 接続済みにして、接続が切れるのを見張る。切れたら onDisconnected を呼ぶ。 */

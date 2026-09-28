@@ -17,5 +17,11 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "electron.vite.config.ts", "vite.config.ts"]
+  "include": [
+    "src",
+    ".storybook/*.ts",
+    ".storybook/*.tsx",
+    "electron.vite.config.ts",
+    "vite.config.ts"
+  ]
 }

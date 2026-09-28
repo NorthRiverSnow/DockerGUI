@@ -11,6 +11,9 @@ import type { AppMessages } from "./messages";
 
 const ICON_SIZE = 16;
 
+/** 状態バーの高さ。View が AppShell の上の領域の高さに使う。 */
+export const STATUS_BAR_HEIGHT = 48;
+
 export function StatusBar(props: {
   connection: ConnectionState;
   /** 経過した時間と、再接続するまでの残り時間を出すための、いまの時刻（エポックからのミリ秒）。 */

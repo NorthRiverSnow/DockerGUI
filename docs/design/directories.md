@@ -36,6 +36,7 @@
 │        └── theme.ts           Mantine の見た目の設定（renderer.md）
 ├── out                          ビルドの出力先。git には入れない
 ├── docs
+├── .storybook                   Storybook の設定（renderer.md の「Storybook で見本を見る」）
 ├── electron.vite.config.ts      ビルドの設定（electron-vite）
 ├── vite.config.ts               検査の設定（vp check）
 ├── tsconfig.json                型の検査の設定

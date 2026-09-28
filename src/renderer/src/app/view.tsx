@@ -2,7 +2,7 @@ import { AppShell, Divider, NavLink, Title } from "@mantine/core";
 import type { ConnectionState } from "../../../shared/connection";
 import type { AppMessages } from "./messages";
 import type { Target } from "./model";
-import { StatusBar } from "./status-bar";
+import { STATUS_BAR_HEIGHT, StatusBar } from "./status-bar";
 
 // docs/spec/common.md の「画面の構成」の、左の一覧の並び
 const TARGETS_ABOVE_DIVIDER: Target[] = [
@@ -36,7 +36,11 @@ export function AppView(props: {
   );
 
   return (
-    <AppShell header={{ height: 48 }} navbar={{ width: 200, breakpoint: 0 }} padding="md">
+    <AppShell
+      header={{ height: STATUS_BAR_HEIGHT }}
+      navbar={{ width: 200, breakpoint: 0 }}
+      padding="md"
+    >
       <AppShell.Header>
         {props.connection && (
           <StatusBar

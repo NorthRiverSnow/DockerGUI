@@ -195,7 +195,7 @@ main は renderer を信用しない（原則 1）。main の側でも、届い�
 | `connection:connectEngine` | 操作 | 指定したエンジンに繋ぐ。停止していれば起動してから繋ぐ | ［接続］［切り替える］「選択待ち」の候補のボタン |
 | `connection:startEngine` | 操作 | エンジンを起動する | ［起動］ |
 | `connection:stopEngine` | 操作 | 接続しているエンジンを停止する | ［停止］ |
-| `connection:cancelConnecting` | 操作 | 探索・接続・切り替え・再接続を中止する | ［中止］ |
+| `connection:cancelConnecting` | 操作 | 探索・接続・切り替えを中止する | ［中止］ |
 | `connection:retryConnecting` | 操作 | 接続先を探し直して繋ぐ。止まっていれば起動してから繋ぐ | ［再試行］ |
 | `connection:reconnectNow` | 操作 | 再接続の待ち時間を飛ばす | ［今すぐ再接続］ |
 | `connection:giveUpReconnecting` | 操作 | 自動の再接続をやめる | ［あきらめる］ |

@@ -316,6 +316,26 @@ Mantine は `prefers-color-scheme` に合わせるので、main が `nativeTheme
 **why: 配色を決める場所を、main の 1 つにする。** renderer が Mantine の配色を切り替えると、メニューの配色は変わらず、画面とメニューで配色が分かれる。
 加えて、Mantine は切り替えた配色をブラウザの保存領域（`localStorage`）に保存するので、配色を保存する場所が設定ファイルと 2 つになる。
 
+### Storybook で見本を見る
+
+**見本のファイル（`*.stories.tsx`）は、描く部品の隣に置き、状態ごとに 1 つの見本を書く**（`directories.md` の `view.stories.tsx`）。
+`vp run storybook` で起動し、`http://localhost:6006` を開く。
+
+**Storybook の上の帯で、配色（ライト / ダーク）と画面の言語（日本語 / English）を切り替える。** 設定は `.storybook/preview.tsx` に書く。
+
+| 切り替えるもの | 切り替え方 |
+| --- | --- |
+| 配色 | `MantineProvider` の `forceColorScheme` に、選んだ配色を渡す |
+| 画面の言語 | 見本の `render` が、選んだ言語の文の組を部品に渡す |
+
+**why: アプリでは、配色と画面の言語を main が決める**（「配色は main が決め、renderer は OS の配色として受け取る」「言語を決めるのは main」）。
+Storybook には main が無いので、上の帯で選んだものを直接渡す。
+
+**Storybook は、この PC からだけ開けるようにする**（`package.json` の `storybook` で `--host localhost` を付ける）。
+**利用状況を Storybook の開発元に送らない**（`.storybook/main.ts` の `disableTelemetry`）。
+
+**why: Storybook は、既定では同じネットワークのほかの機械からも開ける。** 見本は開発中の画面で、ほかの人に見せる理由が無い。
+
 ## 例外になる画面
 
 ### ターミナルの本文は、Model に持たせない
@@ -369,4 +389,3 @@ function terminalThemeOf(style: CSSStyleDeclaration): ITheme {
 | React が描き終えた時点を、確認を返す処理から知る方法 | ログの画面を実装するとき |
 | メニューバーのメニューの文を、main のどこに置くか | メニューを実装するとき |
 | `@xterm/xterm` に、作った後で `theme` を渡し直せるか。`terminalThemeOf` で読む Mantine の CSS の変数の名前 | ターミナルを実装するとき |
-| Storybook で、ライトとダークの見本を切り替える方法 | Storybook を入れるとき |

@@ -41,7 +41,7 @@ Windows で確認できないことに対して、次の 3 つで備える。
 | テスト | Vitest 4（Vite+ 0.3.3 に同梱の 4.1.11） | 別途の導入が要らない |
 | 画面のテスト | jsdom 30 と Testing Library（`@testing-library/react` 16.3.3 で確認） | Electron を起動せずに、Vitest の中で View を描き、ボタンを押せる。Testing Library は、画面を読む人と同じく、ボタンの名前で要素を探す |
 | lint と整形 | oxlint と oxfmt（Vite+ に同梱） | ESLint と Prettier を別途入れずに済む |
-| 画面部品の確認 | Storybook | Electron を起動せずに、コンテナが 1 つも無いときや失敗したときの見た目を確認できる |
+| 画面部品の確認 | Storybook 10（10.6.0 で確認） | Electron を起動せずに、コンテナが 1 つも無いときや失敗したときの見た目を確認できる |
 | ログの記録 | `electron-log` | OS ごとの置き場所の判定、ファイルの回転、renderer からの転送を自分で書かずに済む |
 | ターミナルの表示 | `@xterm/xterm` | ターミナルの制御文字を解釈して画面に出す部分を自分で書かずに済む |
 | 値の検査 | zod 4（4.6.5 で確認） | スキーマから TypeScript の型を作れるので、検査と型を 2 回書かずに済む。資料が多い（原則 12） |
@@ -143,6 +143,7 @@ Storybook が担うのは、Electron を起動せずに、コンテナが 1 つ�
 | 依存の導入 | `vp install` |
 | 依存の追加 | `vp add <パッケージ名>` |
 | 開発用の起動 | `vp run dev` |
+| 見た目の確認（Storybook） | `vp run storybook`。`http://localhost:6006` を開く |
 | ビルド | `vp run build` |
 | テストの実行 | `vp test` |
 | 整形・lint・型検査をまとめて実行 | `vp check` |

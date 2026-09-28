@@ -1,13 +1,13 @@
 import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
-import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
 import type { ConnectionState } from "../../../shared/connection";
 import {
   startFakeEngine,
+  startSilentEngine,
   unusedSocketPath,
   type FakeEngine,
 } from "../../engine-api/fake-engine.test-helper";
@@ -15,6 +15,8 @@ import type { CommandOutput, RunCommand } from "../../os/command";
 import { createConnection, type Connection } from "./connection";
 
 const NOW = 1_700_000_000_000;
+/** 再接続で応答を待つ時間。テストが長くならないように短くする。 */
+const RECONNECT_TIMEOUT_MS = 50;
 const VERSION_BODY = '{"ApiVersion":"1.54","MinAPIVersion":"1.40"}';
 
 let homeDir: string;
@@ -158,6 +160,7 @@ function connectionWith(options: {
     autoStart: options.autoStart ?? true,
     now: () => NOW,
     sleep: options.sleep ?? fakeSleep().sleep,
+    reconnectTimeoutMs: RECONNECT_TIMEOUT_MS,
     onStateChanged: (state) => {
       states.push(state);
       for (const waiter of waiters.filter((w) => w.kind === state.kind)) waiter.resolve();
@@ -354,16 +357,10 @@ describe("cancel", () => {
   });
 
   it("接続中に中止すると、繋ぐのをやめ、動作中・未接続にする", async () => {
-    // 接続は受け付けるが、応答を返さないエンジン
-    const socketPath = unusedSocketPath();
-    const silent = http.createServer(() => {});
-    await new Promise<void>((resolve) => silent.listen(socketPath, () => resolve()));
-    cleanups.push(() => {
-      silent.closeAllConnections();
-      return new Promise<void>((resolve) => silent.close(() => resolve()));
-    });
+    const silent = await startSilentEngine();
+    cleanups.push(() => silent.close());
     const { connection, states, waitFor } = connectionWith({
-      runCommand: fakeCommands({ contextSocketPath: socketPath, colimaInstalled: false }),
+      runCommand: fakeCommands({ contextSocketPath: silent.socketPath, colimaInstalled: false }),
     });
     const connecting = connection.connect();
     await waitFor("connecting");
@@ -497,5 +494,109 @@ describe("切断されたとき", () => {
     ]);
     expect(kindsOf(states)).not.toContain("stopped");
     expect(connection.state().kind).toBe("reconnectWaiting");
+  });
+});
+
+describe("再接続を操作したとき", () => {
+  /** 動いているエンジンに繋ぎ、接続を切って、再接続待ちにする。 */
+  async function waitingForReconnect() {
+    const engine = await fakeEngineAt();
+    const sleeps = fakeSleep();
+    const connectionAndStates = connectionWith({
+      runCommand: fakeCommands({ contextSocketPath: engine.socketPath, colimaInstalled: false }),
+      sleep: sleeps.sleep,
+    });
+    await connectionAndStates.connection.connect();
+    await untilWatching(engine);
+    engine.dropConnections();
+    await connectionAndStates.waitFor("reconnectWaiting");
+    return { engine, sleeps, ...connectionAndStates };
+  }
+
+  it("［今すぐ再接続］を押すと、待ち時間が終わるのを待たずに再接続する", async () => {
+    const { connection } = await waitingForReconnect();
+
+    connection.reconnectNow();
+
+    await until(() => connection.state().kind === "connected");
+  });
+
+  it("［あきらめる］を押すと、再接続をやめ、エンジンが動いていれば動作中・未接続にする", async () => {
+    const { connection, states, sleeps } = await waitingForReconnect();
+
+    await connection.giveUpReconnecting();
+    sleeps.wakeUp();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    expect(connection.state()).toEqual({
+      kind: "runningNotConnected",
+      engineName: "desktop-linux",
+    });
+    expect(kindsOf(states)).not.toContain("reconnecting");
+  });
+
+  it("［あきらめる］を押したときにエンジンが止まっていれば、停止中にする", async () => {
+    const { connection, engine } = await waitingForReconnect();
+    await engine.close();
+
+    await connection.giveUpReconnecting();
+
+    expect(connection.state()).toEqual({
+      kind: "stopped",
+      engineName: "desktop-linux",
+      startable: false,
+    });
+  });
+
+  it("再接続して接続済みに戻った後は、［今すぐ再接続］も［あきらめる］も何もしない", async () => {
+    const { connection, states } = await waitingForReconnect();
+    connection.reconnectNow();
+    await until(() => connection.state().kind === "connected");
+    const statesBefore = states.length;
+
+    connection.reconnectNow();
+    await connection.giveUpReconnecting();
+
+    expect(states.length).toBe(statesBefore);
+    expect(connection.state().kind).toBe("connected");
+  });
+
+  it("再接続待ちでなければ、［今すぐ再接続］も［あきらめる］も何もしない", async () => {
+    const engine = await fakeEngineAt();
+    const { connection, states } = connectionWith({
+      runCommand: fakeCommands({ contextSocketPath: engine.socketPath, colimaInstalled: false }),
+    });
+    await connection.connect();
+
+    connection.reconnectNow();
+    await connection.giveUpReconnecting();
+
+    expect(kindsOf(states)).toEqual(["searching", "connecting", "connected"]);
+  });
+
+  it("再接続でエンジンの応答が返らなければ、打ち切って再接続待ちに戻る", async () => {
+    const socketPath = unusedSocketPath();
+    const engine = await startFakeEngine(200, VERSION_BODY, socketPath);
+    const sleeps = fakeSleep();
+    const { connection, waitFor } = connectionWith({
+      runCommand: fakeCommands({ contextSocketPath: socketPath, colimaInstalled: false }),
+      sleep: sleeps.sleep,
+    });
+    await connection.connect();
+    await untilWatching(engine);
+    await engine.close();
+    const silent = await startSilentEngine(socketPath);
+    cleanups.push(() => silent.close());
+
+    await waitFor("reconnectWaiting");
+    sleeps.wakeUp();
+    await until(() => sleeps.requestedDelays.length === 2);
+
+    expect(sleeps.requestedDelays).toEqual([1000, 2000]);
+    expect(connection.state()).toEqual({
+      kind: "reconnectWaiting",
+      engineName: "desktop-linux",
+      retryAt: NOW + 2000,
+    });
   });
 });

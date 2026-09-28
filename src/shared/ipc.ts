@@ -10,6 +10,8 @@ export const REQUEST_DEFINITIONS = {
   "connection:connectEngine": { argument: z.undefined(), changesState: true },
   "connection:retryConnecting": { argument: z.undefined(), changesState: true },
   "connection:cancelConnecting": { argument: z.undefined(), changesState: true },
+  "connection:reconnectNow": { argument: z.undefined(), changesState: true },
+  "connection:giveUpReconnecting": { argument: z.undefined(), changesState: true },
 } satisfies Record<RequestChannel, { argument: z.ZodType; changesState: boolean }>;
 
 export type RequestArgument<C extends RequestChannel> = z.infer<
@@ -23,6 +25,8 @@ export type RequestResponse = {
   "connection:connectEngine": Result<undefined>;
   "connection:retryConnecting": Result<undefined>;
   "connection:cancelConnecting": Result<undefined>;
+  "connection:reconnectNow": Result<undefined>;
+  "connection:giveUpReconnecting": Result<undefined>;
 };
 
 export const NOTIFICATION_SCHEMAS = {

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vite-plus/test";
 import { socketAgentOf } from "../os/agent";
-import { startFakeEngine, type FakeEngine } from "./fake-engine.test-helper";
+import { startFakeEngine, startSilentEngine, type FakeEngine } from "./fake-engine.test-helper";
 import { negotiatedApiVersionOf } from "./version";
 
 let engine: FakeEngine | undefined;
@@ -59,5 +59,16 @@ describe("negotiatedApiVersionOf", () => {
         engineMessage: "daemon is shutting down",
       },
     });
+  });
+
+  it("timeoutMs の間に応答が無ければ、engineTimedOut を返す", async () => {
+    const silent = await startSilentEngine();
+
+    const result = await negotiatedApiVersionOf(socketAgentOf(silent.socketPath), {
+      timeoutMs: 50,
+    });
+    await silent.close();
+
+    expect(result).toEqual({ ok: false, failure: { kind: "expected", code: "engineTimedOut" } });
   });
 });

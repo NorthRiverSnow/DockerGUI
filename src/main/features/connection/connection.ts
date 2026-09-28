@@ -1,11 +1,14 @@
 import type { ConnectionState } from "../../../shared/connection";
 import type { EngineClient } from "../../engine-api/client";
+import { isSocketAccepting } from "../../os/socket";
 import {
   beginAttempt,
   changeState,
+  stoppedStateOf,
   type Attempt,
   type ConnectionContext,
   type ConnectionDeps,
+  type ReconnectLoop,
 } from "./context";
 import { CONTEXT_LIST_COMMAND, commandLineOf, type EngineTarget } from "./discover";
 import {
@@ -35,6 +38,13 @@ export type Connection = {
    * 接続中でなければ何もしない。起動中も中止しない（「起動中は中止できない」）。
    */
   cancel: () => void;
+  /** 再接続待ちの待ち時間を飛ばして、すぐに再接続する。再接続待ちでなければ何もしない。 */
+  reconnectNow: () => void;
+  /**
+   * 自動の再接続をやめる。エンジンが動いているかを確かめ、動作中・未接続か停止中にする（docs/spec/connection.md の「再接続の繰り返し」）。
+   * 再接続待ちでなければ何もしない。
+   */
+  giveUpReconnecting: () => Promise<void>;
   state: () => ConnectionState;
   /** 繋がっていなければ undefined。 */
   client: () => EngineClient | undefined;
@@ -51,6 +61,7 @@ export function createConnection(deps: ConnectionDeps): Connection {
     client: undefined,
     target: undefined,
     attempt: { cancelled: false, abort: () => {} },
+    reconnectLoop: undefined,
     onDisconnected: (target) => void reconnectUntilSettled(connectionContext, target),
   };
   return {
@@ -59,6 +70,8 @@ export function createConnection(deps: ConnectionDeps): Connection {
     connectEngine: () => connectRunningEngine(connectionContext),
     retry: () => retryConnecting(connectionContext),
     cancel: () => cancelConnecting(connectionContext),
+    reconnectNow: () => reconnectNow(connectionContext),
+    giveUpReconnecting: () => giveUpReconnecting(connectionContext),
     state: () => connectionContext.state,
     client: () => connectionContext.client,
   };
@@ -103,9 +116,11 @@ async function reconnectUntilSettled(
   connectionContext: ConnectionContext,
   target: EngineTarget,
 ): Promise<void> {
+  const loop: ReconnectLoop = { givenUp: false, skipWait: () => {} };
+  connectionContext.reconnectLoop = loop;
   for (let delay = RECONNECT_DELAY_MS.first; ; delay = nextReconnectDelayOf(delay)) {
-    await waitBeforeReconnect(connectionContext, target, delay);
-    if ((await reconnectEngine(connectionContext, target)) === "settled") {
+    await waitBeforeReconnect(connectionContext, target, delay, loop);
+    if (loop.givenUp || (await reconnectEngine(connectionContext, target)) === "settled") {
       return;
     }
   }
@@ -149,4 +164,24 @@ function cancelConnecting(connectionContext: ConnectionContext): void {
   attempt.cancelled = true;
   attempt.abort();
   changeState(connectionContext, { kind: "runningNotConnected", engineName: target.name });
+}
+
+/** ［今すぐ再接続］のボタンから呼ぶ。 */
+function reconnectNow(connectionContext: ConnectionContext): void {
+  connectionContext.reconnectLoop?.skipWait();
+}
+
+/** ［あきらめる］のボタンから呼ぶ。 */
+async function giveUpReconnecting(connectionContext: ConnectionContext): Promise<void> {
+  const { state, target, reconnectLoop } = connectionContext;
+  if (state.kind !== "reconnectWaiting" || !target || !reconnectLoop) {
+    return;
+  }
+  reconnectLoop.givenUp = true;
+  changeState(
+    connectionContext,
+    (await isSocketAccepting(target.socketPath))
+      ? { kind: "runningNotConnected", engineName: target.name }
+      : stoppedStateOf(target),
+  );
 }

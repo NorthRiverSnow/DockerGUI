@@ -13,6 +13,8 @@ export function useAppController(deps: { api: MainApi }): {
   connectEngine: () => void;
   retryConnecting: () => void;
   cancelConnecting: () => void;
+  reconnectNow: () => void;
+  giveUpReconnecting: () => void;
 } {
   const [state, dispatch] = useReducer(nextAppState, INITIAL_APP_STATE);
   const [now, setNow] = useState(Date.now);
@@ -51,6 +53,8 @@ export function useAppController(deps: { api: MainApi }): {
   const connectEngine = useCallback(() => void deps.api.connectEngine(), [deps.api]);
   const retryConnecting = useCallback(() => void deps.api.retryConnecting(), [deps.api]);
   const cancelConnecting = useCallback(() => void deps.api.cancelConnecting(), [deps.api]);
+  const reconnectNow = useCallback(() => void deps.api.reconnectNow(), [deps.api]);
+  const giveUpReconnecting = useCallback(() => void deps.api.giveUpReconnecting(), [deps.api]);
 
   return {
     state,
@@ -60,5 +64,7 @@ export function useAppController(deps: { api: MainApi }): {
     connectEngine,
     retryConnecting,
     cancelConnecting,
+    reconnectNow,
+    giveUpReconnecting,
   };
 }

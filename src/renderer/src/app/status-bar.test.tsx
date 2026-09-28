@@ -34,6 +34,8 @@ function renderStatusBar(connection: ConnectionState) {
     onStart: vi.fn(),
     onConnect: vi.fn(),
     onRetry: vi.fn(),
+    onReconnectNow: vi.fn(),
+    onGiveUp: vi.fn(),
   };
   render(
     <MantineProvider theme={THEME}>
@@ -108,7 +110,7 @@ describe("状態ごとに出すボタン", () => {
     {
       title: "再接続待ち",
       connection: { kind: "reconnectWaiting", engineName: "colima", retryAt: NOW + 1000 },
-      buttons: [],
+      buttons: ["今すぐ再接続", "あきらめる"],
     },
     {
       title: "再接続中",
@@ -160,6 +162,32 @@ describe("ボタンを押したとき", () => {
     fireEvent.click(screen.getByRole("button", { name: "再試行" }));
 
     expect(handlers.onRetry).toHaveBeenCalledOnce();
+  });
+});
+
+describe("再接続待ちのボタンを押したとき", () => {
+  const waiting: ConnectionState = {
+    kind: "reconnectWaiting",
+    engineName: "colima",
+    retryAt: NOW + 1000,
+  };
+
+  it("［今すぐ再接続］を押すと、onReconnectNow だけを呼ぶ", () => {
+    const handlers = renderStatusBar(waiting);
+
+    fireEvent.click(screen.getByRole("button", { name: "今すぐ再接続" }));
+
+    expect(handlers.onReconnectNow).toHaveBeenCalledOnce();
+    expect(handlers.onGiveUp).not.toHaveBeenCalled();
+  });
+
+  it("［あきらめる］を押すと、onGiveUp だけを呼ぶ", () => {
+    const handlers = renderStatusBar(waiting);
+
+    fireEvent.click(screen.getByRole("button", { name: "あきらめる" }));
+
+    expect(handlers.onGiveUp).toHaveBeenCalledOnce();
+    expect(handlers.onReconnectNow).not.toHaveBeenCalled();
   });
 });
 

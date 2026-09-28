@@ -25,6 +25,8 @@ export function AppView(props: {
   onConnectEngine: () => void;
   onRetryConnecting: () => void;
   onCancelConnecting: () => void;
+  onReconnectNow: () => void;
+  onGiveUpReconnecting: () => void;
 }) {
   const targetLink = (target: Target) => (
     <NavLink
@@ -51,6 +53,8 @@ export function AppView(props: {
             onStart={props.onStartEngine}
             onConnect={props.onConnectEngine}
             onRetry={props.onRetryConnecting}
+            onReconnectNow={props.onReconnectNow}
+            onGiveUp={props.onGiveUpReconnecting}
           />
         )}
       </AppShell.Header>

@@ -15,10 +15,14 @@ type EngineVersion = z.infer<typeof engineVersionSchema>;
 
 /**
  * エンジンに GET /version を送り、使う版を決める。
+ * options.timeoutMs を渡すと、その間に応答が無ければ engineTimedOut を返す。
  * why: この要求だけは URL に版を付けない。使う版は、この応答を読むまで決まらない。
  */
-export async function negotiatedApiVersionOf(agent: http.Agent): Promise<Result<string>> {
-  const response = await requestJson(agent, "GET", "/version", engineVersionSchema);
+export async function negotiatedApiVersionOf(
+  agent: http.Agent,
+  options: { timeoutMs?: number } = {},
+): Promise<Result<string>> {
+  const response = await requestJson(agent, "GET", "/version", engineVersionSchema, options);
   return response.ok ? apiVersionOf(response.value) : response;
 }
 

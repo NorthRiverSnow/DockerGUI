@@ -12,6 +12,8 @@ export type ConnectionDeps = {
   now: () => number;
   /** 再接続を待つ間に使う。milliseconds が過ぎたら解決する。 */
   sleep: (milliseconds: number) => Promise<void>;
+  /** 再接続の 1 回で、エンジンの応答を待つ時間（docs/spec/connection.md の「再接続の繰り返し」）。 */
+  reconnectTimeoutMs: number;
   onStateChanged: (state: ConnectionState) => void;
 };
 
@@ -25,6 +27,14 @@ export type Attempt = {
   abort: () => void;
 };
 
+/** 再接続の繰り返し。connection.ts の reconnectNow と giveUpReconnecting が操作する。 */
+export type ReconnectLoop = {
+  /** true にすると、待ち時間が終わった後に再接続せず、繰り返しをやめる。 */
+  givenUp: boolean;
+  /** 再接続待ちの待ち時間を飛ばす。再接続待ちでないときに呼んでも、待っているものが無いので何も起きない。 */
+  skipWait: () => void;
+};
+
 /** 接続の処理が持つ値。 */
 export type ConnectionContext = {
   deps: ConnectionDeps;
@@ -34,6 +44,8 @@ export type ConnectionContext = {
   /** いま扱っているエンジン。探し終える前は undefined。 */
   target: EngineTarget | undefined;
   attempt: Attempt;
+  /** 再接続を始める前は undefined。 */
+  reconnectLoop: ReconnectLoop | undefined;
   /** 接続済みのエンジンとの接続が切れたときに呼ぶ。 */
   onDisconnected: (target: EngineTarget) => void;
 };

@@ -17,6 +17,8 @@ const meta = {
     onStart: fn(),
     onConnect: fn(),
     onRetry: fn(),
+    onReconnectNow: fn(),
+    onGiveUp: fn(),
   },
   // why: 画面の言語の文は、上の帯で選んだ言語で render が上書きする。Controls で書き換えても効かないので、欄に出さない。
   argTypes: { messages: { table: { disable: true } } },

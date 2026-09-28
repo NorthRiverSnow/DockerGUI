@@ -3,7 +3,13 @@ import type { Failure } from "../../../shared/result";
 import { engineClientOf } from "../../engine-api/client";
 import { negotiatedApiVersionOf } from "../../engine-api/version";
 import { socketAgentOf } from "../../os/agent";
-import { changeState, stoppedStateOf, type Attempt, type ConnectionContext } from "./context";
+import {
+  changeState,
+  stoppedStateOf,
+  type Attempt,
+  type ConnectionContext,
+  type ReconnectLoop,
+} from "./context";
 import { CONTEXT_LIST_COMMAND, commandLineOf, type EngineTarget } from "./discover";
 import { searchedEngineOf, type SearchResult } from "./search";
 
@@ -90,23 +96,27 @@ export async function connectEngine(
   changeState(connectionContext, { kind: "unavailable", engineName: target.name, failure });
 }
 
-/** 状態を再接続待ちにして、delay だけ待つ。 */
+/** 状態を再接続待ちにして、delay だけ待つ。loop の skipWait を呼ぶと、すぐに待つのをやめる。 */
 export async function waitBeforeReconnect(
   connectionContext: ConnectionContext,
   target: EngineTarget,
   delay: number,
+  loop: ReconnectLoop,
 ): Promise<void> {
   changeState(connectionContext, {
     kind: "reconnectWaiting",
     engineName: target.name,
     retryAt: connectionContext.deps.now() + delay,
   });
-  await connectionContext.deps.sleep(delay);
+  const skipped = new Promise<void>((resolve) => {
+    loop.skipWait = resolve;
+  });
+  await Promise.race([connectionContext.deps.sleep(delay), skipped]);
 }
 
 /**
  * 状態を再接続中にして、target に繋ぎ直す。繋がったら接続済みにし、エンジンが止まっていれば停止中にして "settled" を返す。
- * それ以外の失敗では、状態を変えずに "retry" を返す。
+ * それ以外の失敗では、状態を変えずに "retry" を返す。応答が reconnectTimeoutMs の間に無いときも、失敗として扱う。
  * 停止中にしても自動では起動しない（docs/spec/connection.md の「実行中に切断されたときは、自動で起動しない」）。
  */
 export async function reconnectEngine(
@@ -119,7 +129,9 @@ export async function reconnectEngine(
     startedAt: connectionContext.deps.now(),
   });
   const agent = socketAgentOf(target.socketPath);
-  const version = await negotiatedApiVersionOf(agent);
+  const version = await negotiatedApiVersionOf(agent, {
+    timeoutMs: connectionContext.deps.reconnectTimeoutMs,
+  });
   if (version.ok) {
     changeToConnected(connectionContext, target, agent, version.value);
     return "settled";

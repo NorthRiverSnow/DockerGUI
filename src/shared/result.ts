@@ -8,6 +8,7 @@ export const expectedFailureSchema = z.discriminatedUnion("code", [
     engineMessage: z.string(),
   }),
   z.object({ kind: z.literal("expected"), code: z.literal("apiVersionUnsupported") }),
+  z.object({ kind: z.literal("expected"), code: z.literal("engineTimedOut") }),
   z.object({ kind: z.literal("expected"), code: z.literal("engineNotFound") }),
   z.object({
     kind: z.literal("expected"),

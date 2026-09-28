@@ -20,6 +20,8 @@ export function App(props: { api: MainApi }) {
       onConnectEngine={controller.connectEngine}
       onRetryConnecting={controller.retryConnecting}
       onCancelConnecting={controller.cancelConnecting}
+      onReconnectNow={controller.reconnectNow}
+      onGiveUpReconnecting={controller.giveUpReconnecting}
     />
   );
 }

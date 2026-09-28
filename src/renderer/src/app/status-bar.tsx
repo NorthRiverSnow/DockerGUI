@@ -23,6 +23,8 @@ export function StatusBar(props: {
   onStart: () => void;
   onConnect: () => void;
   onRetry: () => void;
+  onReconnectNow: () => void;
+  onGiveUp: () => void;
 }) {
   const { connection, messages } = props;
   return (
@@ -51,6 +53,16 @@ export function StatusBar(props: {
           <Button size="xs" onClick={props.onRetry}>
             {messages.buttons.retry}
           </Button>
+        )}
+        {connection.kind === "reconnectWaiting" && (
+          <>
+            <Button size="xs" onClick={props.onReconnectNow}>
+              {messages.buttons.reconnectNow}
+            </Button>
+            <Button size="xs" variant="default" onClick={props.onGiveUp}>
+              {messages.buttons.giveUp}
+            </Button>
+          </>
         )}
         {connection.kind === "runningNotConnected" && (
           <Button size="xs" onClick={props.onConnect}>

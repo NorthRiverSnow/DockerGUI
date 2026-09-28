@@ -9,7 +9,14 @@ export type AppMessages = {
   statusLine: (connection: ConnectionState, now: number) => string;
   /** 経過した時間（docs/spec/common.md の「待たせるときの表示」）。 */
   elapsed: (milliseconds: number) => string;
-  buttons: { cancel: string; start: string; connect: string; retry: string };
+  buttons: {
+    cancel: string;
+    start: string;
+    connect: string;
+    retry: string;
+    reconnectNow: string;
+    giveUp: string;
+  };
 };
 
 export const APP_MESSAGES: Record<Language, AppMessages> = {
@@ -25,7 +32,14 @@ export const APP_MESSAGES: Record<Language, AppMessages> = {
       settings: "設定",
     },
     elapsed: (milliseconds) => `経過 ${minutesAndSecondsOf(milliseconds)}`,
-    buttons: { cancel: "中止", start: "起動", connect: "接続", retry: "再試行" },
+    buttons: {
+      cancel: "中止",
+      start: "起動",
+      connect: "接続",
+      retry: "再試行",
+      reconnectNow: "今すぐ再接続",
+      giveUp: "あきらめる",
+    },
     statusLine: (connection, now) => {
       switch (connection.kind) {
         case "searching":
@@ -61,7 +75,14 @@ export const APP_MESSAGES: Record<Language, AppMessages> = {
       settings: "Settings",
     },
     elapsed: (milliseconds) => `Elapsed ${minutesAndSecondsOf(milliseconds)}`,
-    buttons: { cancel: "Cancel", start: "Start", connect: "Connect", retry: "Retry" },
+    buttons: {
+      cancel: "Cancel",
+      start: "Start",
+      connect: "Connect",
+      retry: "Retry",
+      reconnectNow: "Reconnect now",
+      giveUp: "Give up",
+    },
     statusLine: (connection, now) => {
       switch (connection.kind) {
         case "searching":
@@ -113,6 +134,8 @@ function jaCauseOf(failure: Failure): string {
       return "応答がありません";
     case "apiVersionUnsupported":
       return "DockerGUI が対応していない Engine API の版です";
+    case "engineTimedOut":
+      return "時間内に応答がありません";
     case "engineNotFound":
       return "Docker のエンジンが見つかりません";
     case "engineStartFailed":
@@ -131,6 +154,8 @@ function enCauseOf(failure: Failure): string {
       return "no response";
     case "apiVersionUnsupported":
       return "the Engine API version is not supported by DockerGUI";
+    case "engineTimedOut":
+      return "the engine did not respond in time";
     case "engineNotFound":
       return "no Docker engine was found";
     case "engineStartFailed":

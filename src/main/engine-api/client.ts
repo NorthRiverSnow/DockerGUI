@@ -44,28 +44,45 @@ function watchOf(agent: http.Agent, path: string): EngineWatch {
  * 要求を 1 つ送り、応答の本文を schema で検査して返す。例外を投げない。
  * 応答が 2xx でなければ、エンジンが返した文を engineRejected にして返す。
  * エンジンに繋がらなければ、engineUnreachable を返す。
+ * options.timeoutMs を渡すと、その間に何も届かなければ要求をやめ、engineTimedOut を返す。
  */
 export function requestJson<T>(
   agent: http.Agent,
   method: string,
   path: string,
   schema: z.ZodType<T>,
+  options: { timeoutMs?: number } = {},
 ): Promise<Result<T>> {
   return new Promise((resolve) => {
-    const request = http.request({ agent, method, path, host: "docker" }, (response) => {
-      const chunks: Buffer[] = [];
-      response.on("data", (chunk: Buffer) => chunks.push(chunk));
-      response.on("end", () => {
-        const body = Buffer.concat(chunks).toString("utf8");
-        const status = response.statusCode ?? 0;
-        resolve(
-          status >= 200 && status < 300 ? parsedResultOf(body, schema) : rejectedResultOf(body),
-        );
-      });
+    let timedOut = false;
+    const request = http.request(
+      { agent, method, path, host: "docker", timeout: options.timeoutMs },
+      (response) => {
+        const chunks: Buffer[] = [];
+        response.on("data", (chunk: Buffer) => chunks.push(chunk));
+        response.on("end", () => {
+          const body = Buffer.concat(chunks).toString("utf8");
+          const status = response.statusCode ?? 0;
+          resolve(
+            status >= 200 && status < 300 ? parsedResultOf(body, schema) : rejectedResultOf(body),
+          );
+        });
+      },
+    );
+    // why: Node の timeout は、時間が来たことを知らせるだけで、要求を止めない。自分で止める。
+    request.on("timeout", () => {
+      timedOut = true;
+      request.destroy();
     });
     // why: エンジンに繋がらないときは、応答が返らないので、ステータスコードでは判断できない。
     // 代わりに error の出来事が起きるので、ステータスコードとは別に、エラーの code で判断する。
-    request.on("error", (error: NodeJS.ErrnoException) => resolve(connectionFailureOf(error)));
+    request.on("error", (error: NodeJS.ErrnoException) =>
+      resolve(
+        timedOut
+          ? { ok: false, failure: { kind: "expected", code: "engineTimedOut" } }
+          : connectionFailureOf(error),
+      ),
+    );
     request.end();
   });
 }

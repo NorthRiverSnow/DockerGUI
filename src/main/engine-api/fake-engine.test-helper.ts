@@ -19,6 +19,21 @@ export function unusedSocketPath(): string {
   return path.join(os.tmpdir(), `dg-fake-engine-${randomUUID().slice(0, 8)}.sock`);
 }
 
+/** テストで使う。接続は受け付けるが、どの要求にも応答を返さないサーバを unix ソケットで立てる。 */
+export function startSilentEngine(
+  socketPath: string = unusedSocketPath(),
+): Promise<Pick<FakeEngine, "socketPath" | "close">> {
+  const server = http.createServer(() => {});
+  const close = () =>
+    new Promise<void>((resolve) => {
+      server.close(() => resolve());
+      server.closeAllConnections();
+    });
+  return new Promise((resolve) => {
+    server.listen(socketPath, () => resolve({ socketPath, close }));
+  });
+}
+
 /**
  * テストで使う。エンジンの代わりに、どの要求にも決めた応答を返すサーバを unix ソケットで立てる。
  * ただし /events で終わる要求には、本物のエンジンと同じく、本文を送らずに接続を開いたままにする。

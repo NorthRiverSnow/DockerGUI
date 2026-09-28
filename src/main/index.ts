@@ -37,6 +37,8 @@ const connection = createConnection({
   autoStart: true,
   now: Date.now,
   sleep,
+  // docs/spec/connection.md の「再接続の繰り返し」
+  reconnectTimeoutMs: 10_000,
   onStateChanged: (state) => {
     for (const window of BrowserWindow.getAllWindows()) {
       sendNotification(window.webContents, "connection:connectionStateChanged", state);
@@ -63,6 +65,14 @@ registerRequestHandler("connection:retryConnecting", () => {
 });
 registerRequestHandler("connection:cancelConnecting", () => {
   connection.cancel();
+  return { ok: true, value: undefined };
+});
+registerRequestHandler("connection:reconnectNow", () => {
+  connection.reconnectNow();
+  return { ok: true, value: undefined };
+});
+registerRequestHandler("connection:giveUpReconnecting", () => {
+  void connection.giveUpReconnecting();
   return { ok: true, value: undefined };
 });
 

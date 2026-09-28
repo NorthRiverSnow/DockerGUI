@@ -33,9 +33,9 @@ description: テストが本当に守っているかを、実装をわざと壊�
 **`git checkout` で戻さない。** 未コミットの変更が消える。実際に失う事故が起きる。
 
 ```
-cp path/to/target.ts /tmp/target.bak     # 作業用の場所へ退避
+cp path/to/target.ts <作業用の一時フォルダ>/target.bak     # 作業用の場所へ退避
 # …壊す…
-cp /tmp/target.bak path/to/target.ts     # 戻す
+cp <作業用の一時フォルダ>/target.bak path/to/target.ts     # 戻す
 ```
 
 複数ファイルを壊すなら、まとめて退避する。**壊す前に退避が済んでいることを確認する。**
@@ -77,7 +77,7 @@ cp /tmp/target.bak path/to/target.ts     # 戻す
 ## 5. 戻して、全件のテストを実行する
 
 ```
-cp /tmp/target.bak path/to/target.ts
+cp <作業用の一時フォルダ>/target.bak path/to/target.ts
 <全件のテストのコマンド>
 ```
 

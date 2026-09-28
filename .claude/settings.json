@@ -51,5 +51,15 @@
         ]
       }
     ]
+  },
+  "skillOverrides": {
+    "docs": "off",
+    "docx": "off",
+    "pptx": "off",
+    "xlsx": "off",
+    "pdf": "off",
+    "morning": "off",
+    "import-memory": "off",
+    "managementdocs-dashboard-fix": "off"
   }
 }

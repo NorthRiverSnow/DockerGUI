@@ -84,6 +84,7 @@ screens/containers
 ├── controller.test.ts Controller のテスト
 ├── screen.tsx         Controller を呼び、View に props で渡す（renderer.md）
 ├── view.tsx           View
+├── view.test.tsx      View のテスト（renderer.md の「View のテスト」）
 ├── view.module.css    View の見た目のうち、Mantine の props で書けないもの
 └── view.stories.tsx   View の Storybook（Storybook を入れた後）
 ```

@@ -98,6 +98,25 @@ function useContainersController(deps: {
 テストでは、決めた応答を返す見せかけの窓口を引数に渡し、Controller が Model に正しい出来事を渡すかを確かめる。
 main も Electron も起動せずに済む。
 
+### View のテスト
+
+**View のテストでは、状態ごとに出すボタンと、ボタンを押したときに呼ぶ関数を確かめる。** 色と配置は確かめない
+（`CLAUDE.md` の「テスト」——見た目には書かない。見た目は Storybook で確かめる）。
+
+| 確かめること | 例 |
+| --- | --- |
+| 状態ごとに出すボタン | 「接続不可」で原因が「応答がありません」なら ［再試行］ だけを出す |
+| ボタンと、呼ぶ関数の結び付き | ［再試行］ を押すと `onRetry` を呼ぶ |
+| 状態から作った文が、画面に出ているか | 「再接続待ち」で、残りの秒数を出す |
+
+**要素は、ボタンの名前と役割で探す**（Testing Library の `getByRole`）。CSS のクラス名では探さない。
+クラス名で探すと、見た目を直しただけでテストが失敗する。
+
+**テストのファイルの 1 行目に `// @vitest-environment jsdom` を書く。** 書いたファイルだけを、ブラウザの代わりの jsdom の中で実行する。
+main のテストは Node のまま実行する。
+
+**why: Mantine は、OS の配色を `window.matchMedia` で読む。** jsdom には `window.matchMedia` が無いので、テストの中で、どの条件にも当てはまらないと答える関数を置く。
+
 ## main の窓口（`src/renderer/src/api`）
 
 **`window.api` を呼ぶ処理を、1 つのモジュールに集める**（`design-policy.md` の「Storybook を使う条件」）。

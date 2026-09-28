@@ -39,6 +39,7 @@ Windows で確認できないことに対して、次の 3 つで備える。
 | CSS の検査 | stylelint 17 と `stylelint-use-logical` 2（17.15.0 と 2.1.3 で確認） | 原則 15 と原則 16 を検査で守らせる。Vite+ に同梱されていないので、別に入れる |
 | Electron のビルド | electron-vite 5（安定版）+ Vite 7 | main・preload・renderer の 3 つを 1 つの設定でビルドでき、preload を CommonJS で出力する設定を持つ |
 | テスト | Vitest 4（Vite+ 0.3.3 に同梱の 4.1.11） | 別途の導入が要らない |
+| 画面のテスト | jsdom 30 と Testing Library（`@testing-library/react` 16.3.3 で確認） | Electron を起動せずに、Vitest の中で View を描き、ボタンを押せる。Testing Library は、画面を読む人と同じく、ボタンの名前で要素を探す |
 | lint と整形 | oxlint と oxfmt（Vite+ に同梱） | ESLint と Prettier を別途入れずに済む |
 | 画面部品の確認 | Storybook | Electron を起動せずに、コンテナが 1 つも無いときや失敗したときの見た目を確認できる |
 | ログの記録 | `electron-log` | OS ごとの置き場所の判定、ファイルの回転、renderer からの転送を自分で書かずに済む |
@@ -126,7 +127,7 @@ Storybook は Electron ではなく**ブラウザ**で画面部品を描く。`w
 - **View は `window.api` を直接呼ばない**（原則 14）。
 - **main を呼ぶ口を 1 つのモジュールに集める。** Storybook では main を呼ぶモジュールを差し替える。
 
-**Storybook はテストではなく、見た目を確認する手段として使う。**
+**Storybook はテストではなく、見た目を確認する手段として使う。** 動きは、画面のテスト（`renderer.md` の「View のテスト」）で確かめる。
 「振る舞いには書く。見た目には書かない」（`CLAUDE.md` の「テスト」）は変えない。
 Storybook が担うのは、Electron を起動せずに、コンテナが 1 つも無いときや
 接続に失敗したときの見た目を確かめることに限る。

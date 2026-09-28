@@ -8,7 +8,9 @@ const LANGUAGES: Language[] = ["ja", "en"];
 const STATES_WITH_ENGINE: ConnectionState[] = [
   { kind: "connecting", engineName: "colima", startedAt: 0 },
   { kind: "connected", engineName: "colima" },
-  { kind: "stopped", engineName: "colima" },
+  { kind: "stopped", engineName: "colima", startable: true },
+  { kind: "starting", engineName: "colima", command: "colima start", startedAt: 0 },
+  { kind: "runningNotConnected", engineName: "colima" },
   { kind: "unavailable", engineName: "colima", failure: { kind: "unexpected" } },
 ];
 
@@ -53,5 +55,16 @@ describe("statusLine", () => {
     for (const language of LANGUAGES) {
       expect(APP_MESSAGES[language].statusLine(rejected)).toContain("daemon is shutting down");
     }
+  });
+});
+
+describe("elapsed", () => {
+  it("経過した時間を、分と秒の 2 桁ずつで出す", () => {
+    expect(APP_MESSAGES.ja.elapsed(18_400)).toBe("経過 00:18");
+    expect(APP_MESSAGES.en.elapsed(125_000)).toBe("Elapsed 02:05");
+  });
+
+  it("1 時間を超えたら、分の桁を増やす", () => {
+    expect(APP_MESSAGES.ja.elapsed(3_723_000)).toBe("経過 62:03");
   });
 });

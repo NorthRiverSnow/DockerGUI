@@ -34,6 +34,7 @@ Windows で確認できないことに対して、次の 3 つで備える。
 | ツールチェーン | Vite+（`vp`） | パッケージ管理・テスト・lint・整形・タスク実行を 1 つのコマンドで行える |
 | 画面 | React | 資料が最も多く、詰まったときに調べがつく |
 | 画面の部品 | Mantine 9（9.6.2 で確認） | 下に理由を書く |
+| アイコン | Phosphor Icons（`@phosphor-icons/react` 2.1.10 で確認） | Mantine 9 の文書が勧めている。Mantine の文書の例で使われ、Mantine のパッケージにも依存するものがある（Mantine の文書で確認） |
 | 見た目 | CSS Modules（Vite に同梱） | 部品ごとに CSS のファイルを分けられ、クラス名がほかの部品とぶつからない。Mantine の見た目もふつうの CSS なので、見た目の付け方が 1 つで済む |
 | CSS の検査 | stylelint 17 と `stylelint-use-logical` 2（17.15.0 と 2.1.3 で確認） | 原則 15 と原則 16 を検査で守らせる。Vite+ に同梱されていないので、別に入れる |
 | Electron のビルド | electron-vite 5（安定版）+ Vite 7 | main・preload・renderer の 3 つを 1 つの設定でビルドでき、preload を CommonJS で出力する設定を持つ |
@@ -429,3 +430,41 @@ Mantine の CSS の変数は、`theme.ts` の値と配色に合わせて値が�
 **ターミナルの本文の色は、`@xterm/xterm` の設定に JavaScript で渡す。** `@xterm/xterm` はコンテナの出力を自分で描くので、
 CSS のファイルに書いた色を使わない。色の値は Mantine の CSS の変数から読み出して渡し、配色が変わったら渡し直す
 （`design/renderer.md` の「ターミナルの本文の色は、JavaScript で渡す」）。
+
+### 17. 流れの関数は、手順の関数を呼ぶだけにする
+
+**いくつかの手順を順に行う関数（流れの関数）には、手順の中身を書かない。** 手順ごとに関数を作り、流れの関数はそれを呼んで、結果で分けるだけにする。
+
+```ts
+/** 接続先を探して繋ぐ。止まっていて起動する手段を知っていれば、起動してから繋ぐ。 */
+async function searchAndConnect(connectionContext: ConnectionContext): Promise<void> {
+  const attempt = beginAttempt(connectionContext);
+  const found = await searchEngine(connectionContext);
+  switch (found.kind) {
+    case "running":
+      await connectEngine(connectionContext, found.target, attempt, { ifUnreachable: "stopped" });
+      return;
+    case "startable":
+      await startAndConnect(connectionContext, found.target, attempt);
+      return;
+    // …
+  }
+}
+```
+
+**`createXxx` のように値をまとめて返す関数の中に、処理を書き込まない。** 中に置くのは、持つ値の用意と、外に出す操作を関数につなぐことだけにする。
+処理は外の関数にして、持つ値を引数で受け取る（例: `src/main/features/connection/connection.ts` の `createConnection` と `ConnectionContext`）。
+
+**why: 流れと手順が混ざると、何がどの順に起きるかを、細かい処理を読み飛ばしながら探すことになる。**
+流れの関数が手順の呼び出しだけなら、流れは上から読むだけで分かり、手順の中身は手順の関数を開いたときだけ読めばよい。
+`createXxx` の中に処理を書き込むと、`createXxx` の中の変数に縛られて、処理を外に出せなくなる。
+
+### 18. 書き方で意図を隠さない
+
+| 書かない | 書く | why |
+| --- | --- | --- |
+| 分かれ道の条件の中に、`!` や型の書き方を詰め込む（`!(LIST as readonly string[]).includes(x)`） | 条件に名前を付けた関数にする（`if (!isNotificationChannel(channel))`） | `!` が型の書き方に埋もれると、条件を逆に読み違える |
+| `as` で、型の検査をすり抜けて形を合わせる（関数に項目を後から付けて `as` で型に合わせる、など） | ふつうのオブジェクトを返す | `as` を使うと、項目の付け忘れを型の検査で見つけられない |
+| 型ですでに決まっている値に、`satisfies` で型を確かめ直す | 書かない | 型で守っているように見えるが、何も増えない。実行するときに確かめているのは別の処理なのに、型で守っていると読み違える |
+| 後から差し替える値を、差し替える場所を書かずに置く（最初に何もしない関数を入れておく、など） | 型の説明に、差し替える場所と差し替える値を書く（`src/main/features/connection/context.ts` の `Attempt` の `abort`） | 差し替える場所が別のファイルにあると、何もしない関数が置かれている理由が読めない |
+

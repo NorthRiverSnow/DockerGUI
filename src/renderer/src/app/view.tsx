@@ -1,7 +1,8 @@
-import { AppShell, Divider, Group, NavLink, Text, Title } from "@mantine/core";
+import { AppShell, Divider, NavLink, Title } from "@mantine/core";
 import type { ConnectionState } from "../../../shared/connection";
 import type { AppMessages } from "./messages";
 import type { Target } from "./model";
+import { StatusBar } from "./status-bar";
 
 // docs/spec/common.md の「画面の構成」の、左の一覧の並び
 const TARGETS_ABOVE_DIVIDER: Target[] = [
@@ -17,8 +18,12 @@ const TARGETS_BELOW_DIVIDER: Target[] = ["diagnostics", "settings"];
 export function AppView(props: {
   selectedTarget: Target;
   connection: ConnectionState | undefined;
+  now: number;
   messages: AppMessages;
   onSelectTarget: (target: Target) => void;
+  onStartEngine: () => void;
+  onConnectEngine: () => void;
+  onCancelConnecting: () => void;
 }) {
   const targetLink = (target: Target) => (
     <NavLink
@@ -32,9 +37,16 @@ export function AppView(props: {
   return (
     <AppShell header={{ height: 48 }} navbar={{ width: 200, breakpoint: 0 }} padding="md">
       <AppShell.Header>
-        <Group h="100%" px="md">
-          {props.connection && <Text size="sm">{props.messages.statusLine(props.connection)}</Text>}
-        </Group>
+        {props.connection && (
+          <StatusBar
+            connection={props.connection}
+            now={props.now}
+            messages={props.messages}
+            onCancel={props.onCancelConnecting}
+            onStart={props.onStartEngine}
+            onConnect={props.onConnectEngine}
+          />
+        )}
       </AppShell.Header>
       <AppShell.Navbar p="xs">
         {TARGETS_ABOVE_DIVIDER.map(targetLink)}

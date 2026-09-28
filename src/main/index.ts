@@ -1,8 +1,9 @@
+import { homedir } from "node:os";
 import { join } from "node:path";
 import { app, BrowserWindow } from "electron";
 import { createConnection } from "./features/connection/connection";
 import { registerRequestHandler, sendNotification } from "./ipc/ipc";
-import { runProcess } from "./os/process";
+import { runCommand, startCommand } from "./os/command";
 
 function createMainWindow(): void {
   const window = new BrowserWindow({
@@ -28,7 +29,12 @@ function createMainWindow(): void {
 }
 
 const connection = createConnection({
-  runProcess,
+  runCommand,
+  startCommand,
+  homeDir: homedir(),
+  defaultSocketPath: "/var/run/docker.sock",
+  // TODO: 設定の保存を作るステップで、設定の「エンジンの起動」から読む（docs/spec/settings.md の「接続」）
+  autoStart: true,
   now: Date.now,
   onStateChanged: (state) => {
     for (const window of BrowserWindow.getAllWindows()) {
@@ -41,6 +47,19 @@ registerRequestHandler("connection:getConnectionState", () => ({
   ok: true,
   value: connection.state(),
 }));
+// why: 起動は数十秒かかる。終わるまで応答を待たせず、受け付けたらすぐ返す。結果は接続の状態の知らせで届く。
+registerRequestHandler("connection:startEngine", () => {
+  void connection.startEngine();
+  return { ok: true, value: undefined };
+});
+registerRequestHandler("connection:connectEngine", () => {
+  void connection.connectEngine();
+  return { ok: true, value: undefined };
+});
+registerRequestHandler("connection:cancelConnecting", () => {
+  void connection.cancel();
+  return { ok: true, value: undefined };
+});
 
 void app.whenReady().then(() => {
   createMainWindow();

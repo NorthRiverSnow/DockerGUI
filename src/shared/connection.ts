@@ -7,9 +7,17 @@ import { failureSchema } from "./result";
  */
 export const connectionStateSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("searching"), command: z.string(), startedAt: z.number() }),
+  z.object({
+    kind: z.literal("starting"),
+    engineName: z.string(),
+    command: z.string(),
+    startedAt: z.number(),
+  }),
   z.object({ kind: z.literal("connecting"), engineName: z.string(), startedAt: z.number() }),
   z.object({ kind: z.literal("connected"), engineName: z.string() }),
-  z.object({ kind: z.literal("stopped"), engineName: z.string() }),
+  z.object({ kind: z.literal("runningNotConnected"), engineName: z.string() }),
+  /** startable は、DockerGUI が起動する手段を知っているか（docs/spec/connection.md の「起動する手段が分からないとき」）。 */
+  z.object({ kind: z.literal("stopped"), engineName: z.string(), startable: z.boolean() }),
   z.object({ kind: z.literal("unavailable"), engineName: z.string(), failure: failureSchema }),
 ]);
 

@@ -10,6 +10,9 @@ declare global {
 /** main の窓口（docs/design/renderer.md の「main の窓口」）。 */
 export type MainApi = {
   getConnectionState: () => Promise<RequestResponse["connection:getConnectionState"]>;
+  startEngine: () => Promise<RequestResponse["connection:startEngine"]>;
+  connectEngine: () => Promise<RequestResponse["connection:connectEngine"]>;
+  cancelConnecting: () => Promise<RequestResponse["connection:cancelConnecting"]>;
   /** 受け取りをやめる関数を返す。 */
   onConnectionStateChanged: (
     listener: (state: NotificationValue<"connection:connectionStateChanged">) => void,
@@ -23,6 +26,18 @@ export function realMainApiOf(windowApi: WindowApi): MainApi {
     getConnectionState: () =>
       windowApi.invoke("connection:getConnectionState") as Promise<
         RequestResponse["connection:getConnectionState"]
+      >,
+    startEngine: () =>
+      windowApi.invoke("connection:startEngine") as Promise<
+        RequestResponse["connection:startEngine"]
+      >,
+    connectEngine: () =>
+      windowApi.invoke("connection:connectEngine") as Promise<
+        RequestResponse["connection:connectEngine"]
+      >,
+    cancelConnecting: () =>
+      windowApi.invoke("connection:cancelConnecting") as Promise<
+        RequestResponse["connection:cancelConnecting"]
       >,
     onConnectionStateChanged: (listener) =>
       windowApi.on("connection:connectionStateChanged", (value) =>

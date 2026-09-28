@@ -1,57 +1,126 @@
 import type { ConnectionState } from "../../../shared/connection";
-import { engineClientOf, type EngineClient } from "../../engine-api/client";
-import { negotiatedApiVersionOf } from "../../engine-api/version";
-import { socketAgentOf } from "../../os/agent";
-import type { RunProcess } from "../../os/process";
-import { CONTEXT_LIST_COMMAND, discoveredEngineTargetOf } from "./discover";
+import type { EngineClient } from "../../engine-api/client";
+import { isSocketAccepting } from "../../os/socket";
+import {
+  beginAttempt,
+  changeState,
+  stoppedStateOf,
+  type Attempt,
+  type ConnectionContext,
+  type ConnectionDeps,
+} from "./context";
+import { CONTEXT_LIST_COMMAND, commandLineOf, type EngineTarget } from "./discover";
+import {
+  changeToEngineNotFound,
+  changeToStopped,
+  connectEngine,
+  searchEngine,
+  startEngine,
+} from "./steps";
 
 export type Connection = {
-  /** 接続先を探し、繋ぐ。状態が変わるたびに onStateChanged を呼ぶ。 */
+  /** 接続先を探し、繋ぐ。止まっていて、起動する手段を知っていれば、起動してから繋ぐ。 */
   connect: () => Promise<void>;
+  /** 停止中のエンジンを起動し、起動が終わったら繋ぐ。起動できる停止中でなければ何もしない。 */
+  startEngine: () => Promise<void>;
+  /** 動作中・未接続のエンジンに繋ぐ。動作中・未接続でなければ何もしない。 */
+  connectEngine: () => Promise<void>;
+  /**
+   * 起動と接続を中止する。起動中なら起動のコマンドを止める。
+   * 止めた後にエンジンが動いているかを確かめ直し、動作中・未接続か停止中にする（docs/spec/connection.md の「［中止］を押した後の状態」）。
+   */
+  cancel: () => Promise<void>;
   state: () => ConnectionState;
   /** 繋がっていなければ undefined。 */
   client: () => EngineClient | undefined;
 };
 
-const SEARCH_COMMAND = [CONTEXT_LIST_COMMAND.command, ...CONTEXT_LIST_COMMAND.args].join(" ");
-
-export function createConnection(deps: {
-  runProcess: RunProcess;
-  now: () => number;
-  onStateChanged: (state: ConnectionState) => void;
-}): Connection {
-  let state: ConnectionState = {
-    kind: "searching",
-    command: SEARCH_COMMAND,
-    startedAt: deps.now(),
+export function createConnection(deps: ConnectionDeps): Connection {
+  const connectionContext: ConnectionContext = {
+    deps,
+    state: {
+      kind: "searching",
+      command: commandLineOf(CONTEXT_LIST_COMMAND),
+      startedAt: deps.now(),
+    },
+    client: undefined,
+    target: undefined,
+    attempt: { cancelled: false, abort: () => {} },
   };
-  let client: EngineClient | undefined;
-
-  const changeState = (next: ConnectionState) => {
-    state = next;
-    deps.onStateChanged(next);
+  return {
+    connect: () => searchAndConnect(connectionContext),
+    startEngine: () => startStoppedEngine(connectionContext),
+    connectEngine: () => connectRunningEngine(connectionContext),
+    cancel: () => cancelAttempt(connectionContext),
+    state: () => connectionContext.state,
+    client: () => connectionContext.client,
   };
+}
 
-  const connect = async () => {
-    changeState({ kind: "searching", command: SEARCH_COMMAND, startedAt: deps.now() });
-    const target = await discoveredEngineTargetOf(deps.runProcess);
-    changeState({ kind: "connecting", engineName: target.name, startedAt: deps.now() });
-
-    const agent = socketAgentOf(target.socketPath);
-    const version = await negotiatedApiVersionOf(agent);
-    if (version.ok) {
-      client = engineClientOf(agent, version.value);
-      changeState({ kind: "connected", engineName: target.name });
+/** 接続先を探して繋ぐ。止まっていて起動する手段を知っていれば、起動してから繋ぐ。 */
+async function searchAndConnect(connectionContext: ConnectionContext): Promise<void> {
+  const attempt = beginAttempt(connectionContext);
+  const found = await searchEngine(connectionContext);
+  switch (found.kind) {
+    case "running":
+      await connectEngine(connectionContext, found.target, attempt, { ifUnreachable: "stopped" });
       return;
-    }
-    agent.destroy();
-    const { failure } = version;
-    changeState(
-      failure.kind === "expected" && failure.code === "engineUnreachable"
-        ? { kind: "stopped", engineName: target.name }
-        : { kind: "unavailable", engineName: target.name, failure },
-    );
-  };
+    case "startable":
+      if (!connectionContext.deps.autoStart) {
+        changeToStopped(connectionContext, found.target);
+        return;
+      }
+      await startAndConnect(connectionContext, found.target, attempt);
+      return;
+    case "stoppedWithoutStart":
+      changeToStopped(connectionContext, found.target);
+      return;
+    case "notFound":
+      changeToEngineNotFound(connectionContext);
+  }
+}
 
-  return { connect, state: () => state, client: () => client };
+/** 起動してから繋ぐ。起動した直後のエンジンに繋がらなければ、接続不可にする。 */
+async function startAndConnect(
+  connectionContext: ConnectionContext,
+  target: EngineTarget,
+  attempt: Attempt,
+): Promise<void> {
+  if (await startEngine(connectionContext, target, attempt)) {
+    await connectEngine(connectionContext, target, attempt, { ifUnreachable: "unavailable" });
+  }
+}
+
+/** ［起動］のボタンから呼ぶ。 */
+async function startStoppedEngine(connectionContext: ConnectionContext): Promise<void> {
+  const { state, target } = connectionContext;
+  if (state.kind === "stopped" && state.startable && target) {
+    await startAndConnect(connectionContext, target, beginAttempt(connectionContext));
+  }
+}
+
+/** ［接続］のボタンから呼ぶ。 */
+async function connectRunningEngine(connectionContext: ConnectionContext): Promise<void> {
+  const { state, target } = connectionContext;
+  if (state.kind === "runningNotConnected" && target) {
+    await connectEngine(connectionContext, target, beginAttempt(connectionContext), {
+      ifUnreachable: "stopped",
+    });
+  }
+}
+
+/** ［中止］のボタンから呼ぶ。 */
+async function cancelAttempt(connectionContext: ConnectionContext): Promise<void> {
+  const { state, target, attempt } = connectionContext;
+  if ((state.kind !== "starting" && state.kind !== "connecting") || !target) {
+    return;
+  }
+  attempt.cancelled = true;
+  attempt.abort();
+  changeState(
+    connectionContext,
+    (await isSocketAccepting(target.socketPath))
+      ? { kind: "runningNotConnected", engineName: target.name }
+      : stoppedStateOf(target),
+  );
 }

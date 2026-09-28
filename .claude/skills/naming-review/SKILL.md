@@ -142,6 +142,13 @@ naming-review には、どのプロジェクトでも使える規則だけを書
 ○ const emptyProgress = (counts, answers) => …
 ```
 
+**`context` `state` `result` のような広い名前には、何のものかを足す。** 型の名前に書いてあっても、変数の名前だけを読んだ人には伝わらない。
+
+```
+✗ function negotiate(context: ConnectionContext) …
+○ function negotiate(connectionContext: ConnectionContext) …
+```
+
 ---
 
 ## 置き場所も名前の一部

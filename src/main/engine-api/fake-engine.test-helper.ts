@@ -16,9 +16,15 @@ export function unusedSocketPath(): string {
   return path.join(os.tmpdir(), `dg-fake-engine-${randomUUID().slice(0, 8)}.sock`);
 }
 
-/** テストで使う。エンジンの代わりに、どの要求にも決めた応答を返すサーバを unix ソケットで立てる。 */
-export function startFakeEngine(status: number, body: string): Promise<FakeEngine> {
-  const socketPath = unusedSocketPath();
+/**
+ * テストで使う。エンジンの代わりに、どの要求にも決めた応答を返すサーバを unix ソケットで立てる。
+ * socketPath を渡さなければ、まだ誰も使っていない場所に立てる。
+ */
+export function startFakeEngine(
+  status: number,
+  body: string,
+  socketPath: string = unusedSocketPath(),
+): Promise<FakeEngine> {
   const requestedUrls: string[] = [];
   const server = http.createServer((request, response) => {
     requestedUrls.push(request.url ?? "");

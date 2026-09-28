@@ -9,7 +9,7 @@
 | `socket` | unix ソケットと名前付きパイプに繋ぐ |
 | `child-transport` | 子プロセスの標準入出力を、1 本の通信路として扱う。`stream.Duplex` を継承するクラス（`design-policy.md` の原則 13） |
 | `agent` | HTTP の接続の作り方を、接続方式に合わせて差し替える。`http.Agent` を継承するクラス（原則 13） |
-| `process` | 子プロセスを起動し、起動と終了をログに書く（原則 11）。`docker compose`、`colima start`、`docker context ls` などに使う |
+| `command` | コマンドを子プロセスとして起動し、起動と終了をログに書く（原則 11）。`docker compose`、`colima start`、`docker context ls` などに使う |
 | `files` | 設定ファイルの読み書きと、ログのファイルへの書き出し |
 
 `wsl.exe` の引数の組み立てとパスの変換は、`windows.md` で決める。

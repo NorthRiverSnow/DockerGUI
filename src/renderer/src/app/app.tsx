@@ -8,13 +8,17 @@ import { AppView } from "./view";
 const LANGUAGE: Language = "ja";
 
 export function App(props: { api: MainApi }) {
-  const { state, selectTarget } = useAppController({ api: props.api });
+  const controller = useAppController({ api: props.api });
   return (
     <AppView
-      selectedTarget={state.selectedTarget}
-      connection={state.connection}
+      selectedTarget={controller.state.selectedTarget}
+      connection={controller.state.connection}
+      now={controller.now}
       messages={APP_MESSAGES[LANGUAGE]}
-      onSelectTarget={selectTarget}
+      onSelectTarget={controller.selectTarget}
+      onStartEngine={controller.startEngine}
+      onConnectEngine={controller.connectEngine}
+      onCancelConnecting={controller.cancelConnecting}
     />
   );
 }

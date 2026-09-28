@@ -12,6 +12,7 @@ export type MainApi = {
   getConnectionState: () => Promise<RequestResponse["connection:getConnectionState"]>;
   startEngine: () => Promise<RequestResponse["connection:startEngine"]>;
   connectEngine: () => Promise<RequestResponse["connection:connectEngine"]>;
+  retryConnecting: () => Promise<RequestResponse["connection:retryConnecting"]>;
   cancelConnecting: () => Promise<RequestResponse["connection:cancelConnecting"]>;
   /** 受け取りをやめる関数を返す。 */
   onConnectionStateChanged: (
@@ -34,6 +35,10 @@ export function realMainApiOf(windowApi: WindowApi): MainApi {
     connectEngine: () =>
       windowApi.invoke("connection:connectEngine") as Promise<
         RequestResponse["connection:connectEngine"]
+      >,
+    retryConnecting: () =>
+      windowApi.invoke("connection:retryConnecting") as Promise<
+        RequestResponse["connection:retryConnecting"]
       >,
     cancelConnecting: () =>
       windowApi.invoke("connection:cancelConnecting") as Promise<

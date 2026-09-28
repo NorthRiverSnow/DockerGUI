@@ -8,6 +8,9 @@ export type FakeEngine = {
   socketPath: string;
   /** 受け取った要求の URL。受け取った順に並ぶ。 */
   requestedUrls: string[];
+  /** 繋がっている接続をすべて切る。サーバは動いたままで、新しい接続を受け付ける。 */
+  dropConnections: () => void;
+  /** 繋がっている接続をすべて切ってから、サーバを止め、ソケットのファイルを消す。 */
   close: () => Promise<void>;
 };
 
@@ -18,6 +21,7 @@ export function unusedSocketPath(): string {
 
 /**
  * テストで使う。エンジンの代わりに、どの要求にも決めた応答を返すサーバを unix ソケットで立てる。
+ * ただし /events で終わる要求には、本物のエンジンと同じく、本文を送らずに接続を開いたままにする。
  * socketPath を渡さなければ、まだ誰も使っていない場所に立てる。
  */
 export function startFakeEngine(
@@ -27,18 +31,25 @@ export function startFakeEngine(
 ): Promise<FakeEngine> {
   const requestedUrls: string[] = [];
   const server = http.createServer((request, response) => {
-    requestedUrls.push(request.url ?? "");
+    const url = request.url ?? "";
+    requestedUrls.push(url);
     response.writeHead(status, { "Content-Type": "application/json" });
+    if (url.endsWith("/events")) {
+      response.flushHeaders();
+      return;
+    }
     response.end(body);
   });
+  const dropConnections = () => server.closeAllConnections();
   const close = () =>
     new Promise<void>((resolve) => {
       server.close(() => {
         rmSync(socketPath, { force: true });
         resolve();
       });
+      dropConnections();
     });
   return new Promise((resolve) => {
-    server.listen(socketPath, () => resolve({ socketPath, requestedUrls, close }));
+    server.listen(socketPath, () => resolve({ socketPath, requestedUrls, dropConnections, close }));
   });
 }

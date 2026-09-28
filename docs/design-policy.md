@@ -151,6 +151,12 @@ Storybook が担うのは、Electron を起動せずに、コンテナが 1 つ�
 **各ステップの終了条件は、`vp check` と `vp test` と `vp run lint:css` が、すべて正常終了すること。**
 `vp run lint:css` は、stylelint を呼ぶタスク。stylelint は Vite+ に同梱されていないので、`vp check` に含まれない。
 
+**`vp run dev` は、main と preload のファイルを変えると、作り直してアプリを起動し直す**（`package.json` の `dev` で `electron-vite dev --watch` を実行する）。
+renderer のファイルを変えたときは、アプリを起動し直さずに画面だけが新しくなる。
+
+**why: `--watch` を付けないと、main と preload は、アプリを起動し直すまで古いままになる。**
+画面だけが新しくなり、新しいボタンを押しても、古い preload が知らない口の呼び出しを断るので、何も起きない。
+
 **`vp install` の後に、`postinstall` が Electron の本体を入れる**（`package.json` の `postinstall` で `install-electron` を実行する）。
 Electron 44 は、パッケージを入れたときには本体をダウンロードしない。
 pnpm が依存を入れ直して Electron のパッケージの置き場所が変わると、新しい置き場所に本体が無い状態になり、`vp run dev` が起動できない（開発機で確認）。

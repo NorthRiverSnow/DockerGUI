@@ -1,4 +1,10 @@
-import { CheckCircleIcon, PlugsIcon, StopCircleIcon, WarningIcon } from "@phosphor-icons/react";
+import {
+  CheckCircleIcon,
+  LinkBreakIcon,
+  PlugsIcon,
+  StopCircleIcon,
+  WarningIcon,
+} from "@phosphor-icons/react";
 import { Button, Group, Loader, Text } from "@mantine/core";
 import type { ConnectionState } from "../../../shared/connection";
 import type { AppMessages } from "./messages";
@@ -7,19 +13,20 @@ const ICON_SIZE = 16;
 
 export function StatusBar(props: {
   connection: ConnectionState;
-  /** 経過した時間を出すための、いまの時刻（エポックからのミリ秒）。 */
+  /** 経過した時間と、再接続するまでの残り時間を出すための、いまの時刻（エポックからのミリ秒）。 */
   now: number;
   messages: AppMessages;
   onCancel: () => void;
   onStart: () => void;
   onConnect: () => void;
+  onRetry: () => void;
 }) {
   const { connection, messages } = props;
   return (
     <Group h="100%" px="md" gap="sm" wrap="nowrap">
       <StateIcon connection={connection} />
       <Text size="sm" truncate>
-        {messages.statusLine(connection)}
+        {messages.statusLine(connection, props.now)}
       </Text>
       {"startedAt" in connection && (
         <Text size="sm" c="dimmed" style={{ whiteSpace: "nowrap" }}>
@@ -27,7 +34,7 @@ export function StatusBar(props: {
         </Text>
       )}
       <Group ms="auto" gap="xs" wrap="nowrap">
-        {(connection.kind === "starting" || connection.kind === "connecting") && (
+        {connection.kind === "connecting" && (
           <Button size="xs" variant="default" onClick={props.onCancel}>
             {messages.buttons.cancel}
           </Button>
@@ -35,6 +42,11 @@ export function StatusBar(props: {
         {connection.kind === "stopped" && connection.startable && (
           <Button size="xs" onClick={props.onStart}>
             {messages.buttons.start}
+          </Button>
+        )}
+        {isNoResponse(connection) && (
+          <Button size="xs" onClick={props.onRetry}>
+            {messages.buttons.retry}
           </Button>
         )}
         {connection.kind === "runningNotConnected" && (
@@ -47,6 +59,15 @@ export function StatusBar(props: {
   );
 }
 
+/** 接続不可のうち、原因が「応答がありません」のもの（docs/spec/connection.md の「［再試行］」）。 */
+function isNoResponse(connection: ConnectionState): boolean {
+  return (
+    connection.kind === "unavailable" &&
+    connection.failure.kind === "expected" &&
+    connection.failure.code === "engineUnreachable"
+  );
+}
+
 /** 状態を表すアイコン。文でも同じ状態を出しているので、読み上げの対象から外す。 */
 function StateIcon(props: { connection: ConnectionState }) {
   switch (props.connection.kind) {
@@ -54,6 +75,7 @@ function StateIcon(props: { connection: ConnectionState }) {
     case "connecting":
       return <Loader size={ICON_SIZE} color="blue" aria-hidden />;
     case "starting":
+    case "reconnecting":
       return <Loader size={ICON_SIZE} color="yellow" aria-hidden />;
     case "connected":
       return <CheckCircleIcon {...iconPropsOf("green")} weight="fill" />;
@@ -63,11 +85,13 @@ function StateIcon(props: { connection: ConnectionState }) {
       return <StopCircleIcon {...iconPropsOf("gray")} weight="fill" />;
     case "unavailable":
       return <WarningIcon {...iconPropsOf("red")} weight="fill" />;
+    case "reconnectWaiting":
+      return <LinkBreakIcon {...iconPropsOf("yellow")} weight="bold" />;
   }
 }
 
 // why: 色は Mantine の CSS の変数で渡す（design-policy.md の原則 16）。
 // -filled の変数は、配色（ライトとダーク）に合わせて濃さが変わる。
-function iconPropsOf(color: "green" | "blue" | "gray" | "red") {
+function iconPropsOf(color: "green" | "blue" | "gray" | "red" | "yellow") {
   return { size: ICON_SIZE, color: `var(--mantine-color-${color}-filled)`, "aria-hidden": true };
 }

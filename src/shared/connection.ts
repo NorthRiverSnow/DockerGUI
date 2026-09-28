@@ -19,6 +19,9 @@ export const connectionStateSchema = z.discriminatedUnion("kind", [
   /** startable は、DockerGUI が起動する手段を知っているか（docs/spec/connection.md の「起動する手段が分からないとき」）。 */
   z.object({ kind: z.literal("stopped"), engineName: z.string(), startable: z.boolean() }),
   z.object({ kind: z.literal("unavailable"), engineName: z.string(), failure: failureSchema }),
+  /** retryAt は、次に再接続を試みる時刻（エポックからのミリ秒）。 */
+  z.object({ kind: z.literal("reconnectWaiting"), engineName: z.string(), retryAt: z.number() }),
+  z.object({ kind: z.literal("reconnecting"), engineName: z.string(), startedAt: z.number() }),
 ]);
 
 export type ConnectionState = z.infer<typeof connectionStateSchema>;

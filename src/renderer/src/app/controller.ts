@@ -2,15 +2,16 @@ import { useCallback, useEffect, useReducer, useState } from "react";
 import type { MainApi } from "../api/main-api";
 import { INITIAL_APP_STATE, nextAppState, type AppState, type Target } from "./model";
 
-const ELAPSED_REFRESH_MS = 1000;
+const CLOCK_REFRESH_MS = 1000;
 
 export function useAppController(deps: { api: MainApi }): {
   state: AppState;
-  /** 経過した時間を出すための、いまの時刻。経過した時間を出す状態の間だけ、1 秒ごとに進む。 */
+  /** 経過した時間と、再接続するまでの残り時間を出すための、いまの時刻。どちらかを出す状態の間だけ、1 秒ごとに進む。 */
   now: number;
   selectTarget: (target: Target) => void;
   startEngine: () => void;
   connectEngine: () => void;
+  retryConnecting: () => void;
   cancelConnecting: () => void;
 } {
   const [state, dispatch] = useReducer(nextAppState, INITIAL_APP_STATE);
@@ -30,15 +31,17 @@ export function useAppController(deps: { api: MainApi }): {
     return stopReceiving;
   }, [deps.api]);
 
-  const showsElapsed = state.connection !== undefined && "startedAt" in state.connection;
+  const showsTime =
+    state.connection !== undefined &&
+    ("startedAt" in state.connection || "retryAt" in state.connection);
   useEffect(() => {
-    if (!showsElapsed) {
+    if (!showsTime) {
       return;
     }
     setNow(Date.now());
-    const timer = setInterval(() => setNow(Date.now()), ELAPSED_REFRESH_MS);
+    const timer = setInterval(() => setNow(Date.now()), CLOCK_REFRESH_MS);
     return () => clearInterval(timer);
-  }, [showsElapsed]);
+  }, [showsTime]);
 
   const selectTarget = useCallback((target: Target) => {
     dispatch({ kind: "targetSelected", target });
@@ -46,7 +49,16 @@ export function useAppController(deps: { api: MainApi }): {
   // why: ボタンの操作の結果は、接続の状態の知らせで届く。口の応答は、受け付けたことしか表さないので読まない。
   const startEngine = useCallback(() => void deps.api.startEngine(), [deps.api]);
   const connectEngine = useCallback(() => void deps.api.connectEngine(), [deps.api]);
+  const retryConnecting = useCallback(() => void deps.api.retryConnecting(), [deps.api]);
   const cancelConnecting = useCallback(() => void deps.api.cancelConnecting(), [deps.api]);
 
-  return { state, now, selectTarget, startEngine, connectEngine, cancelConnecting };
+  return {
+    state,
+    now,
+    selectTarget,
+    startEngine,
+    connectEngine,
+    retryConnecting,
+    cancelConnecting,
+  };
 }

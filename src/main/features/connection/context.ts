@@ -1,16 +1,17 @@
 import type { ConnectionState } from "../../../shared/connection";
 import type { EngineClient } from "../../engine-api/client";
-import type { RunCommand, StartCommand } from "../../os/command";
+import type { RunCommand } from "../../os/command";
 import type { EngineTarget } from "./discover";
 
 export type ConnectionDeps = {
   runCommand: RunCommand;
-  startCommand: StartCommand;
   homeDir: string;
   defaultSocketPath: string;
   /** 止まっていたら利用者に聞かずに起動するか（docs/spec/connection.md の「既定は自動で起動する」）。 */
   autoStart: boolean;
   now: () => number;
+  /** 再接続を待つ間に使う。milliseconds が過ぎたら解決する。 */
+  sleep: (milliseconds: number) => Promise<void>;
   onStateChanged: (state: ConnectionState) => void;
 };
 
@@ -18,8 +19,8 @@ export type ConnectionDeps = {
 export type Attempt = {
   cancelled: boolean;
   /**
-   * 今行っている起動や接続を止める。始めた時点では止める対象が無いので、何もしない関数が入っている。
-   * steps.ts の negotiate はエンジンへの接続を切る関数に、startAndConnect は起動のコマンドを止める関数に差し替える。
+   * 今行っている接続を止める。始めた時点では止める対象が無いので、何もしない関数が入っている。
+   * steps.ts の connectEngine が、エンジンへの接続を切る関数に差し替える。
    */
   abort: () => void;
 };
@@ -33,6 +34,8 @@ export type ConnectionContext = {
   /** いま扱っているエンジン。探し終える前は undefined。 */
   target: EngineTarget | undefined;
   attempt: Attempt;
+  /** 接続済みのエンジンとの接続が切れたときに呼ぶ。 */
+  onDisconnected: (target: EngineTarget) => void;
 };
 
 /** 状態を変え、onStateChanged で知らせる。 */

@@ -1,9 +1,10 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { setTimeout as sleep } from "node:timers/promises";
 import { app, BrowserWindow } from "electron";
 import { createConnection } from "./features/connection/connection";
 import { registerRequestHandler, sendNotification } from "./ipc/ipc";
-import { runCommand, startCommand } from "./os/command";
+import { runCommand } from "./os/command";
 
 function createMainWindow(): void {
   const window = new BrowserWindow({
@@ -30,12 +31,12 @@ function createMainWindow(): void {
 
 const connection = createConnection({
   runCommand,
-  startCommand,
   homeDir: homedir(),
   defaultSocketPath: "/var/run/docker.sock",
   // TODO: 設定の保存を作るステップで、設定の「エンジンの起動」から読む（docs/spec/settings.md の「接続」）
   autoStart: true,
   now: Date.now,
+  sleep,
   onStateChanged: (state) => {
     for (const window of BrowserWindow.getAllWindows()) {
       sendNotification(window.webContents, "connection:connectionStateChanged", state);
@@ -56,8 +57,12 @@ registerRequestHandler("connection:connectEngine", () => {
   void connection.connectEngine();
   return { ok: true, value: undefined };
 });
+registerRequestHandler("connection:retryConnecting", () => {
+  void connection.retry();
+  return { ok: true, value: undefined };
+});
 registerRequestHandler("connection:cancelConnecting", () => {
-  void connection.cancel();
+  connection.cancel();
   return { ok: true, value: undefined };
 });
 

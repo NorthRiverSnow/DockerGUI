@@ -5,11 +5,11 @@ import type { Target } from "./model";
 
 export type AppMessages = {
   targetNames: Record<Target, string>;
-  /** 状態バーの 1 行目（docs/spec/connection.md の「接続の状態」）。 */
-  statusLine: (connection: ConnectionState) => string;
+  /** 状態バーの 1 行目（docs/spec/connection.md の「接続の状態」）。now は、再接続するまでの残り時間を出すための、いまの時刻。 */
+  statusLine: (connection: ConnectionState, now: number) => string;
   /** 経過した時間（docs/spec/common.md の「待たせるときの表示」）。 */
   elapsed: (milliseconds: number) => string;
-  buttons: { cancel: string; start: string; connect: string };
+  buttons: { cancel: string; start: string; connect: string; retry: string };
 };
 
 export const APP_MESSAGES: Record<Language, AppMessages> = {
@@ -25,8 +25,8 @@ export const APP_MESSAGES: Record<Language, AppMessages> = {
       settings: "設定",
     },
     elapsed: (milliseconds) => `経過 ${minutesAndSecondsOf(milliseconds)}`,
-    buttons: { cancel: "中止", start: "起動", connect: "接続" },
-    statusLine: (connection) => {
+    buttons: { cancel: "中止", start: "起動", connect: "接続", retry: "再試行" },
+    statusLine: (connection, now) => {
       switch (connection.kind) {
         case "searching":
           return `接続先を探しています…（${connection.command}）`;
@@ -42,6 +42,10 @@ export const APP_MESSAGES: Record<Language, AppMessages> = {
           return `${connection.engineName} は停止しています`;
         case "unavailable":
           return `${connection.engineName} に接続できません（${jaCauseOf(connection.failure)}）`;
+        case "reconnectWaiting":
+          return `${connection.engineName} との接続が切れました。${secondsUntil(connection.retryAt, now)} 秒後に再接続します`;
+        case "reconnecting":
+          return `${connection.engineName} に再接続しています…`;
       }
     },
   },
@@ -57,8 +61,8 @@ export const APP_MESSAGES: Record<Language, AppMessages> = {
       settings: "Settings",
     },
     elapsed: (milliseconds) => `Elapsed ${minutesAndSecondsOf(milliseconds)}`,
-    buttons: { cancel: "Cancel", start: "Start", connect: "Connect" },
-    statusLine: (connection) => {
+    buttons: { cancel: "Cancel", start: "Start", connect: "Connect", retry: "Retry" },
+    statusLine: (connection, now) => {
       switch (connection.kind) {
         case "searching":
           return `Looking for a Docker engine… (${connection.command})`;
@@ -74,10 +78,21 @@ export const APP_MESSAGES: Record<Language, AppMessages> = {
           return `${connection.engineName} is stopped`;
         case "unavailable":
           return `Can't connect to ${connection.engineName} (${enCauseOf(connection.failure)})`;
+        case "reconnectWaiting": {
+          const seconds = secondsUntil(connection.retryAt, now);
+          return `Lost connection to ${connection.engineName}. Reconnecting in ${seconds} ${seconds === 1 ? "second" : "seconds"}`;
+        }
+        case "reconnecting":
+          return `Reconnecting to ${connection.engineName}…`;
       }
     },
   },
 };
+
+/** time までの残りの秒数。端数は切り上げ、過ぎていれば 0 を返す。 */
+function secondsUntil(time: number, now: number): number {
+  return Math.max(0, Math.ceil((time - now) / 1000));
+}
 
 /** 00:18 のように、分と秒を 2 桁ずつで返す。1 時間を超えても、分の桁を増やして表す。 */
 function minutesAndSecondsOf(milliseconds: number): string {

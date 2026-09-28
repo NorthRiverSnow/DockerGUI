@@ -4,6 +4,14 @@ import type { Result } from "../../shared/result";
 
 export type EngineClient = {
   get: <T>(path: string, schema: z.ZodType<T>) => Promise<Result<T>>;
+  /** 本文が続く GET の要求（`/events` など）を送り、開いたままにする。 */
+  watch: (path: string) => EngineWatch;
+};
+
+export type EngineWatch = {
+  /** 本文が終わるか、接続が切れるか、close を呼ぶと解決する。reject しない。 */
+  ended: Promise<void>;
+  close: () => void;
 };
 
 const engineErrorSchema = z.object({ message: z.string() });
@@ -12,7 +20,24 @@ const engineErrorSchema = z.object({ message: z.string() });
 export function engineClientOf(agent: http.Agent, apiVersion: string): EngineClient {
   return {
     get: (path, schema) => requestJson(agent, "GET", `/v${apiVersion}${path}`, schema),
+    watch: (path) => watchOf(agent, `/v${apiVersion}${path}`),
   };
+}
+
+// TODO: 一覧の更新を作るステップで、本文の 1 行ごとに JSON を読んで渡す（docs/design/main.md の「ストリームの読み方」）
+function watchOf(agent: http.Agent, path: string): EngineWatch {
+  let finish: () => void = () => {};
+  const ended = new Promise<void>((resolve) => {
+    finish = resolve;
+  });
+  const request = http.request({ agent, method: "GET", path, host: "docker" }, (response) => {
+    // why: 本文を読まずにおくと、受け取った本文がたまり続ける。読み捨てて、終わったことだけを知る。
+    response.resume();
+    response.on("close", finish);
+  });
+  request.on("error", finish);
+  request.end();
+  return { ended, close: () => request.destroy() };
 }
 
 /**

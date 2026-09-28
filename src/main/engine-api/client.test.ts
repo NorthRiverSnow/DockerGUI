@@ -73,3 +73,51 @@ describe("engineClientOf", () => {
     });
   });
 });
+
+describe("watch", () => {
+  async function watchingClient() {
+    const fakeEngine = await startFakeEngine(200, "");
+    engine = fakeEngine;
+    return { fakeEngine, client: engineClientOf(socketAgentOf(fakeEngine.socketPath), "1.54") };
+  }
+
+  /** エンジンの代わりのサーバが、要求を受け取るまで待つ。 */
+  async function untilRequested(fakeEngine: FakeEngine): Promise<void> {
+    while (fakeEngine.requestedUrls.length === 0) {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+  }
+
+  it("開いている間は終わらず、エンジンが接続を切ったら ended が解決する", async () => {
+    const { fakeEngine, client } = await watchingClient();
+    let ended = false;
+
+    const watch = client.watch("/events");
+    void watch.ended.then(() => {
+      ended = true;
+    });
+    await untilRequested(fakeEngine);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(ended).toBe(false);
+
+    fakeEngine.dropConnections();
+    await watch.ended;
+    expect(fakeEngine.requestedUrls).toEqual(["/v1.54/events"]);
+  });
+
+  it("close を呼ぶと、ended が解決する", async () => {
+    const { fakeEngine, client } = await watchingClient();
+
+    const watch = client.watch("/events");
+    await untilRequested(fakeEngine);
+    watch.close();
+
+    await watch.ended;
+  });
+
+  it("エンジンが止まっていて、ソケットのファイルが無ければ、ended が解決する", async () => {
+    const client = engineClientOf(socketAgentOf(unusedSocketPath()), "1.54");
+
+    await client.watch("/events").ended;
+  });
+});

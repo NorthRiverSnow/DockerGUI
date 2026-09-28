@@ -1,10 +1,8 @@
 import type { ConnectionState } from "../../../shared/connection";
 import type { EngineClient } from "../../engine-api/client";
-import { isSocketAccepting } from "../../os/socket";
 import {
   beginAttempt,
   changeState,
-  stoppedStateOf,
   type Attempt,
   type ConnectionContext,
   type ConnectionDeps,
@@ -14,9 +12,14 @@ import {
   changeToEngineNotFound,
   changeToStopped,
   connectEngine,
+  reconnectEngine,
   searchEngine,
   startEngine,
+  waitBeforeReconnect,
 } from "./steps";
+
+/** 再接続を待つ時間。1 回目は first で、失敗するたびに倍にし、max で止める（docs/spec/connection.md の「再接続の繰り返し」）。 */
+const RECONNECT_DELAY_MS = { first: 1000, max: 30_000 };
 
 export type Connection = {
   /** 接続先を探し、繋ぐ。止まっていて、起動する手段を知っていれば、起動してから繋ぐ。 */
@@ -25,11 +28,13 @@ export type Connection = {
   startEngine: () => Promise<void>;
   /** 動作中・未接続のエンジンに繋ぐ。動作中・未接続でなければ何もしない。 */
   connectEngine: () => Promise<void>;
+  /** 接続不可のときに、connect と同じく探し直して繋ぐ。接続不可でなければ何もしない。 */
+  retry: () => Promise<void>;
   /**
-   * 起動と接続を中止する。起動中なら起動のコマンドを止める。
-   * 止めた後にエンジンが動いているかを確かめ直し、動作中・未接続か停止中にする（docs/spec/connection.md の「［中止］を押した後の状態」）。
+   * 接続を中止し、動作中・未接続にする（docs/spec/connection.md の「［中止］を押した後の状態」）。
+   * 接続中でなければ何もしない。起動中も中止しない（「起動中は中止できない」）。
    */
-  cancel: () => Promise<void>;
+  cancel: () => void;
   state: () => ConnectionState;
   /** 繋がっていなければ undefined。 */
   client: () => EngineClient | undefined;
@@ -46,12 +51,14 @@ export function createConnection(deps: ConnectionDeps): Connection {
     client: undefined,
     target: undefined,
     attempt: { cancelled: false, abort: () => {} },
+    onDisconnected: (target) => void reconnectUntilSettled(connectionContext, target),
   };
   return {
     connect: () => searchAndConnect(connectionContext),
     startEngine: () => startStoppedEngine(connectionContext),
     connectEngine: () => connectRunningEngine(connectionContext),
-    cancel: () => cancelAttempt(connectionContext),
+    retry: () => retryConnecting(connectionContext),
+    cancel: () => cancelConnecting(connectionContext),
     state: () => connectionContext.state,
     client: () => connectionContext.client,
   };
@@ -86,9 +93,26 @@ async function startAndConnect(
   target: EngineTarget,
   attempt: Attempt,
 ): Promise<void> {
-  if (await startEngine(connectionContext, target, attempt)) {
+  if (await startEngine(connectionContext, target)) {
     await connectEngine(connectionContext, target, attempt, { ifUnreachable: "unavailable" });
   }
+}
+
+/** 切断された後、繋がるか、エンジンが止まっていると分かるまで、待つ時間を延ばしながら再接続を繰り返す。 */
+async function reconnectUntilSettled(
+  connectionContext: ConnectionContext,
+  target: EngineTarget,
+): Promise<void> {
+  for (let delay = RECONNECT_DELAY_MS.first; ; delay = nextReconnectDelayOf(delay)) {
+    await waitBeforeReconnect(connectionContext, target, delay);
+    if ((await reconnectEngine(connectionContext, target)) === "settled") {
+      return;
+    }
+  }
+}
+
+function nextReconnectDelayOf(delay: number): number {
+  return Math.min(delay * 2, RECONNECT_DELAY_MS.max);
 }
 
 /** ［起動］のボタンから呼ぶ。 */
@@ -109,18 +133,20 @@ async function connectRunningEngine(connectionContext: ConnectionContext): Promi
   }
 }
 
+/** ［再試行］のボタンから呼ぶ。 */
+async function retryConnecting(connectionContext: ConnectionContext): Promise<void> {
+  if (connectionContext.state.kind === "unavailable") {
+    await searchAndConnect(connectionContext);
+  }
+}
+
 /** ［中止］のボタンから呼ぶ。 */
-async function cancelAttempt(connectionContext: ConnectionContext): Promise<void> {
+function cancelConnecting(connectionContext: ConnectionContext): void {
   const { state, target, attempt } = connectionContext;
-  if ((state.kind !== "starting" && state.kind !== "connecting") || !target) {
+  if (state.kind !== "connecting" || !target) {
     return;
   }
   attempt.cancelled = true;
   attempt.abort();
-  changeState(
-    connectionContext,
-    (await isSocketAccepting(target.socketPath))
-      ? { kind: "runningNotConnected", engineName: target.name }
-      : stoppedStateOf(target),
-  );
+  changeState(connectionContext, { kind: "runningNotConnected", engineName: target.name });
 }

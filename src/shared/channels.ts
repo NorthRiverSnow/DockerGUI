@@ -5,6 +5,7 @@ export const REQUEST_CHANNELS = [
   "connection:getConnectionState",
   "connection:startEngine",
   "connection:connectEngine",
+  "connection:retryConnecting",
   "connection:cancelConnecting",
 ] as const;
 export const NOTIFICATION_CHANNELS = ["connection:connectionStateChanged"] as const;

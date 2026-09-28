@@ -12,13 +12,15 @@ const STATES_WITH_ENGINE: ConnectionState[] = [
   { kind: "starting", engineName: "colima", command: "colima start", startedAt: 0 },
   { kind: "runningNotConnected", engineName: "colima" },
   { kind: "unavailable", engineName: "colima", failure: { kind: "unexpected" } },
+  { kind: "reconnectWaiting", engineName: "colima", retryAt: 0 },
+  { kind: "reconnecting", engineName: "colima", startedAt: 0 },
 ];
 
 describe("statusLine", () => {
   it("接続先のエンジンがある状態では、どの言語でもエンジンの名前を出す", () => {
     for (const language of LANGUAGES) {
       for (const state of STATES_WITH_ENGINE) {
-        expect(APP_MESSAGES[language].statusLine(state)).toContain("colima");
+        expect(APP_MESSAGES[language].statusLine(state, 0)).toContain("colima");
       }
     }
   });
@@ -31,12 +33,12 @@ describe("statusLine", () => {
     };
 
     for (const language of LANGUAGES) {
-      expect(APP_MESSAGES[language].statusLine(searching)).toContain("docker context ls");
+      expect(APP_MESSAGES[language].statusLine(searching, 0)).toContain("docker context ls");
     }
   });
 
   it("接続済みは「接続先: エンジンの名前」と出す", () => {
-    expect(APP_MESSAGES.ja.statusLine({ kind: "connected", engineName: "colima" })).toBe(
+    expect(APP_MESSAGES.ja.statusLine({ kind: "connected", engineName: "colima" }, 0)).toBe(
       "接続先: colima",
     );
   });
@@ -53,8 +55,37 @@ describe("statusLine", () => {
     };
 
     for (const language of LANGUAGES) {
-      expect(APP_MESSAGES[language].statusLine(rejected)).toContain("daemon is shutting down");
+      expect(APP_MESSAGES[language].statusLine(rejected, 0)).toContain("daemon is shutting down");
     }
+  });
+});
+
+describe("statusLine（再接続待ち）", () => {
+  const waiting: ConnectionState = {
+    kind: "reconnectWaiting",
+    engineName: "colima",
+    retryAt: 18_000,
+  };
+
+  it("再接続するまでの残り時間を、端数を切り上げた秒で出す", () => {
+    expect(APP_MESSAGES.ja.statusLine(waiting, 200)).toBe(
+      "colima との接続が切れました。18 秒後に再接続します",
+    );
+    expect(APP_MESSAGES.en.statusLine(waiting, 200)).toBe(
+      "Lost connection to colima. Reconnecting in 18 seconds",
+    );
+  });
+
+  it("英語では、残りが 1 秒のときだけ単数形にする", () => {
+    expect(APP_MESSAGES.en.statusLine(waiting, 17_000)).toBe(
+      "Lost connection to colima. Reconnecting in 1 second",
+    );
+  });
+
+  it("再接続する時刻を過ぎていたら、残りを 0 秒と出す", () => {
+    expect(APP_MESSAGES.ja.statusLine(waiting, 19_000)).toBe(
+      "colima との接続が切れました。0 秒後に再接続します",
+    );
   });
 });
 

@@ -23,6 +23,7 @@ export function AppView(props: {
   onSelectTarget: (target: Target) => void;
   onStartEngine: () => void;
   onConnectEngine: () => void;
+  onRetryConnecting: () => void;
   onCancelConnecting: () => void;
 }) {
   const targetLink = (target: Target) => (
@@ -45,6 +46,7 @@ export function AppView(props: {
             onCancel={props.onCancelConnecting}
             onStart={props.onStartEngine}
             onConnect={props.onConnectEngine}
+            onRetry={props.onRetryConnecting}
           />
         )}
       </AppShell.Header>

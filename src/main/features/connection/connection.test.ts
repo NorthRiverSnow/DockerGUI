@@ -11,7 +11,7 @@ import {
   unusedSocketPath,
   type FakeEngine,
 } from "../../engine-api/fake-engine.test-helper";
-import type { CommandOutput, RunCommand, StartCommand } from "../../os/command";
+import type { CommandOutput, RunCommand } from "../../os/command";
 import { createConnection, type Connection } from "./connection";
 
 const NOW = 1_700_000_000_000;
@@ -74,46 +74,76 @@ function fakeCommands(options: {
 }
 
 type FakeStartCommand = {
-  /** 接続の処理に渡す、起動の代わりの関数。 */
-  startCommand: StartCommand;
+  /** 起動のコマンドの代わり。finish を呼ぶまで終わらない。 */
+  run: RunCommand;
   /** 起動したコマンド。起動した順に並ぶ。 */
   startedCommands: string[];
-  /** 起動したコマンドに、終了を伝えたか。 */
-  wasKilled: () => boolean;
-  /** 起動したコマンドを、output の結果で終わらせる。 */
+  /** いちばん新しく起動したコマンドを、output の結果で終わらせる。 */
   finish: (output: CommandOutput) => void;
 };
 
-/** 起動のコマンドの代わり。finish を呼ぶまで終わらない。終了を伝えると、終了コード 143 で終わる。 */
 function fakeStartCommand(): FakeStartCommand {
   const startedCommands: string[] = [];
-  let killed = false;
   let finishRunning: (output: CommandOutput) => void = () => {};
-
-  const startCommand: StartCommand = (command, args) => {
-    startedCommands.push([command, ...args].join(" "));
-    const output = new Promise<CommandOutput>((resolve) => {
-      finishRunning = resolve;
-    });
-    const kill = () => {
-      killed = true;
-      finishRunning({ exitCode: 143, stdout: "", stderr: "" });
-    };
-    return { output, kill };
-  };
-
   return {
-    startCommand,
+    run: (command, args) => {
+      startedCommands.push([command, ...args].join(" "));
+      return new Promise((resolve) => {
+        finishRunning = resolve;
+      });
+    },
     startedCommands,
-    wasKilled: () => killed,
     finish: (output) => finishRunning(output),
   };
 }
 
+type FakeSleep = {
+  /** 接続の処理に渡す、待つ関数の代わり。wakeUp を呼ぶまで終わらない。 */
+  sleep: (milliseconds: number) => Promise<void>;
+  /** 待つように頼まれた時間。頼まれた順に並ぶ。 */
+  requestedDelays: number[];
+  /** 待っているもののうち、いちばん古いものを終わらせる。 */
+  wakeUp: () => void;
+};
+
+function fakeSleep(): FakeSleep {
+  const requestedDelays: number[] = [];
+  const sleeping: (() => void)[] = [];
+  return {
+    sleep: (milliseconds) => {
+      requestedDelays.push(milliseconds);
+      return new Promise((resolve) => sleeping.push(resolve));
+    },
+    requestedDelays,
+    wakeUp: () => sleeping.shift()?.(),
+  };
+}
+
+/** condition が true になるまで待つ。 */
+async function until(condition: () => boolean): Promise<void> {
+  while (!condition()) {
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+}
+
+/** 接続済みになった後に、接続の処理が /events の要求を送るまで待つ。送る前に接続を切ると、切れたことが伝わらない。 */
+const untilWatching = (engine: FakeEngine) =>
+  until(() => engine.requestedUrls.includes("/v1.54/events"));
+
+/** colima start だけを start に渡し、ほかのコマンドを runCommand に渡す。 */
+function runCommandWith(runCommand: RunCommand, start: FakeStartCommand): RunCommand {
+  return (command, args) =>
+    command === "colima" && args[0] === "start"
+      ? start.run(command, args)
+      : runCommand(command, args);
+}
+
 function connectionWith(options: {
   runCommand: RunCommand;
-  startCommand?: StartCommand;
+  /** colima start を受け持つ。渡さなければ、colima start は終わらない。 */
+  start?: FakeStartCommand;
   autoStart?: boolean;
+  sleep?: FakeSleep["sleep"];
 }): {
   connection: Connection;
   states: ConnectionState[];
@@ -122,12 +152,12 @@ function connectionWith(options: {
   const states: ConnectionState[] = [];
   const waiters: { kind: ConnectionState["kind"]; resolve: () => void }[] = [];
   const connection = createConnection({
-    runCommand: options.runCommand,
-    startCommand: options.startCommand ?? fakeStartCommand().startCommand,
+    runCommand: runCommandWith(options.runCommand, options.start ?? fakeStartCommand()),
     homeDir,
     defaultSocketPath: unusedSocketPath(),
     autoStart: options.autoStart ?? true,
     now: () => NOW,
+    sleep: options.sleep ?? fakeSleep().sleep,
     onStateChanged: (state) => {
       states.push(state);
       for (const waiter of waiters.filter((w) => w.kind === state.kind)) waiter.resolve();
@@ -160,7 +190,7 @@ describe("connect", () => {
     const start = fakeStartCommand();
     const { connection, states, waitFor } = connectionWith({
       runCommand: fakeCommands({ contextSocketPath: unusedSocketPath(), colimaInstalled: true }),
-      startCommand: start.startCommand,
+      start,
     });
 
     const connecting = connection.connect();
@@ -184,7 +214,7 @@ describe("connect", () => {
     const start = fakeStartCommand();
     const { connection, waitFor } = connectionWith({
       runCommand: fakeCommands({ colimaInstalled: true }),
-      startCommand: start.startCommand,
+      start,
     });
 
     const connecting = connection.connect();
@@ -203,7 +233,7 @@ describe("connect", () => {
     const start = fakeStartCommand();
     const { connection, waitFor } = connectionWith({
       runCommand: fakeCommands({ colimaInstalled: true }),
-      startCommand: start.startCommand,
+      start,
     });
 
     const connecting = connection.connect();
@@ -227,7 +257,7 @@ describe("connect", () => {
     const start = fakeStartCommand();
     const { connection } = connectionWith({
       runCommand: fakeCommands({ colimaInstalled: true }),
-      startCommand: start.startCommand,
+      start,
       autoStart: false,
     });
 
@@ -272,7 +302,7 @@ describe("startEngine", () => {
     const start = fakeStartCommand();
     const { connection, waitFor } = connectionWith({
       runCommand: fakeCommands({ colimaInstalled: true }),
-      startCommand: start.startCommand,
+      start,
       autoStart: false,
     });
     await connection.connect();
@@ -293,7 +323,7 @@ describe("startEngine（受け付けないとき）", () => {
     const start = fakeStartCommand();
     const { connection } = connectionWith({
       runCommand: fakeCommands({ contextSocketPath: engine.socketPath, colimaInstalled: true }),
-      startCommand: start.startCommand,
+      start,
     });
     await connection.connect();
 
@@ -305,41 +335,25 @@ describe("startEngine（受け付けないとき）", () => {
 });
 
 describe("cancel", () => {
-  it("起動中に中止すると、起動のコマンドを止め、エンジンが動いていなければ停止中にする", async () => {
+  it("起動中は中止しても、起動を続けて繋ぐ", async () => {
     const start = fakeStartCommand();
     const { connection, waitFor } = connectionWith({
       runCommand: fakeCommands({ colimaInstalled: true }),
-      startCommand: start.startCommand,
+      start,
     });
     const connecting = connection.connect();
     await waitFor("starting");
 
-    await connection.cancel();
-    await connecting;
-
-    expect(start.wasKilled()).toBe(true);
-    expect(connection.state()).toEqual({ kind: "stopped", engineName: "colima", startable: true });
-  });
-
-  it("起動中に中止したときにエンジンが動いていれば、動作中・未接続にし、［接続］で繋げる", async () => {
-    const start = fakeStartCommand();
-    const { connection, waitFor } = connectionWith({
-      runCommand: fakeCommands({ colimaInstalled: true }),
-      startCommand: start.startCommand,
-    });
-    const connecting = connection.connect();
-    await waitFor("starting");
+    connection.cancel();
+    expect(connection.state().kind).toBe("starting");
     await fakeEngineAt(colimaSocketPath);
-
-    await connection.cancel();
+    start.finish({ exitCode: 0, stdout: "", stderr: "" });
     await connecting;
-    expect(connection.state()).toEqual({ kind: "runningNotConnected", engineName: "colima" });
 
-    await connection.connectEngine();
     expect(connection.state()).toEqual({ kind: "connected", engineName: "colima" });
   });
 
-  it("接続中に中止すると、繋ぐのをやめ、エンジンが動いていれば動作中・未接続にする", async () => {
+  it("接続中に中止すると、繋ぐのをやめ、動作中・未接続にする", async () => {
     // 接続は受け付けるが、応答を返さないエンジン
     const socketPath = unusedSocketPath();
     const silent = http.createServer(() => {});
@@ -354,7 +368,7 @@ describe("cancel", () => {
     const connecting = connection.connect();
     await waitFor("connecting");
 
-    await connection.cancel();
+    connection.cancel();
     await connecting;
 
     expect(kindsOf(states)).not.toContain("unavailable");
@@ -363,5 +377,125 @@ describe("cancel", () => {
       engineName: "desktop-linux",
     });
     expect(connection.client()).toBeUndefined();
+  });
+});
+
+describe("retry", () => {
+  it("応答が無くて接続不可になった後に再試行すると、探し直して、起動してから繋ぐ", async () => {
+    const start = fakeStartCommand();
+    const { connection, waitFor } = connectionWith({
+      runCommand: fakeCommands({ colimaInstalled: true }),
+      start,
+    });
+    const connecting = connection.connect();
+    await waitFor("starting");
+    start.finish({ exitCode: 0, stdout: "", stderr: "" });
+    await connecting;
+    expect(connection.state().kind).toBe("unavailable");
+
+    const retrying = connection.retry();
+    await until(() => start.startedCommands.length === 2);
+    await fakeEngineAt(colimaSocketPath);
+    start.finish({ exitCode: 0, stdout: "", stderr: "" });
+    await retrying;
+
+    expect(connection.state()).toEqual({ kind: "connected", engineName: "colima" });
+  });
+
+  it("接続不可でなければ、再試行しても何もしない", async () => {
+    const engine = await fakeEngineAt();
+    const { connection, states } = connectionWith({
+      runCommand: fakeCommands({ contextSocketPath: engine.socketPath, colimaInstalled: false }),
+    });
+    await connection.connect();
+
+    await connection.retry();
+
+    expect(kindsOf(states)).toEqual(["searching", "connecting", "connected"]);
+  });
+});
+
+describe("切断されたとき", () => {
+  it("接続が切れたら、再接続待ちと再接続中を経て、接続済みに戻る", async () => {
+    const engine = await fakeEngineAt();
+    const sleeps = fakeSleep();
+    const { connection, states, waitFor } = connectionWith({
+      runCommand: fakeCommands({ contextSocketPath: engine.socketPath, colimaInstalled: false }),
+      sleep: sleeps.sleep,
+    });
+    await connection.connect();
+    await untilWatching(engine);
+
+    engine.dropConnections();
+    await waitFor("reconnectWaiting");
+    expect(connection.state()).toEqual({
+      kind: "reconnectWaiting",
+      engineName: "desktop-linux",
+      retryAt: NOW + 1000,
+    });
+    expect(connection.client()).toBeUndefined();
+
+    sleeps.wakeUp();
+    await until(() => connection.state().kind === "connected");
+    expect(kindsOf(states)).toEqual([
+      "searching",
+      "connecting",
+      "connected",
+      "reconnectWaiting",
+      "reconnecting",
+      "connected",
+    ]);
+    expect(connection.client()).toBeDefined();
+  });
+
+  it("再接続のときにエンジンが止まっていれば、停止中にし、自動では起動しない", async () => {
+    const start = fakeStartCommand();
+    const sleeps = fakeSleep();
+    const { connection, waitFor } = connectionWith({
+      runCommand: fakeCommands({ colimaInstalled: true }),
+      start,
+      sleep: sleeps.sleep,
+    });
+    const connecting = connection.connect();
+    await waitFor("starting");
+    const engine = await fakeEngineAt(colimaSocketPath);
+    start.finish({ exitCode: 0, stdout: "", stderr: "" });
+    await connecting;
+    await untilWatching(engine);
+
+    await engine.close();
+    await waitFor("reconnectWaiting");
+    sleeps.wakeUp();
+    await waitFor("stopped");
+
+    expect(connection.state()).toEqual({ kind: "stopped", engineName: "colima", startable: true });
+    expect(start.startedCommands).toEqual(["colima start"]);
+  });
+
+  it("エンジンが断り続ける間は、待つ時間を 1 秒から倍にしながら再接続を繰り返し、30 秒より延ばさない", async () => {
+    const socketPath = unusedSocketPath();
+    const engine = await startFakeEngine(200, VERSION_BODY, socketPath);
+    const sleeps = fakeSleep();
+    const { connection, states } = connectionWith({
+      runCommand: fakeCommands({ contextSocketPath: socketPath, colimaInstalled: false }),
+      sleep: sleeps.sleep,
+    });
+    await connection.connect();
+    await untilWatching(engine);
+
+    await engine.close();
+    const rejecting = await startFakeEngine(500, '{"message":"daemon is starting"}', socketPath);
+    cleanups.push(() => rejecting.close());
+    for (let tries = 1; tries <= 7; tries++) {
+      await until(() => sleeps.requestedDelays.length === tries);
+      sleeps.wakeUp();
+    }
+    await until(() => sleeps.requestedDelays.length === 8);
+
+    expect(sleeps.requestedDelays).toEqual([
+      1000, 2000, 4000, 8000, 16_000, 30_000, 30_000, 30_000,
+    ]);
+    expect(kindsOf(states)).not.toContain("stopped");
+    expect(connection.state().kind).toBe("reconnectWaiting");
   });
 });

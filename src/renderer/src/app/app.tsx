@@ -18,6 +18,7 @@ export function App(props: { api: MainApi }) {
       onSelectTarget={controller.selectTarget}
       onStartEngine={controller.startEngine}
       onConnectEngine={controller.connectEngine}
+      onRetryConnecting={controller.retryConnecting}
       onCancelConnecting={controller.cancelConnecting}
     />
   );

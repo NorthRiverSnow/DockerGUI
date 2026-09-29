@@ -7,7 +7,9 @@ import { createConnection } from "./features/connection/connection";
 import { createColorScheme } from "./features/settings/color-scheme";
 import { createScreenLanguage } from "./features/settings/language";
 import { openSettingsStore } from "./features/settings/settings-store";
-import { registerRequestHandler, sendNotification } from "./ipc/ipc";
+import { registerAppChannels } from "./ipc/app";
+import { registerConnectionChannels } from "./ipc/connection";
+import { sendNotificationToAllWindows } from "./ipc/ipc";
 import { runCommand, startCommand } from "./os/command";
 import { refreshPathFromLoginShell } from "./os/login-shell-path";
 
@@ -52,42 +54,11 @@ const connection = createConnection({
   repeat: (task, intervalMs) => {
     setInterval(() => void task(), intervalMs);
   },
-  onStateChanged: (state) => {
-    for (const window of BrowserWindow.getAllWindows()) {
-      sendNotification(window.webContents, "connection:connectionStateChanged", state);
-    }
-  },
+  onStateChanged: (state) =>
+    sendNotificationToAllWindows("connection:connectionStateChanged", state),
 });
 
-registerRequestHandler("connection:getConnectionState", () => ({
-  ok: true,
-  value: connection.state(),
-}));
-// why: 起動は数十秒かかる。終わるまで応答を待たせず、受け付けたらすぐ返す。結果は接続の状態の知らせで届く。
-registerRequestHandler("connection:startEngine", () => {
-  void connection.startEngine();
-  return { ok: true, value: undefined };
-});
-registerRequestHandler("connection:connectEngine", () => {
-  void connection.connectEngine();
-  return { ok: true, value: undefined };
-});
-registerRequestHandler("connection:retryConnecting", () => {
-  void connection.retry();
-  return { ok: true, value: undefined };
-});
-registerRequestHandler("connection:cancelConnecting", () => {
-  connection.cancel();
-  return { ok: true, value: undefined };
-});
-registerRequestHandler("connection:reconnectNow", () => {
-  connection.reconnectNow();
-  return { ok: true, value: undefined };
-});
-registerRequestHandler("connection:giveUpReconnecting", () => {
-  void connection.giveUpReconnecting();
-  return { ok: true, value: undefined };
-});
+registerConnectionChannels(connection);
 
 // why: 設定ファイルの場所は、Electron の app.getPath から決まる。settings-store.ts を Electron に依存させず、
 // テストでは一時フォルダの場所を渡せるように、場所はここで決めて渡す。
@@ -99,21 +70,10 @@ const colorScheme = createColorScheme({
   },
 });
 
-registerRequestHandler("app:setColorScheme", (selected) => {
-  colorScheme.switchTo(selected);
-  return { ok: true, value: undefined };
-});
-
 const screenLanguage = createScreenLanguage({
   store: settingsStore,
   systemLanguages: () => app.getPreferredSystemLanguages(),
 });
-
-registerRequestHandler("app:getLanguage", () => ({ ok: true, value: screenLanguage.current() }));
-registerRequestHandler("app:setLanguage", (setting) => ({
-  ok: true,
-  value: screenLanguage.select(setting),
-}));
 
 void app.whenReady().then(() => {
   const window = createMainWindow();
@@ -123,10 +83,7 @@ void app.whenReady().then(() => {
       setTimeout(callback, milliseconds);
     },
   });
-  registerRequestHandler("app:rendererPainted", () => {
-    windowReveal.rendererPainted();
-    return { ok: true, value: undefined };
-  });
+  registerAppChannels({ colorScheme, screenLanguage, windowReveal });
   void connection.connect();
 });
 

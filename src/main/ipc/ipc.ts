@@ -1,4 +1,4 @@
-import { ipcMain, type WebContents } from "electron";
+import { BrowserWindow, ipcMain, type WebContents } from "electron";
 import type { NotificationChannel, RequestChannel } from "../../shared/channels";
 import {
   REQUEST_DEFINITIONS,
@@ -35,4 +35,14 @@ export function sendNotification<C extends NotificationChannel>(
   value: NotificationValue<C>,
 ): void {
   webContents.send(channel, value);
+}
+
+/** 開いているすべての窓の renderer に、知らせを送る。 */
+export function sendNotificationToAllWindows<C extends NotificationChannel>(
+  channel: C,
+  value: NotificationValue<C>,
+): void {
+  for (const window of BrowserWindow.getAllWindows()) {
+    sendNotification(window.webContents, channel, value);
+  }
 }

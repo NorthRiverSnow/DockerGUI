@@ -8,8 +8,8 @@
 .
 ├── src
 │  ├── main                     main
-│  │  ├── index.ts             起動の入口。ウィンドウを作り、IPC 層を登録する
-│  │  ├── ipc                  IPC 層
+│  │  ├── index.ts             起動の入口。窓と機能層の部品を作り、IPC 層の口に渡す
+│  │  ├── ipc                  IPC 層。口のまとまりごとに 1 つのファイル（connection.ts、app.ts …）
 │  │  ├── features             機能層。機能ごとに 1 つのディレクトリ
 │  │  │  ├── connection       接続と診断（docs/spec/connection.md）
 │  │  │  ├── containers       コンテナ（docs/spec/containers.md）

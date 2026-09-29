@@ -465,7 +465,14 @@ async function searchAndConnect(connectionContext: ConnectionContext): Promise<v
 処理は外の関数にして、持つ値を引数で受け取る（例: `src/main/features/connection/connection.ts` の `createConnection` と `ConnectionContext`）。
 
 **main の入口（`src/main/index.ts`）は、部品を作ってつなぐだけにする。** 判断や計算は、機能層か OS の窓口に置き、`index.ts` はそれを呼ぶ。
-`index.ts` に書くのは、Electron の値（`app.getPath` の場所、`nativeTheme` など）を部品に渡すことと、口に機能層の関数をつなぐことだけ。
+`index.ts` に書くのは、窓を作ることと、Electron の値（`app.getPath` の場所、`nativeTheme` など）を渡して機能層の部品を作ることだけ。
+
+**口に機能層の関数をつなぐ処理は、IPC 層に、口のまとまりごとに 1 つのファイルで置く**（`src/main/ipc/connection.ts` の `registerConnectionChannels`、`src/main/ipc/app.ts` の `registerAppChannels`）。
+まとまりは、`docs/design/ipc.md` の口の一覧の見出し（`connection`、`containers`、`app` …）に合わせる。`index.ts` は、作った部品を渡して呼ぶだけにする。
+
+**why: 口は機能を作るたびに増え、全部で 50 を超える。** `index.ts` につなぐと、`index.ts` の大部分が口をつなぐ行になる。
+まとまりを `ipc.md` の見出しに合わせれば、`ipc.md` の表とファイルを 1 対 1 で見比べられる。
+`createXxx` ごとには分けない。配色と画面の言語は別の部品だが、どちらも `app` の口なので、`createXxx` ごとに分けると `app` の口が複数のファイルに散る。
 
 **why: `index.ts` に処理を書くと、Electron を起動しないと確かめられない。** 機能層と OS の窓口に置けば、Electron の値の代わりを渡してテストできる。
 

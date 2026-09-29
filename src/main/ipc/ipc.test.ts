@@ -1,30 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { invokeChannel, registeredChannels } from "./electron.test-helper";
 
-const registered = new Map<string, (event: unknown, argument: unknown) => Promise<unknown>>();
-
-vi.mock("electron", () => ({
-  ipcMain: {
-    handle: (
-      channel: string,
-      listener: (event: unknown, argument: unknown) => Promise<unknown>,
-    ) => {
-      registered.set(channel, listener);
-    },
-  },
-}));
+vi.mock("electron", async () => (await import("./electron.test-helper")).electronMock);
 
 const { registerRequestHandler } = await import("./ipc");
 
-/** renderer から、口 connection:getConnectionState に argument を送ったときの応答を返す。 */
-function invokeGetConnectionState(argument: unknown) {
-  const listener = registered.get("connection:getConnectionState");
-  if (!listener) throw new Error("the channel is not registered");
-  return listener({}, argument);
-}
+const invokeGetConnectionState = (argument: unknown) =>
+  invokeChannel("connection:getConnectionState", argument);
 
 const CONNECTED = { ok: true, value: { kind: "connected", engineName: "colima" } } as const;
 
-beforeEach(() => registered.clear());
+beforeEach(() => registeredChannels.clear());
 
 describe("registerRequestHandler", () => {
   it("届いた値がスキーマに合えば、機能層の関数の結果を返す", async () => {

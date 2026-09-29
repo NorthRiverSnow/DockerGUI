@@ -22,6 +22,7 @@ export function App(props: { api: MainApi }) {
       onCancelConnecting={controller.cancelConnecting}
       onReconnectNow={controller.reconnectNow}
       onGiveUpReconnecting={controller.giveUpReconnecting}
+      onSwitchColorScheme={controller.switchColorScheme}
     />
   );
 }

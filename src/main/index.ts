@@ -1,17 +1,23 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, nativeTheme } from "electron";
+import { createWindowReveal } from "./features/app/window-reveal";
 import { createConnection } from "./features/connection/connection";
+import { createColorScheme } from "./features/settings/color-scheme";
+import { openSettingsStore } from "./features/settings/settings-store";
 import { registerRequestHandler, sendNotification } from "./ipc/ipc";
 import { runCommand, startCommand } from "./os/command";
-import { loginShellPathOf } from "./os/login-shell-path";
+import { refreshPathFromLoginShell } from "./os/login-shell-path";
 
-function createMainWindow(): void {
+function createMainWindow(): BrowserWindow {
   const window = new BrowserWindow({
     width: 1200,
     height: 800,
     title: "DockerGUI",
+    // why: 窓の背景は、配色の設定によらず白になる。renderer が背景を塗るまで隠しておき、
+    // 塗り終えたら見せる（features/app/window-reveal.ts）。
+    show: false,
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
       contextIsolation: true,
@@ -28,30 +34,12 @@ function createMainWindow(): void {
   } else {
     void window.loadFile(join(__dirname, "../renderer/index.html"));
   }
-}
-
-/** ログインシェルが設定ファイルを読み終えるのを待つ時間（docs/design/main.md の「コマンドを探す場所を読み直す」）。 */
-const LOGIN_SHELL_TIMEOUT_MS = 5000;
-
-/** PATH を、ログインシェルが設定ファイルを読んだ後の値に置き換える。読めなければ、今の PATH のままにする。 */
-async function refreshPath(): Promise<void> {
-  // TODO: Windows の接続方式を作るステップで、Windows の PATH の読み直しを決める（docs/design/windows.md）
-  if (process.platform === "win32") {
-    return;
-  }
-  const path = await loginShellPathOf(
-    startCommand,
-    process.env["SHELL"] ?? "/bin/zsh",
-    LOGIN_SHELL_TIMEOUT_MS,
-  );
-  if (path) {
-    process.env["PATH"] = path;
-  }
+  return window;
 }
 
 const connection = createConnection({
   runCommand,
-  refreshPath,
+  refreshPath: () => refreshPathFromLoginShell(startCommand),
   homeDir: homedir(),
   defaultSocketPath: "/var/run/docker.sock",
   // TODO: 設定の保存を作るステップで、設定の「エンジンの起動」から読む（docs/spec/settings.md の「接続」）
@@ -100,8 +88,33 @@ registerRequestHandler("connection:giveUpReconnecting", () => {
   return { ok: true, value: undefined };
 });
 
+// why: 設定ファイルの場所は、Electron の app.getPath から決まる。settings-store.ts を Electron に依存させず、
+// テストでは一時フォルダの場所を渡せるように、場所はここで決めて渡す。
+const settingsStore = openSettingsStore(join(app.getPath("userData"), "settings.json"));
+const colorScheme = createColorScheme({
+  store: settingsStore,
+  setThemeSource: (themeSource) => {
+    nativeTheme.themeSource = themeSource;
+  },
+});
+
+registerRequestHandler("app:setColorScheme", (selected) => {
+  colorScheme.switchTo(selected);
+  return { ok: true, value: undefined };
+});
+
 void app.whenReady().then(() => {
-  createMainWindow();
+  const window = createMainWindow();
+  const windowReveal = createWindowReveal({
+    show: () => window.show(),
+    setTimer: (callback, milliseconds) => {
+      setTimeout(callback, milliseconds);
+    },
+  });
+  registerRequestHandler("app:rendererPainted", () => {
+    windowReveal.rendererPainted();
+    return { ok: true, value: undefined };
+  });
   void connection.connect();
 });
 

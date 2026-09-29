@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { NotificationChannel, RequestChannel } from "./channels";
+import { colorSchemeSettingSchema } from "./color-scheme";
 import { connectionStateSchema, type ConnectionState } from "./connection";
 import type { Result } from "./result";
 
@@ -12,6 +13,8 @@ export const REQUEST_DEFINITIONS = {
   "connection:cancelConnecting": { argument: z.undefined(), changesState: true },
   "connection:reconnectNow": { argument: z.undefined(), changesState: true },
   "connection:giveUpReconnecting": { argument: z.undefined(), changesState: true },
+  "app:setColorScheme": { argument: colorSchemeSettingSchema, changesState: true },
+  "app:rendererPainted": { argument: z.undefined(), changesState: false },
 } satisfies Record<RequestChannel, { argument: z.ZodType; changesState: boolean }>;
 
 export type RequestArgument<C extends RequestChannel> = z.infer<
@@ -27,6 +30,8 @@ export type RequestResponse = {
   "connection:cancelConnecting": Result<undefined>;
   "connection:reconnectNow": Result<undefined>;
   "connection:giveUpReconnecting": Result<undefined>;
+  "app:setColorScheme": Result<undefined>;
+  "app:rendererPainted": Result<undefined>;
 };
 
 export const NOTIFICATION_SCHEMAS = {

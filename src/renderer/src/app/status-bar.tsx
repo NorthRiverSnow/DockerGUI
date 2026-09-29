@@ -6,7 +6,9 @@ import {
   WarningIcon,
 } from "@phosphor-icons/react";
 import { Button, Group, Loader, Text } from "@mantine/core";
+import type { ColorSchemeSetting } from "../../../shared/color-scheme";
 import type { ConnectionState } from "../../../shared/connection";
+import { ColorSchemeButton } from "./color-scheme-button";
 import type { AppMessages } from "./messages";
 
 const ICON_SIZE = 16;
@@ -15,10 +17,12 @@ const ICON_SIZE = 16;
 export const STATUS_BAR_HEIGHT = 48;
 
 export function StatusBar(props: {
-  connection: ConnectionState;
+  /** main から最初の状態が届くまでは undefined。届くまでは、接続の状態を出さない。 */
+  connection: ConnectionState | undefined;
   /** 経過した時間と、再接続するまでの残り時間を出すための、いまの時刻（エポックからのミリ秒）。 */
   now: number;
   messages: AppMessages;
+  onSwitchColorScheme: (colorScheme: ColorSchemeSetting) => void;
   onCancel: () => void;
   onStart: () => void;
   onConnect: () => void;
@@ -29,48 +33,72 @@ export function StatusBar(props: {
   const { connection, messages } = props;
   return (
     <Group h="100%" px="md" gap="sm" wrap="nowrap">
-      <StateIcon connection={connection} />
-      <Text size="sm" truncate title={messages.statusLine(connection, props.now)}>
-        {messages.statusLine(connection, props.now)}
-      </Text>
-      {"startedAt" in connection && (
-        <Text size="sm" c="dimmed" style={{ whiteSpace: "nowrap" }}>
-          {messages.elapsed(props.now - connection.startedAt)}
-        </Text>
+      {connection && (
+        <>
+          <StateIcon connection={connection} />
+          <Text size="sm" truncate title={messages.statusLine(connection, props.now)}>
+            {messages.statusLine(connection, props.now)}
+          </Text>
+          {"startedAt" in connection && (
+            <Text size="sm" c="dimmed" style={{ whiteSpace: "nowrap" }}>
+              {messages.elapsed(props.now - connection.startedAt)}
+            </Text>
+          )}
+        </>
       )}
       <Group ms="auto" gap="xs" wrap="nowrap">
-        {connection.kind === "connecting" && (
-          <Button size="xs" variant="default" onClick={props.onCancel}>
-            {messages.buttons.cancel}
-          </Button>
-        )}
-        {connection.kind === "stopped" && connection.startable && (
-          <Button size="xs" onClick={props.onStart}>
-            {messages.buttons.start}
-          </Button>
-        )}
-        {canRetry(connection) && (
-          <Button size="xs" onClick={props.onRetry}>
-            {messages.buttons.retry}
-          </Button>
-        )}
-        {connection.kind === "reconnectWaiting" && (
-          <>
-            <Button size="xs" onClick={props.onReconnectNow}>
-              {messages.buttons.reconnectNow}
-            </Button>
-            <Button size="xs" variant="default" onClick={props.onGiveUp}>
-              {messages.buttons.giveUp}
-            </Button>
-          </>
-        )}
-        {connection.kind === "runningNotConnected" && (
-          <Button size="xs" onClick={props.onConnect}>
-            {messages.buttons.connect}
-          </Button>
-        )}
+        {connection && <ConnectionButtons {...props} connection={connection} />}
+        <ColorSchemeButton messages={messages} onSwitch={props.onSwitchColorScheme} />
       </Group>
     </Group>
+  );
+}
+
+/** 接続の状態の表のボタン（docs/spec/connection.md の「接続の状態」）。配色を選ぶボタンの左に並べる。 */
+function ConnectionButtons(props: {
+  connection: ConnectionState;
+  messages: AppMessages;
+  onCancel: () => void;
+  onStart: () => void;
+  onConnect: () => void;
+  onRetry: () => void;
+  onReconnectNow: () => void;
+  onGiveUp: () => void;
+}) {
+  const { connection, messages } = props;
+  return (
+    <>
+      {connection.kind === "connecting" && (
+        <Button size="xs" variant="default" onClick={props.onCancel}>
+          {messages.buttons.cancel}
+        </Button>
+      )}
+      {connection.kind === "stopped" && connection.startable && (
+        <Button size="xs" onClick={props.onStart}>
+          {messages.buttons.start}
+        </Button>
+      )}
+      {canRetry(connection) && (
+        <Button size="xs" onClick={props.onRetry}>
+          {messages.buttons.retry}
+        </Button>
+      )}
+      {connection.kind === "reconnectWaiting" && (
+        <>
+          <Button size="xs" onClick={props.onReconnectNow}>
+            {messages.buttons.reconnectNow}
+          </Button>
+          <Button size="xs" variant="default" onClick={props.onGiveUp}>
+            {messages.buttons.giveUp}
+          </Button>
+        </>
+      )}
+      {connection.kind === "runningNotConnected" && (
+        <Button size="xs" onClick={props.onConnect}>
+          {messages.buttons.connect}
+        </Button>
+      )}
+    </>
   );
 }
 

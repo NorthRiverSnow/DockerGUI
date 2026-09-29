@@ -1,3 +1,4 @@
+import type { ColorSchemeSetting } from "../../../shared/color-scheme";
 import type { ConnectionState } from "../../../shared/connection";
 import type { Language } from "../../../shared/language";
 import type { Failure } from "../../../shared/result";
@@ -17,6 +18,8 @@ export type AppMessages = {
     reconnectNow: string;
     giveUp: string;
   };
+  /** 配色を切り替えるボタンの名前。押すと切り替わる先の配色ごとに持つ（docs/spec/common.md の「配色を選ぶ」）。 */
+  colorScheme: { switchTo: Record<ColorSchemeSetting, string> };
 };
 
 export const APP_MESSAGES: Record<Language, AppMessages> = {
@@ -40,6 +43,7 @@ export const APP_MESSAGES: Record<Language, AppMessages> = {
       reconnectNow: "今すぐ再接続",
       giveUp: "あきらめる",
     },
+    colorScheme: { switchTo: { light: "ライトに切り替える", dark: "ダークに切り替える" } },
     statusLine: (connection, now) => {
       switch (connection.kind) {
         case "searching":
@@ -85,6 +89,7 @@ export const APP_MESSAGES: Record<Language, AppMessages> = {
       reconnectNow: "Reconnect now",
       giveUp: "Give up",
     },
+    colorScheme: { switchTo: { light: "Switch to light", dark: "Switch to dark" } },
     statusLine: (connection, now) => {
       switch (connection.kind) {
         case "searching":

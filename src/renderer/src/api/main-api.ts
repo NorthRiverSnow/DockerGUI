@@ -1,5 +1,5 @@
 import type { WindowApi } from "../../../shared/channels";
-import type { NotificationValue, RequestResponse } from "../../../shared/ipc";
+import type { NotificationValue, RequestArgument, RequestResponse } from "../../../shared/ipc";
 
 declare global {
   interface Window {
@@ -16,7 +16,12 @@ export type MainApi = {
   cancelConnecting: () => Promise<RequestResponse["connection:cancelConnecting"]>;
   reconnectNow: () => Promise<RequestResponse["connection:reconnectNow"]>;
   giveUpReconnecting: () => Promise<RequestResponse["connection:giveUpReconnecting"]>;
+  setColorScheme: (
+    colorScheme: RequestArgument<"app:setColorScheme">,
+  ) => Promise<RequestResponse["app:setColorScheme"]>;
   /** 受け取りをやめる関数を返す。 */
+  /** 最初に描き終えたことを main に知らせる。main は知らせを受けてから窓を見せる。 */
+  notifyRendererPainted: () => Promise<RequestResponse["app:rendererPainted"]>;
   onConnectionStateChanged: (
     listener: (state: NotificationValue<"connection:connectionStateChanged">) => void,
   ) => () => void;
@@ -54,6 +59,12 @@ export function realMainApiOf(windowApi: WindowApi): MainApi {
       windowApi.invoke("connection:giveUpReconnecting") as Promise<
         RequestResponse["connection:giveUpReconnecting"]
       >,
+    setColorScheme: (colorScheme) =>
+      windowApi.invoke("app:setColorScheme", colorScheme) as Promise<
+        RequestResponse["app:setColorScheme"]
+      >,
+    notifyRendererPainted: () =>
+      windowApi.invoke("app:rendererPainted") as Promise<RequestResponse["app:rendererPainted"]>,
     onConnectionStateChanged: (listener) =>
       windowApi.on("connection:connectionStateChanged", (value) =>
         listener(value as NotificationValue<"connection:connectionStateChanged">),

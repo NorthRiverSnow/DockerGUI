@@ -44,5 +44,6 @@
       "version": "12.6.0",
       "onFail": "download"
     }
-  }
+  },
+  "productName": "DockerGUI"
 }

@@ -463,6 +463,11 @@ async function searchAndConnect(connectionContext: ConnectionContext): Promise<v
 **`createXxx` のように値をまとめて返す関数の中に、処理を書き込まない。** 中に置くのは、持つ値の用意と、外に出す操作を関数につなぐことだけにする。
 処理は外の関数にして、持つ値を引数で受け取る（例: `src/main/features/connection/connection.ts` の `createConnection` と `ConnectionContext`）。
 
+**main の入口（`src/main/index.ts`）は、部品を作ってつなぐだけにする。** 判断や計算は、機能層か OS の窓口に置き、`index.ts` はそれを呼ぶ。
+`index.ts` に書くのは、Electron の値（`app.getPath` の場所、`nativeTheme` など）を部品に渡すことと、口に機能層の関数をつなぐことだけ。
+
+**why: `index.ts` に処理を書くと、Electron を起動しないと確かめられない。** 機能層と OS の窓口に置けば、Electron の値の代わりを渡してテストできる。
+
 **why: 流れと手順が混ざると、何がどの順に起きるかを、細かい処理を読み飛ばしながら探すことになる。**
 流れの関数が手順の呼び出しだけなら、流れは上から読むだけで分かり、手順の中身は手順の関数を開いたときだけ読めばよい。
 `createXxx` の中に処理を書き込むと、`createXxx` の中の変数に縛られて、処理を外に出せなくなる。

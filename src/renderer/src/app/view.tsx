@@ -1,4 +1,5 @@
 import { AppShell, Divider, NavLink, Title } from "@mantine/core";
+import type { ColorSchemeSetting } from "../../../shared/color-scheme";
 import type { ConnectionState } from "../../../shared/connection";
 import type { AppMessages } from "./messages";
 import type { Target } from "./model";
@@ -27,6 +28,7 @@ export function AppView(props: {
   onCancelConnecting: () => void;
   onReconnectNow: () => void;
   onGiveUpReconnecting: () => void;
+  onSwitchColorScheme: (colorScheme: ColorSchemeSetting) => void;
 }) {
   const targetLink = (target: Target) => (
     <NavLink
@@ -44,19 +46,18 @@ export function AppView(props: {
       padding="md"
     >
       <AppShell.Header>
-        {props.connection && (
-          <StatusBar
-            connection={props.connection}
-            now={props.now}
-            messages={props.messages}
-            onCancel={props.onCancelConnecting}
-            onStart={props.onStartEngine}
-            onConnect={props.onConnectEngine}
-            onRetry={props.onRetryConnecting}
-            onReconnectNow={props.onReconnectNow}
-            onGiveUp={props.onGiveUpReconnecting}
-          />
-        )}
+        <StatusBar
+          connection={props.connection}
+          now={props.now}
+          messages={props.messages}
+          onSwitchColorScheme={props.onSwitchColorScheme}
+          onCancel={props.onCancelConnecting}
+          onStart={props.onStartEngine}
+          onConnect={props.onConnectEngine}
+          onRetry={props.onRetryConnecting}
+          onReconnectNow={props.onReconnectNow}
+          onGiveUp={props.onGiveUpReconnecting}
+        />
       </AppShell.Header>
       <AppShell.Navbar p="xs">
         {TARGETS_ABOVE_DIVIDER.map(targetLink)}

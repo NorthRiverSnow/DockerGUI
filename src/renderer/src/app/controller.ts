@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useReducer, useState } from "react";
+import type { ColorSchemeSetting } from "../../../shared/color-scheme";
 import type { MainApi } from "../api/main-api";
 import { INITIAL_APP_STATE, nextAppState, type AppState, type Target } from "./model";
 
@@ -15,6 +16,7 @@ export function useAppController(deps: { api: MainApi }): {
   cancelConnecting: () => void;
   reconnectNow: () => void;
   giveUpReconnecting: () => void;
+  switchColorScheme: (colorScheme: ColorSchemeSetting) => void;
 } {
   const [state, dispatch] = useReducer(nextAppState, INITIAL_APP_STATE);
   const [now, setNow] = useState(Date.now);
@@ -31,6 +33,12 @@ export function useAppController(deps: { api: MainApi }): {
       }
     });
     return stopReceiving;
+  }, [deps.api]);
+
+  // why: useEffect は、React が画面を描き終えた後に呼ばれる。Mantine が背景を塗った後なので、
+  // この時点で窓を見せれば、白い背景が見えない（docs/design/main.md の「窓は、renderer が描き終えてから見せる」）。
+  useEffect(() => {
+    void deps.api.notifyRendererPainted();
   }, [deps.api]);
 
   const showsTime =
@@ -55,6 +63,11 @@ export function useAppController(deps: { api: MainApi }): {
   const cancelConnecting = useCallback(() => void deps.api.cancelConnecting(), [deps.api]);
   const reconnectNow = useCallback(() => void deps.api.reconnectNow(), [deps.api]);
   const giveUpReconnecting = useCallback(() => void deps.api.giveUpReconnecting(), [deps.api]);
+  // why: 画面の配色は、main が Electron の配色を変えた時点で変わる。renderer は配色を持たないので、送るだけにする。
+  const switchColorScheme = useCallback(
+    (colorScheme: ColorSchemeSetting) => void deps.api.setColorScheme(colorScheme),
+    [deps.api],
+  );
 
   return {
     state,
@@ -66,5 +79,6 @@ export function useAppController(deps: { api: MainApi }): {
     cancelConnecting,
     reconnectNow,
     giveUpReconnecting,
+    switchColorScheme,
   };
 }

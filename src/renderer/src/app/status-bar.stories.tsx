@@ -19,6 +19,7 @@ const meta = {
     onRetry: fn(),
     onReconnectNow: fn(),
     onGiveUp: fn(),
+    onSwitchColorScheme: fn(),
   },
   // why: 画面の言語の文は、上の帯で選んだ言語で render が上書きする。Controls で書き換えても効かないので、欄に出さない。
   argTypes: { messages: { table: { disable: true } } },
@@ -40,6 +41,11 @@ const meta = {
 export default meta;
 
 type Story = StoryObj<typeof meta>;
+
+export const BeforeConnectionState: Story = {
+  name: "接続の状態が届く前",
+  args: { connection: undefined },
+};
 
 export const Searching: Story = {
   name: "探索中",

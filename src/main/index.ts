@@ -4,7 +4,8 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { app, BrowserWindow } from "electron";
 import { createConnection } from "./features/connection/connection";
 import { registerRequestHandler, sendNotification } from "./ipc/ipc";
-import { runCommand } from "./os/command";
+import { runCommand, startCommand } from "./os/command";
+import { loginShellPathOf } from "./os/login-shell-path";
 
 function createMainWindow(): void {
   const window = new BrowserWindow({
@@ -29,8 +30,28 @@ function createMainWindow(): void {
   }
 }
 
+/** ログインシェルが設定ファイルを読み終えるのを待つ時間（docs/design/main.md の「コマンドを探す場所を読み直す」）。 */
+const LOGIN_SHELL_TIMEOUT_MS = 5000;
+
+/** PATH を、ログインシェルが設定ファイルを読んだ後の値に置き換える。読めなければ、今の PATH のままにする。 */
+async function refreshPath(): Promise<void> {
+  // TODO: Windows の接続方式を作るステップで、Windows の PATH の読み直しを決める（docs/design/windows.md）
+  if (process.platform === "win32") {
+    return;
+  }
+  const path = await loginShellPathOf(
+    startCommand,
+    process.env["SHELL"] ?? "/bin/zsh",
+    LOGIN_SHELL_TIMEOUT_MS,
+  );
+  if (path) {
+    process.env["PATH"] = path;
+  }
+}
+
 const connection = createConnection({
   runCommand,
+  refreshPath,
   homeDir: homedir(),
   defaultSocketPath: "/var/run/docker.sock",
   // TODO: 設定の保存を作るステップで、設定の「エンジンの起動」から読む（docs/spec/settings.md の「接続」）

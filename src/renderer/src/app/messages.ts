@@ -55,7 +55,9 @@ export const APP_MESSAGES: Record<Language, AppMessages> = {
         case "stopped":
           return `${connection.engineName} は停止しています`;
         case "unavailable":
-          return `${connection.engineName} に接続できません（${jaCauseOf(connection.failure)}）`;
+          return isEngineNotFound(connection.failure)
+            ? "Docker のエンジンが見つかりません。Docker をインストールして起動し、「再試行」を押してください"
+            : `${connection.engineName} に接続できません（${jaCauseOf(connection.failure)}）`;
         case "reconnectWaiting":
           return `${connection.engineName} との接続が切れました。${secondsUntil(connection.retryAt, now)} 秒後に再接続します`;
         case "reconnecting":
@@ -98,7 +100,9 @@ export const APP_MESSAGES: Record<Language, AppMessages> = {
         case "stopped":
           return `${connection.engineName} is stopped`;
         case "unavailable":
-          return `Can't connect to ${connection.engineName} (${enCauseOf(connection.failure)})`;
+          return isEngineNotFound(connection.failure)
+            ? "No Docker engine was found. Install and start Docker, then press Retry"
+            : `Can't connect to ${connection.engineName} (${enCauseOf(connection.failure)})`;
         case "reconnectWaiting": {
           const seconds = secondsUntil(connection.retryAt, now);
           return `Lost connection to ${connection.engineName}. Reconnecting in ${seconds} ${seconds === 1 ? "second" : "seconds"}`;
@@ -109,6 +113,10 @@ export const APP_MESSAGES: Record<Language, AppMessages> = {
     },
   },
 };
+
+function isEngineNotFound(failure: Failure): boolean {
+  return failure.kind === "expected" && failure.code === "engineNotFound";
+}
 
 /** time までの残りの秒数。端数は切り上げ、過ぎていれば 0 を返す。 */
 function secondsUntil(time: number, now: number): number {

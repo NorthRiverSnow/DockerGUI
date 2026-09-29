@@ -171,6 +171,7 @@ function connectionWith(options: {
   autoStart?: boolean;
   sleep?: FakeSleep["sleep"];
   repeat?: FakeRepeat["repeat"];
+  refreshPath?: () => Promise<void>;
 }): {
   connection: Connection;
   states: ConnectionState[];
@@ -180,6 +181,7 @@ function connectionWith(options: {
   const waiters: { kind: ConnectionState["kind"]; resolve: () => void }[] = [];
   const connection = createConnection({
     runCommand: runCommandWith(options.runCommand, options.start ?? fakeStartCommand()),
+    refreshPath: options.refreshPath ?? (async () => {}),
     homeDir,
     defaultSocketPath: unusedSocketPath(),
     autoStart: options.autoStart ?? true,
@@ -423,6 +425,53 @@ describe("retry", () => {
     await retrying;
 
     expect(connection.state()).toEqual({ kind: "connected", engineName: "colima" });
+  });
+
+  it("エンジンが見つからなくて接続不可になった後、エンジンを入れて再試行すると、繋がる", async () => {
+    // docker context ls が、エンジンを入れた後にだけ、動いているエンジンを返す
+    let installedEngine: FakeEngine | undefined;
+    const { connection } = connectionWith({
+      runCommand: (command, args) =>
+        fakeCommands({ contextSocketPath: installedEngine?.socketPath, colimaInstalled: false })(
+          command,
+          args,
+        ),
+    });
+    await connection.connect();
+    expect(connection.state()).toEqual({
+      kind: "unavailable",
+      engineName: "Docker",
+      failure: { kind: "expected", code: "engineNotFound" },
+    });
+
+    installedEngine = await fakeEngineAt();
+    await connection.retry();
+
+    expect(connection.state()).toEqual({ kind: "connected", engineName: "desktop-linux" });
+  });
+
+  it("PATH を通してエンジンを入れた後に再試行すると、PATH を読み直してから探し、繋ぐ", async () => {
+    const engine = await fakeEngineAt();
+    // 利用者の設定ファイルに docker の場所が書かれているか。アプリは、PATH を読み直したときだけ、書かれた内容を知る
+    let dockerInShellConfig = false;
+    let dockerOnAppPath = false;
+    const { connection } = connectionWith({
+      runCommand: (command, args) =>
+        fakeCommands({
+          contextSocketPath: dockerOnAppPath ? engine.socketPath : undefined,
+          colimaInstalled: false,
+        })(command, args),
+      refreshPath: async () => {
+        dockerOnAppPath = dockerInShellConfig;
+      },
+    });
+    await connection.connect();
+    expect(connection.state().kind).toBe("unavailable");
+
+    dockerInShellConfig = true;
+    await connection.retry();
+
+    expect(connection.state()).toEqual({ kind: "connected", engineName: "desktop-linux" });
   });
 
   it("接続不可でなければ、再試行しても何もしない", async () => {

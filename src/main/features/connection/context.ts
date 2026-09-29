@@ -5,6 +5,11 @@ import type { EngineTarget } from "./discover";
 
 export type ConnectionDeps = {
   runCommand: RunCommand;
+  /**
+   * コマンドを探す場所（PATH）を、利用者の設定ファイルから読み直す。読めなければ、今の PATH のままにする。
+   * エンジンを探す前に呼ぶ（docs/spec/connection.md の「［再試行］」）。
+   */
+  refreshPath: () => Promise<void>;
   homeDir: string;
   defaultSocketPath: string;
   /** 止まっていたら利用者に聞かずに起動するか（docs/spec/connection.md の「既定は自動で起動する」）。 */

@@ -60,6 +60,29 @@ describe("statusLine", () => {
   });
 });
 
+describe("statusLine（エンジンが見つからないとき）", () => {
+  const notFound: ConnectionState = {
+    kind: "unavailable",
+    engineName: "Docker",
+    failure: { kind: "expected", code: "engineNotFound" },
+  };
+
+  it("エンジンの名前は「Docker」と書き、macOS だけのエンジンの名前を出さない", () => {
+    for (const language of LANGUAGES) {
+      expect(APP_MESSAGES[language].statusLine(notFound, 0)).not.toContain("colima");
+    }
+  });
+
+  it("原因だけでなく、利用者がすることを出す", () => {
+    expect(APP_MESSAGES.ja.statusLine(notFound, 0)).toBe(
+      "Docker のエンジンが見つかりません。Docker をインストールして起動し、「再試行」を押してください",
+    );
+    expect(APP_MESSAGES.en.statusLine(notFound, 0)).toBe(
+      "No Docker engine was found. Install and start Docker, then press Retry",
+    );
+  });
+});
+
 describe("statusLine（再接続待ち）", () => {
   const waiting: ConnectionState = {
     kind: "reconnectWaiting",

@@ -14,13 +14,14 @@ import {
 import { CONTEXT_LIST_COMMAND, commandLineOf, type EngineTarget } from "./discover";
 import { searchedEngineOf, type SearchResult } from "./search";
 
-/** 状態を探索中にして、繋ぐエンジンを探す。 */
+/** 状態を探索中にして、コマンドを探す場所を読み直してから、繋ぐエンジンを探す。 */
 export async function searchEngine(connectionContext: ConnectionContext): Promise<SearchResult> {
   changeState(connectionContext, {
     kind: "searching",
     command: commandLineOf(CONTEXT_LIST_COMMAND),
     startedAt: connectionContext.deps.now(),
   });
+  await connectionContext.deps.refreshPath();
   return searchedEngineOf(connectionContext.deps);
 }
 

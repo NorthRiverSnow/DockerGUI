@@ -105,6 +105,20 @@ describe("状態ごとに出すボタン", () => {
         engineName: "Docker",
         failure: { kind: "expected", code: "engineNotFound" },
       },
+      buttons: ["再試行"],
+    },
+    {
+      title: "起動に失敗して接続不可",
+      connection: {
+        kind: "unavailable",
+        engineName: "colima",
+        failure: {
+          kind: "expected",
+          code: "engineStartFailed",
+          command: "colima start",
+          stderr: "",
+        },
+      },
       buttons: [],
     },
     {

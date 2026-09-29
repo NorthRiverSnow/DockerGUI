@@ -30,7 +30,7 @@ export function StatusBar(props: {
   return (
     <Group h="100%" px="md" gap="sm" wrap="nowrap">
       <StateIcon connection={connection} />
-      <Text size="sm" truncate>
+      <Text size="sm" truncate title={messages.statusLine(connection, props.now)}>
         {messages.statusLine(connection, props.now)}
       </Text>
       {"startedAt" in connection && (
@@ -49,7 +49,7 @@ export function StatusBar(props: {
             {messages.buttons.start}
           </Button>
         )}
-        {isNoResponse(connection) && (
+        {canRetry(connection) && (
           <Button size="xs" onClick={props.onRetry}>
             {messages.buttons.retry}
           </Button>
@@ -74,12 +74,13 @@ export function StatusBar(props: {
   );
 }
 
-/** 接続不可のうち、原因が「応答がありません」のもの（docs/spec/connection.md の「［再試行］」）。 */
-function isNoResponse(connection: ConnectionState): boolean {
+/** 接続不可のうち、原因が「応答がありません」か「エンジンが見つかりません」のもの（docs/spec/connection.md の「［再試行］」）。 */
+function canRetry(connection: ConnectionState): boolean {
   return (
     connection.kind === "unavailable" &&
     connection.failure.kind === "expected" &&
-    connection.failure.code === "engineUnreachable"
+    (connection.failure.code === "engineUnreachable" ||
+      connection.failure.code === "engineNotFound")
   );
 }
 

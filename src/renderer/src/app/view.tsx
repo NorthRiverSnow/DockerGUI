@@ -1,6 +1,7 @@
 import { AppShell, Divider, NavLink, Title } from "@mantine/core";
 import type { ColorSchemeSetting } from "../../../shared/color-scheme";
 import type { ConnectionState } from "../../../shared/connection";
+import type { LanguageSetting, LanguageState } from "../../../shared/language";
 import type { AppMessages } from "./messages";
 import type { Target } from "./model";
 import { STATUS_BAR_HEIGHT, StatusBar } from "./status-bar";
@@ -19,6 +20,7 @@ const TARGETS_BELOW_DIVIDER: Target[] = ["diagnostics", "settings"];
 export function AppView(props: {
   selectedTarget: Target;
   connection: ConnectionState | undefined;
+  language: LanguageState | undefined;
   now: number;
   messages: AppMessages;
   onSelectTarget: (target: Target) => void;
@@ -29,6 +31,7 @@ export function AppView(props: {
   onReconnectNow: () => void;
   onGiveUpReconnecting: () => void;
   onSwitchColorScheme: (colorScheme: ColorSchemeSetting) => void;
+  onSelectLanguage: (setting: LanguageSetting) => void;
 }) {
   const targetLink = (target: Target) => (
     <NavLink
@@ -51,6 +54,8 @@ export function AppView(props: {
           now={props.now}
           messages={props.messages}
           onSwitchColorScheme={props.onSwitchColorScheme}
+          language={props.language}
+          onSelectLanguage={props.onSelectLanguage}
           onCancel={props.onCancelConnecting}
           onStart={props.onStartEngine}
           onConnect={props.onConnectEngine}

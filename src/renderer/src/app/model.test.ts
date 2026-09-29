@@ -19,4 +19,12 @@ describe("nextAppState", () => {
 
     expect(next.connection).toEqual(connection);
   });
+
+  it("main から届いた画面の言語を、アプリ全体の状態に入れる", () => {
+    const language = { setting: "auto", language: "en" } as const;
+
+    const next = nextAppState(INITIAL_APP_STATE, { kind: "languageReceived", language });
+
+    expect(next.language).toEqual(language);
+  });
 });

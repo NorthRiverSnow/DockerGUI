@@ -11,6 +11,8 @@ export const REQUEST_CHANNELS = [
   "connection:giveUpReconnecting",
   "app:setColorScheme",
   "app:rendererPainted",
+  "app:getLanguage",
+  "app:setLanguage",
 ] as const;
 export const NOTIFICATION_CHANNELS = ["connection:connectionStateChanged"] as const;
 

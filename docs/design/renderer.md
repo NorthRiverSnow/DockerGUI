@@ -112,6 +112,9 @@ main も Electron も起動せずに済む。
 **要素は、ボタンの名前と役割で探す**（Testing Library の `getByRole`）。CSS のクラス名では探さない。
 クラス名で探すと、見た目を直しただけでテストが失敗する。
 
+**Controller の hook は、Testing Library の `renderHook` で呼んで確かめる**（`src/renderer/src/app/controller.test.ts`）。
+main の窓口の代わり（`src/renderer/src/api/fake-main-api.test-helper.ts`）を渡し、どの窓口がどの順で呼ばれたかと、知らせを届けた後の状態を確かめる。
+
 **テストのファイルの 1 行目に `// @vitest-environment jsdom` を書く。** 書いたファイルだけを、ブラウザの代わりの jsdom の中で実行する。
 main のテストは Node のまま実行する。
 
@@ -222,6 +225,8 @@ Model を「状態 + 出来事 → 次の状態」の純関数にしてあるの
 
 **main が画面の言語（`"ja"` か `"en"`）を決め、renderer に渡す**（`ipc.md` の「共通の口（`stream` と `app`）」の `app:getLanguage`）。
 renderer は、OS の言語を自分で読まない。
+**main は、設定が「自動」のとき、Electron の `app.getPreferredSystemLanguages()` の最初の言語で決める**（`src/main/features/settings/language.ts`）。
+最初の言語が `ja` か `ja-` で始まるなら日本語、それ以外は英語。開発機では `["ja-JP"]` を返し、macOS の言語の設定の順と一致した。
 `Language` の型（`"ja" | "en"`）は、IPC で渡す値の型なので `src/shared` に置く（`ipc.md` の「形の正は `src/shared` のスキーマ」）。
 
 **why: メニューバーのメニューは main が作るので、main も画面の言語を知る必要がある。**
@@ -229,6 +234,21 @@ main と renderer がそれぞれ OS の言語を読むと、2 つの判定が�
 
 **画面の言語は、アプリ全体の状態に入れる**（「アプリ全体の状態」）。
 App が画面の言語を props で各画面の screen に渡し、screen が画面の言語で文の組を選ぶ。
+
+**言語を選んだ後の画面の言語は、`app:setLanguage` の応答で受け取る。** 「自動」を選んだときの言語は、main が OS の言語から決めるので、renderer は選んだ時点では分からない。
+知らせの口は置かない。画面の言語を変えるのは renderer だけで、起動したときの言語は、窓を見せる前に `app:getLanguage` で受け取っている。
+
+**画面の言語が届くまでは、窓を見せる知らせ（`app:rendererPainted`）を送らない**（`main.md` の「窓は、renderer が描き終えてから見せる」）。
+届く前に見せると、仮の言語（日本語）で描いた文が、届いた言語に変わるのが見える。
+
+### 言語のメニュー
+
+**状態バーの右端に、いまの画面の言語の国旗のボタンを置く。** 押すと「自動」「日本語」「English」のメニューが開く（`docs/spec/common.md` の「言語を選ぶ」）。
+国旗は、`circle-flags` の SVG をアプリに同梱して出す。旗の画像は読み上げの対象から外し、ボタンの名前（`aria-label`）を言語の名前にする。
+言語の名前は、どの画面の言語でも同じ文字で出すので、`messages.ts` ではなく `language-menu.tsx` に置く。「自動」だけは、いまの画面の言語の文にする。
+
+**選んでいる設定は、メニューの項目の左のチェックと、`aria-current` で示す。** Mantine のメニューは、項目の役割（`role`）を `menuitem` に固定し、
+`menuitem` には、選んでいることを表す `aria-checked` を付けられない。
 
 ### 文は、言語ごとの組を 1 つのファイルに並べる
 
@@ -391,7 +411,6 @@ function terminalThemeOf(style: CSSStyleDeclaration): ITheme {
 
 | 確かめていないこと | いつ確かめるか |
 | --- | --- |
-| Controller の hook のテストに使う道具 | 最初の画面を実装するとき |
 | 隠したターミナルを見せ直したときに、`@xterm/xterm` で行数と桁数を測り直す方法 | ターミナルを実装するとき |
 | ログの本文の、見えている範囲だけを描く方法 | ログの画面を実装するとき |
 | React が描き終えた時点を、確認を返す処理から知る方法 | ログの画面を実装するとき |

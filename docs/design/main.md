@@ -139,7 +139,7 @@
 | 別の名前（`settings.json.writing`）で書き終えてから、名前を変える | 書いている途中でアプリが終わっても、書きかけの `settings.json` を残さない |
 | JSON として読めないファイルは、`settings.json.broken` に名前を変えて残す | `docs/spec/settings.md` の「壊れた設定ファイルを、上書きする前に残す」 |
 
-**今読み書きする項目は、配色だけ。** 配色は、一度も切り替えていなければ保存しない（`docs/spec/common.md` の「配色を選ぶ」）。 読めなかったことを状態バーで知らせる処理（`docs/spec/settings.md` の「設定ファイルを読めないとき」）は、設定の画面を作るときに作る。
+**今読み書きする項目は、配色と画面の言語。** 配色は、一度も切り替えていなければ保存しない（`docs/spec/common.md` の「配色を選ぶ」）。 読めなかったことを状態バーで知らせる処理（`docs/spec/settings.md` の「設定ファイルを読めないとき」）は、設定の画面を作るときに作る。
 
 **窓を開く前に、配色の設定を `nativeTheme.themeSource` に入れる**（`src/main/features/settings/color-scheme.ts` の `createColorScheme`）。
 窓を開いた後に入れると、OS の配色で一度描いてから、保存されている配色に切り替わる（開発機で確認。OS がダークで、保存した配色がライトのとき、ダークで 1 回描いてからライトに変わった）。

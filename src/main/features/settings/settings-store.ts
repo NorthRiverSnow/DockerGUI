@@ -2,10 +2,13 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "
 import path from "node:path";
 import { z } from "zod";
 import { colorSchemeSettingSchema, type ColorSchemeSetting } from "../../../shared/color-scheme";
+import { languageSettingSchema, type LanguageSetting } from "../../../shared/language";
 
 export type Settings = {
   /** 一度も配色を切り替えていなければ undefined。undefined の間は OS の配色に合わせる。 */
   colorScheme: ColorSchemeSetting | undefined;
+  /** 保存されていなければ auto。 */
+  language: LanguageSetting;
 };
 
 export type SettingsStore = {
@@ -52,7 +55,11 @@ function storedObjectOf(filePath: string): Record<string, unknown> {
 /** 項目ごとに検査し、形が正しくない項目だけを、保存されていないものとして扱う（docs/spec/settings.md の「場面ごとの振る舞い」）。 */
 function readSettings(stored: Record<string, unknown>): Settings {
   const colorScheme = colorSchemeSettingSchema.safeParse(stored["colorScheme"]);
-  return { colorScheme: colorScheme.success ? colorScheme.data : undefined };
+  const language = languageSettingSchema.safeParse(stored["language"]);
+  return {
+    colorScheme: colorScheme.success ? colorScheme.data : undefined,
+    language: language.success ? language.data : "auto",
+  };
 }
 
 function writeSettingsFile(filePath: string, stored: Record<string, unknown>): void {

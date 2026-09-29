@@ -26,13 +26,19 @@ const storedJson = () => JSON.parse(readFileSync(filePath, "utf8")) as unknown;
 
 describe("openSettingsStore", () => {
   it("設定ファイルが無ければ、配色は保存されていないものとして扱う", () => {
-    expect(openSettingsStore(filePath).current()).toEqual({ colorScheme: undefined });
+    expect(openSettingsStore(filePath).current()).toEqual({
+      colorScheme: undefined,
+      language: "auto",
+    });
   });
 
   it("変えた配色を設定ファイルに書き、開き直しても同じ配色を読む", () => {
     openSettingsStore(filePath).update({ colorScheme: "dark" });
 
-    expect(openSettingsStore(filePath).current()).toEqual({ colorScheme: "dark" });
+    expect(openSettingsStore(filePath).current()).toEqual({
+      colorScheme: "dark",
+      language: "auto",
+    });
   });
 
   it("変えた配色は、書いた直後から current に反映する", () => {
@@ -40,13 +46,22 @@ describe("openSettingsStore", () => {
 
     store.update({ colorScheme: "light" });
 
-    expect(store.current()).toEqual({ colorScheme: "light" });
+    expect(store.current()).toEqual({ colorScheme: "light", language: "auto" });
   });
 
   it("配色の値が正しくなければ、配色は保存されていないものとして扱う", () => {
     writeStored('{"colorScheme":"auto"}');
 
-    expect(openSettingsStore(filePath).current()).toEqual({ colorScheme: undefined });
+    expect(openSettingsStore(filePath).current()).toEqual({
+      colorScheme: undefined,
+      language: "auto",
+    });
+  });
+
+  it("画面の言語の値が正しくなければ、「自動」として扱う", () => {
+    writeStored('{"language":"fr"}');
+
+    expect(openSettingsStore(filePath).current().language).toBe("auto");
   });
 
   it("DockerGUI が知らない項目も、書き戻すときに残す", () => {
@@ -62,7 +77,7 @@ describe("openSettingsStore", () => {
 
     const store = openSettingsStore(filePath);
 
-    expect(store.current()).toEqual({ colorScheme: undefined });
+    expect(store.current()).toEqual({ colorScheme: undefined, language: "auto" });
     expect(readFileSync(`${filePath}.broken`, "utf8")).toBe("{ broken");
     expect(existsSync(filePath)).toBe(false);
   });

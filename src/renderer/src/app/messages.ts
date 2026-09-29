@@ -20,6 +20,8 @@ export type AppMessages = {
   };
   /** 配色を切り替えるボタンの名前。押すと切り替わる先の配色ごとに持つ（docs/spec/common.md の「配色を選ぶ」）。 */
   colorScheme: { switchTo: Record<ColorSchemeSetting, string> };
+  /** 言語のメニューの「自動」。言語の名前は、いまの画面の言語によらず同じなので持たない（language-menu.tsx）。 */
+  language: { auto: string };
 };
 
 export const APP_MESSAGES: Record<Language, AppMessages> = {
@@ -44,6 +46,7 @@ export const APP_MESSAGES: Record<Language, AppMessages> = {
       giveUp: "あきらめる",
     },
     colorScheme: { switchTo: { light: "ライトに切り替える", dark: "ダークに切り替える" } },
+    language: { auto: "自動" },
     statusLine: (connection, now) => {
       switch (connection.kind) {
         case "searching":
@@ -90,6 +93,7 @@ export const APP_MESSAGES: Record<Language, AppMessages> = {
       giveUp: "Give up",
     },
     colorScheme: { switchTo: { light: "Switch to light", dark: "Switch to dark" } },
+    language: { auto: "Auto" },
     statusLine: (connection, now) => {
       switch (connection.kind) {
         case "searching":

@@ -8,7 +8,9 @@ import {
 import { Button, Group, Loader, Text } from "@mantine/core";
 import type { ColorSchemeSetting } from "../../../shared/color-scheme";
 import type { ConnectionState } from "../../../shared/connection";
+import type { LanguageSetting, LanguageState } from "../../../shared/language";
 import { ColorSchemeButton } from "./color-scheme-button";
+import { LanguageMenu } from "./language-menu";
 import type { AppMessages } from "./messages";
 
 const ICON_SIZE = 16;
@@ -23,6 +25,9 @@ export function StatusBar(props: {
   now: number;
   messages: AppMessages;
   onSwitchColorScheme: (colorScheme: ColorSchemeSetting) => void;
+  /** main から届くまでは undefined。届くまでは、言語のボタンを出さない。 */
+  language: LanguageState | undefined;
+  onSelectLanguage: (setting: LanguageSetting) => void;
   onCancel: () => void;
   onStart: () => void;
   onConnect: () => void;
@@ -49,6 +54,13 @@ export function StatusBar(props: {
       <Group ms="auto" gap="xs" wrap="nowrap">
         {connection && <ConnectionButtons {...props} connection={connection} />}
         <ColorSchemeButton messages={messages} onSwitch={props.onSwitchColorScheme} />
+        {props.language && (
+          <LanguageMenu
+            language={props.language}
+            messages={messages}
+            onSelect={props.onSelectLanguage}
+          />
+        )}
       </Group>
     </Group>
   );

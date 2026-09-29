@@ -20,6 +20,10 @@ export type MainApi = {
     colorScheme: RequestArgument<"app:setColorScheme">,
   ) => Promise<RequestResponse["app:setColorScheme"]>;
   /** 受け取りをやめる関数を返す。 */
+  getLanguage: () => Promise<RequestResponse["app:getLanguage"]>;
+  setLanguage: (
+    setting: RequestArgument<"app:setLanguage">,
+  ) => Promise<RequestResponse["app:setLanguage"]>;
   /** 最初に描き終えたことを main に知らせる。main は知らせを受けてから窓を見せる。 */
   notifyRendererPainted: () => Promise<RequestResponse["app:rendererPainted"]>;
   onConnectionStateChanged: (
@@ -63,6 +67,10 @@ export function realMainApiOf(windowApi: WindowApi): MainApi {
       windowApi.invoke("app:setColorScheme", colorScheme) as Promise<
         RequestResponse["app:setColorScheme"]
       >,
+    getLanguage: () =>
+      windowApi.invoke("app:getLanguage") as Promise<RequestResponse["app:getLanguage"]>,
+    setLanguage: (setting) =>
+      windowApi.invoke("app:setLanguage", setting) as Promise<RequestResponse["app:setLanguage"]>,
     notifyRendererPainted: () =>
       windowApi.invoke("app:rendererPainted") as Promise<RequestResponse["app:rendererPainted"]>,
     onConnectionStateChanged: (listener) =>

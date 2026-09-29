@@ -308,12 +308,12 @@ main は renderer を信用しない（原則 1）。main の側でも、届い�
 | `app:openAppLogFolder` | 操作 | DockerGUI のログのファイルがあるフォルダを、OS のファイルの画面で開く | ［ログのフォルダを開く］（`common.md` の「想定していない失敗」） |
 | `app:reportRendererError` | 操作 | renderer で起きた例外を main に送り、ログに書く | `design-policy.md` の原則 9 |
 | `app:getLanguage` | 要求 | 画面の言語の設定（自動 / 日本語 / English）と、画面の言語（`ja` か `en`）を返す。設定が「自動」なら、OS の言語から決めた言語を返す | `common.md` の「言語を選ぶ」 |
-| `app:setLanguage` | 操作 | 画面の言語の設定を変えて保存し、メニューバーのメニューを作り直す | 同じ |
-| `app:languageChanged` | 知らせ | 画面の言語が変わったことと、新しい設定と言語 | 同じ |
+| `app:setLanguage` | 操作 | 画面の言語の設定を変えて保存し、メニューバーのメニューを作り直す。変えた後の設定と、設定から決めた画面の言語（`ja` か `en`）を返す | 同じ |
 | `app:setColorScheme` | 操作 | 切り替えた配色（ライト / ダーク）を保存し、Electron の `nativeTheme.themeSource` に入れる。設定の画面の「OS に合わせる」では、保存した配色を消す（設定の画面を作るときに、送る値に追加する） | `common.md` の「配色を選ぶ」、`settings.md` の「配色・言語」 |
 | `app:rendererPainted` | 要求 | renderer が最初に描き終えたことを知らせる。main は、知らせを受けてから窓を見せる | `main.md` の「窓は、renderer が描き終えてから見せる」 |
 
-配色の知らせの口は置かない。配色が変わると、CSS の `prefers-color-scheme` が変わり、renderer はその変化で知る（`renderer.md` の「配色は main が決め、renderer は OS の配色として受け取る」）。
+**画面の言語と配色の知らせの口は置かない。** 画面の言語を変えるのは renderer だけなので、`app:setLanguage` の応答で足りる。
+配色が変わると、CSS の `prefers-color-scheme` が変わり、renderer はその変化で知る（`renderer.md` の「配色は main が決め、renderer は OS の配色として受け取る」）。
 
 **画面の言語と配色は、設定の画面にも出すが、`settings` の口で扱わない。** 設定の画面の「配色・言語」も、`app` の口を使う。
 画面の言語と配色は、設定を既定に戻すときも戻さない（`settings.md` の「既定に戻す」）。`settings:updateSetting` と `settings:resetSettings` で扱うと、言語と配色だけを例外にする処理が要る。
@@ -335,4 +335,3 @@ main は renderer を信用しない（原則 1）。main の側でも、届い�
 | `ipcRenderer.send` で送ったターミナルの入力が、送った順に main に届くか | ターミナルを実装するとき |
 | `sandbox` を有効にした renderer から、OS のクリップボードに書けるか | コピーを実装するとき |
 | 背圧の、まとめる時間の長さと、確認が返っていない送信の上限 | ログの画面を実装するとき |
-| main が OS の言語を読む方法（Electron の `app.getPreferredSystemLanguages()` を使えるか） | 画面の言語を実装するとき |

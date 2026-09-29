@@ -20,9 +20,11 @@ const meta = {
     onReconnectNow: fn(),
     onGiveUp: fn(),
     onSwitchColorScheme: fn(),
+    language: { setting: "auto", language: "ja" },
+    onSelectLanguage: fn(),
   },
-  // why: 画面の言語の文は、上の帯で選んだ言語で render が上書きする。Controls で書き換えても効かないので、欄に出さない。
-  argTypes: { messages: { table: { disable: true } } },
+  // why: 画面の言語の文と画面の言語は、上の帯で選んだ言語で render が上書きする。Controls で書き換えても効かないので、欄に出さない。
+  argTypes: { messages: { table: { disable: true } }, language: { table: { disable: true } } },
   // why: 状態バーは、高さを決めた枠の中で、文とボタンを上下の真ん中にそろえる。
   // アプリと同じ高さの枠に入れないと、ボタンの有無で行の高さが変わり、文の位置がずれて見える。
   decorators: [
@@ -34,7 +36,13 @@ const meta = {
   ],
   render: (args, { globals }) => {
     const language: Language = globals["language"] === "en" ? "en" : "ja";
-    return <StatusBar {...args} messages={APP_MESSAGES[language]} />;
+    return (
+      <StatusBar
+        {...args}
+        messages={APP_MESSAGES[language]}
+        language={{ setting: language, language }}
+      />
+    );
   },
 } satisfies Meta<typeof StatusBar>;
 

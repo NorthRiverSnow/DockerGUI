@@ -5,6 +5,7 @@ import { app, BrowserWindow, nativeTheme } from "electron";
 import { createWindowReveal } from "./features/app/window-reveal";
 import { createConnection } from "./features/connection/connection";
 import { createColorScheme } from "./features/settings/color-scheme";
+import { createScreenLanguage } from "./features/settings/language";
 import { openSettingsStore } from "./features/settings/settings-store";
 import { registerRequestHandler, sendNotification } from "./ipc/ipc";
 import { runCommand, startCommand } from "./os/command";
@@ -102,6 +103,17 @@ registerRequestHandler("app:setColorScheme", (selected) => {
   colorScheme.switchTo(selected);
   return { ok: true, value: undefined };
 });
+
+const screenLanguage = createScreenLanguage({
+  store: settingsStore,
+  systemLanguages: () => app.getPreferredSystemLanguages(),
+});
+
+registerRequestHandler("app:getLanguage", () => ({ ok: true, value: screenLanguage.current() }));
+registerRequestHandler("app:setLanguage", (setting) => ({
+  ok: true,
+  value: screenLanguage.select(setting),
+}));
 
 void app.whenReady().then(() => {
   const window = createMainWindow();

@@ -1,8 +1,11 @@
 // @vitest-environment jsdom
 import { MantineProvider } from "@mantine/core";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import japanFlag from "circle-flags/flags/jp.svg";
+import unitedStatesFlag from "circle-flags/flags/us.svg";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vite-plus/test";
 import type { ConnectionState } from "../../../shared/connection";
+import type { LanguageState } from "../../../shared/language";
 import { THEME } from "../theme";
 import { APP_MESSAGES } from "./messages";
 import { StatusBar } from "./status-bar";
@@ -31,13 +34,17 @@ beforeAll(() => {
 // vp test はテストの関数を全体に置かないので、テストごとに片付ける。
 afterEach(cleanup);
 
-/** アプリと同じく、Mantine の配色を OS の配色に合わせて描く。options.osPrefersDark を書かなければ、OS はライト。 */
+/**
+ * アプリと同じく、Mantine の配色を OS の配色に合わせて描く。options.osPrefersDark を書かなければ、OS はライト。
+ * options.language を書かなければ、画面の言語は「自動」で決まった日本語にする。
+ */
 function renderStatusBar(
   connection: ConnectionState | undefined,
-  options: { osPrefersDark?: boolean } = {},
+  options: { osPrefersDark?: boolean; language?: LanguageState } = {},
 ) {
   osPrefersDark = options.osPrefersDark ?? false;
   const handlers = {
+    onSelectLanguage: vi.fn(),
     onSwitchColorScheme: vi.fn(),
     onCancel: vi.fn(),
     onStart: vi.fn(),
@@ -48,7 +55,13 @@ function renderStatusBar(
   };
   render(
     <MantineProvider theme={THEME} defaultColorScheme="auto">
-      <StatusBar connection={connection} now={NOW} messages={APP_MESSAGES.ja} {...handlers} />
+      <StatusBar
+        connection={connection}
+        now={NOW}
+        messages={APP_MESSAGES.ja}
+        language={options.language ?? { setting: "auto", language: "ja" }}
+        {...handlers}
+      />
     </MantineProvider>,
   );
   return handlers;
@@ -65,12 +78,12 @@ describe("状態ごとに出すボタン", () => {
     {
       title: "接続の状態が届く前も、配色を切り替えるボタンは出す",
       connection: undefined,
-      buttons: ["ダークに切り替える"],
+      buttons: ["ダークに切り替える", "日本語"],
     },
     {
       title: "探索中",
       connection: { kind: "searching", command: "docker context ls", startedAt: NOW },
-      buttons: ["ダークに切り替える"],
+      buttons: ["ダークに切り替える", "日本語"],
     },
     {
       title: "起動中は、中止できない",
@@ -80,32 +93,32 @@ describe("状態ごとに出すボタン", () => {
         command: "colima start",
         startedAt: NOW,
       },
-      buttons: ["ダークに切り替える"],
+      buttons: ["ダークに切り替える", "日本語"],
     },
     {
       title: "接続中",
       connection: { kind: "connecting", engineName: "colima", startedAt: NOW },
-      buttons: ["中止", "ダークに切り替える"],
+      buttons: ["中止", "ダークに切り替える", "日本語"],
     },
     {
       title: "接続済み",
       connection: { kind: "connected", engineName: "colima" },
-      buttons: ["ダークに切り替える"],
+      buttons: ["ダークに切り替える", "日本語"],
     },
     {
       title: "動作中・未接続",
       connection: { kind: "runningNotConnected", engineName: "colima" },
-      buttons: ["接続", "ダークに切り替える"],
+      buttons: ["接続", "ダークに切り替える", "日本語"],
     },
     {
       title: "起動できる停止中",
       connection: { kind: "stopped", engineName: "colima", startable: true },
-      buttons: ["起動", "ダークに切り替える"],
+      buttons: ["起動", "ダークに切り替える", "日本語"],
     },
     {
       title: "起動できない停止中",
       connection: { kind: "stopped", engineName: "default", startable: false },
-      buttons: ["ダークに切り替える"],
+      buttons: ["ダークに切り替える", "日本語"],
     },
     {
       title: "応答が無くて接続不可",
@@ -114,7 +127,7 @@ describe("状態ごとに出すボタン", () => {
         engineName: "colima",
         failure: { kind: "expected", code: "engineUnreachable" },
       },
-      buttons: ["再試行", "ダークに切り替える"],
+      buttons: ["再試行", "ダークに切り替える", "日本語"],
     },
     {
       title: "エンジンが見つからなくて接続不可",
@@ -123,7 +136,7 @@ describe("状態ごとに出すボタン", () => {
         engineName: "Docker",
         failure: { kind: "expected", code: "engineNotFound" },
       },
-      buttons: ["再試行", "ダークに切り替える"],
+      buttons: ["再試行", "ダークに切り替える", "日本語"],
     },
     {
       title: "起動に失敗して接続不可",
@@ -137,17 +150,17 @@ describe("状態ごとに出すボタン", () => {
           stderr: "",
         },
       },
-      buttons: ["ダークに切り替える"],
+      buttons: ["ダークに切り替える", "日本語"],
     },
     {
       title: "再接続待ち",
       connection: { kind: "reconnectWaiting", engineName: "colima", retryAt: NOW + 1000 },
-      buttons: ["今すぐ再接続", "あきらめる", "ダークに切り替える"],
+      buttons: ["今すぐ再接続", "あきらめる", "ダークに切り替える", "日本語"],
     },
     {
       title: "再接続中",
       connection: { kind: "reconnecting", engineName: "colima", startedAt: NOW },
-      buttons: ["ダークに切り替える"],
+      buttons: ["ダークに切り替える", "日本語"],
     },
   ];
 
@@ -255,5 +268,54 @@ describe("配色を切り替えるボタン", () => {
     fireEvent.click(screen.getByRole("button", { name: "ライトに切り替える" }));
 
     expect(handlers.onSwitchColorScheme).toHaveBeenCalledExactlyOnceWith("light");
+  });
+});
+
+describe("言語のメニュー", () => {
+  it("ボタンの名前は、いまの画面の言語の名前にする", () => {
+    renderStatusBar(undefined, { language: { setting: "auto", language: "en" } });
+
+    expect(screen.getByRole("button", { name: "English" })).toBeTruthy();
+  });
+
+  it("ボタンには、日本語なら日本の旗、英語ならアメリカの旗を出す", () => {
+    const flagOf = (language: "ja" | "en") => {
+      renderStatusBar(undefined, { language: { setting: language, language } });
+      const name = language === "ja" ? "日本語" : "English";
+      const flag = screen.getByRole("button", { name }).querySelector("img")?.getAttribute("src");
+      cleanup();
+      return flag;
+    };
+
+    expect(flagOf("ja")).toBe(japanFlag);
+    expect(flagOf("en")).toBe(unitedStatesFlag);
+  });
+
+  it("押すと、自動・日本語・English を出し、選んでいる設定を選択済みとして示す", async () => {
+    renderStatusBar(undefined, { language: { setting: "en", language: "en" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "English" }));
+    const items = await screen.findAllByRole("menuitem");
+
+    expect(items.map((item) => item.textContent)).toEqual(["自動", "日本語", "English"]);
+    expect(items.map((item) => item.getAttribute("aria-current"))).toEqual([null, null, "true"]);
+  });
+
+  it("「自動」を選んでいるときは、「自動」を選択済みとして示す", async () => {
+    renderStatusBar(undefined, { language: { setting: "auto", language: "ja" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "日本語" }));
+    const items = await screen.findAllByRole("menuitem");
+
+    expect(items.map((item) => item.getAttribute("aria-current"))).toEqual(["true", null, null]);
+  });
+
+  it("メニューで言語を選ぶと、onSelectLanguage に選んだ設定を渡す", async () => {
+    const handlers = renderStatusBar(undefined);
+
+    fireEvent.click(screen.getByRole("button", { name: "日本語" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "English" }));
+
+    expect(handlers.onSelectLanguage).toHaveBeenCalledExactlyOnceWith("en");
   });
 });

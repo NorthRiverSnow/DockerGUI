@@ -9,6 +9,7 @@ import { createScreenLanguage } from "./features/settings/language";
 import { openSettingsStore } from "./features/settings/settings-store";
 import { registerAppChannels } from "./ipc/app";
 import { registerConnectionChannels } from "./ipc/connection";
+import { registerContainersChannels } from "./ipc/containers";
 import { sendNotificationToAllWindows } from "./ipc/ipc";
 import { runCommand, startCommand } from "./os/command";
 import { refreshPathFromLoginShell } from "./os/login-shell-path";
@@ -59,6 +60,7 @@ const connection = createConnection({
 });
 
 registerConnectionChannels(connection);
+registerContainersChannels({ client: () => connection.client() });
 
 // why: 設定ファイルの場所は、Electron の app.getPath から決まる。settings-store.ts を Electron に依存させず、
 // テストでは一時フォルダの場所を渡せるように、場所はここで決めて渡す。

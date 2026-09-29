@@ -7,6 +7,8 @@ export type FakeMainApi = {
   api: MainApi;
   /** 呼ばれた窓口の名前。呼ばれた順に並ぶ。 */
   calls: string[];
+  /** いちばん古い、まだ応答していない listContainers に、result を返す。 */
+  answerContainers: (result: Awaited<ReturnType<MainApi["listContainers"]>>) => void;
   /** getLanguage の応答を返す。呼ぶまで getLanguage は終わらない。 */
   answerLanguage: (state: LanguageState) => void;
 };
@@ -17,10 +19,12 @@ const OK: Result<undefined> = { ok: true, value: undefined };
  * テストで使う。main の窓口の代わり。呼ばれた窓口の名前を calls に残す。
  * getLanguage は answerLanguage を呼ぶまで、getConnectionState はいつまでも終わらない。
  * setLanguage は、選んだ設定と、「自動」なら日本語、それ以外は選んだ言語を返す。
+ * listContainers は、answerContainers を呼ぶまで終わらない。
  */
 export function fakeMainApi(): FakeMainApi {
   const calls: string[] = [];
   let answer: (state: LanguageState) => void = () => {};
+  const containerAnswers: ((result: Awaited<ReturnType<MainApi["listContainers"]>>) => void)[] = [];
   const called = <T>(name: string, value: T) => {
     calls.push(name);
     return Promise.resolve(value);
@@ -48,6 +52,10 @@ export function fakeMainApi(): FakeMainApi {
         ok: true,
         value: { setting, language: setting === "auto" ? "ja" : setting },
       }),
+    listContainers: () => {
+      calls.push("listContainers");
+      return new Promise((resolve) => containerAnswers.push(resolve));
+    },
     notifyRendererPainted: () => called("notifyRendererPainted", OK),
     onConnectionStateChanged: () => () => {},
   };
@@ -55,5 +63,6 @@ export function fakeMainApi(): FakeMainApi {
     api,
     calls,
     answerLanguage: (state) => answer(state),
+    answerContainers: (result) => containerAnswers.shift()?.(result),
   };
 }

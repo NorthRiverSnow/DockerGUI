@@ -24,6 +24,7 @@ export type MainApi = {
   setLanguage: (
     setting: RequestArgument<"app:setLanguage">,
   ) => Promise<RequestResponse["app:setLanguage"]>;
+  listContainers: () => Promise<RequestResponse["containers:listContainers"]>;
   /** 最初に描き終えたことを main に知らせる。main は知らせを受けてから窓を見せる。 */
   notifyRendererPainted: () => Promise<RequestResponse["app:rendererPainted"]>;
   onConnectionStateChanged: (
@@ -71,6 +72,10 @@ export function realMainApiOf(windowApi: WindowApi): MainApi {
       windowApi.invoke("app:getLanguage") as Promise<RequestResponse["app:getLanguage"]>,
     setLanguage: (setting) =>
       windowApi.invoke("app:setLanguage", setting) as Promise<RequestResponse["app:setLanguage"]>,
+    listContainers: () =>
+      windowApi.invoke("containers:listContainers") as Promise<
+        RequestResponse["containers:listContainers"]
+      >,
     notifyRendererPainted: () =>
       windowApi.invoke("app:rendererPainted") as Promise<RequestResponse["app:rendererPainted"]>,
     onConnectionStateChanged: (listener) =>

@@ -1,4 +1,5 @@
-import { AppShell, Divider, NavLink, Title } from "@mantine/core";
+import { AppShell, Divider, NavLink, Stack, Title } from "@mantine/core";
+import type { ReactNode } from "react";
 import type { ColorSchemeSetting } from "../../../shared/color-scheme";
 import type { ConnectionState } from "../../../shared/connection";
 import type { LanguageSetting, LanguageState } from "../../../shared/language";
@@ -21,6 +22,8 @@ export function AppView(props: {
   selectedTarget: Target;
   connection: ConnectionState | undefined;
   language: LanguageState | undefined;
+  /** 右の領域に出す、選んでいる対象の画面。まだ作っていない対象では undefined。 */
+  content: ReactNode | undefined;
   now: number;
   messages: AppMessages;
   onSelectTarget: (target: Target) => void;
@@ -70,7 +73,10 @@ export function AppView(props: {
         {TARGETS_BELOW_DIVIDER.map(targetLink)}
       </AppShell.Navbar>
       <AppShell.Main>
-        <Title order={2}>{props.messages.targetNames[props.selectedTarget]}</Title>
+        <Stack gap="md">
+          <Title order={2}>{props.messages.targetNames[props.selectedTarget]}</Title>
+          {props.content}
+        </Stack>
       </AppShell.Main>
     </AppShell>
   );

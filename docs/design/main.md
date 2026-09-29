@@ -79,9 +79,9 @@
 `2` と `1` の見出しが付いた 2 件が返った。
 **TTY のあるコンテナで見出しが付かないことは、確かめていない**（Engine API の文書に書いてある振る舞い）。
 
-## 変換層（`src/main/convert`）
+## 変換層（機能ごとの `convert.ts`）
 
-**Engine API の応答 1 つを、画面の型 1 つに直す純関数を並べる。**
+**Engine API の応答 1 つを、画面の型 1 つに直す純関数を並べる。** 関数は、使う機能のディレクトリの `convert.ts` に置く（`directories.md` の「main は、層ごとに分ける」）。
 関数の名前は `〜Of` の形にする（CLAUDE.md の「決まっている名前の形」。例: `containerRowOf(apiContainer)`）。
 
 | 直すもの | 例 |
@@ -196,6 +196,20 @@ renderer は、アプリ全体の Controller の `useEffect` で知らせる。`
 | `POST /containers/{id}/unpause` | 再開 | 確かめた |
 | `DELETE /containers/{id}` | 削除 | 確かめた |
 | `GET /containers/{id}/logs` | ログ | 確かめた |
+
+### コンテナの一覧
+
+**`GET /containers/json?all=1` で一覧を読み、コンテナごとに `GET /containers/{id}/json` を同時に送って詳細を読む**（`src/main/features/containers/containers.ts`）。
+一覧の API は、終了コードと、起動・終了した時刻を返さない（開発機の Docker 29.5.2 で確認。返すのは `State` と、Docker が作った英語の文の `Status`）。
+
+| 決めたこと | why |
+| --- | --- |
+| `Status` の英語の文（`Exited (255) 13 days ago`）を読まない | 形が Engine API の文書に無く、版で変わりうる。読んだ時点の「13 days ago」しか分からず、時間が経っても表示が進まない |
+| 詳細を読めなかったコンテナのうち、エンジンが断ったもの（削除されて無いなど）は、行に入れない | 一覧を読んでから詳細を読むまでの間に、コンテナが削除されることがある |
+| 繋がらないなど、エンジンそのものの失敗は、一覧全体の失敗にする | 一部の行だけが欠けた一覧を、欠けていると気づかせずに出さない |
+| 詳細の状態が、Engine API の文書の 7 つ以外なら、一覧全体の失敗にする | 知らない状態を、別の状態の名前で出さない |
+
+**並び順（動作中を先に）は renderer が決める**（`src/renderer/src/screens/containers/model.ts` の `sortedRowsOf`）。main は Engine API が返した順のまま返す。
 
 **動作中のコンテナの削除は、`stop` を送ってから `DELETE` を送る。** `DELETE` に `force=true` を付けない。
 `force=true` は停止を待たずに強制終了するので、`docs/spec/containers.md` の「停止は待たされる」と食い違う。

@@ -2,6 +2,7 @@ import type { ColorSchemeSetting } from "../../../shared/color-scheme";
 import type { ConnectionState } from "../../../shared/connection";
 import type { Language } from "../../../shared/language";
 import type { Failure } from "../../../shared/result";
+import { FAILURE_CAUSES } from "../messages/failure";
 import type { Target } from "./model";
 
 export type AppMessages = {
@@ -64,7 +65,7 @@ export const APP_MESSAGES: Record<Language, AppMessages> = {
         case "unavailable":
           return isEngineNotFound(connection.failure)
             ? "Docker のエンジンが見つかりません。Docker をインストールして起動し、「再試行」を押してください"
-            : `${connection.engineName} に接続できません（${jaCauseOf(connection.failure)}）`;
+            : `${connection.engineName} に接続できません（${FAILURE_CAUSES.ja(connection.failure)}）`;
         case "reconnectWaiting":
           return `${connection.engineName} との接続が切れました。${secondsUntil(connection.retryAt, now)} 秒後に再接続します`;
         case "reconnecting":
@@ -111,7 +112,7 @@ export const APP_MESSAGES: Record<Language, AppMessages> = {
         case "unavailable":
           return isEngineNotFound(connection.failure)
             ? "No Docker engine was found. Install and start Docker, then press Retry"
-            : `Can't connect to ${connection.engineName} (${enCauseOf(connection.failure)})`;
+            : `Can't connect to ${connection.engineName} (${FAILURE_CAUSES.en(connection.failure)})`;
         case "reconnectWaiting": {
           const seconds = secondsUntil(connection.retryAt, now);
           return `Lost connection to ${connection.engineName}. Reconnecting in ${seconds} ${seconds === 1 ? "second" : "seconds"}`;
@@ -138,44 +139,4 @@ function minutesAndSecondsOf(milliseconds: number): string {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-}
-
-function jaCauseOf(failure: Failure): string {
-  if (failure.kind === "unexpected") {
-    return "原因が分かりません";
-  }
-  switch (failure.code) {
-    case "engineRejected":
-      return failure.engineMessage;
-    case "engineUnreachable":
-      return "応答がありません";
-    case "apiVersionUnsupported":
-      return "DockerGUI が対応していない Engine API の版です";
-    case "engineTimedOut":
-      return "時間内に応答がありません";
-    case "engineNotFound":
-      return "Docker のエンジンが見つかりません";
-    case "engineStartFailed":
-      return `${failure.command} が失敗しました: ${failure.stderr}`;
-  }
-}
-
-function enCauseOf(failure: Failure): string {
-  if (failure.kind === "unexpected") {
-    return "unknown cause";
-  }
-  switch (failure.code) {
-    case "engineRejected":
-      return failure.engineMessage;
-    case "engineUnreachable":
-      return "no response";
-    case "apiVersionUnsupported":
-      return "the Engine API version is not supported by DockerGUI";
-    case "engineTimedOut":
-      return "the engine did not respond in time";
-    case "engineNotFound":
-      return "no Docker engine was found";
-    case "engineStartFailed":
-      return `${failure.command} failed: ${failure.stderr}`;
-  }
 }

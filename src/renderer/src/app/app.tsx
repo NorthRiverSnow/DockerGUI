@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import type { MainApi } from "../api/main-api";
 import { useAppController } from "./controller";
 import { APP_MESSAGES } from "./messages";
+import { ContainersScreen } from "../screens/containers/screen";
 import { AppView } from "./view";
 
 export function App(props: { api: MainApi }) {
@@ -20,6 +21,15 @@ export function App(props: { api: MainApi }) {
       selectedTarget={controller.state.selectedTarget}
       connection={controller.state.connection}
       language={controller.state.language}
+      content={
+        controller.state.selectedTarget === "containers" ? (
+          <ContainersScreen
+            api={props.api}
+            connection={controller.state.connection}
+            language={language}
+          />
+        ) : undefined
+      }
       now={controller.now}
       messages={APP_MESSAGES[language]}
       onSelectTarget={controller.selectTarget}

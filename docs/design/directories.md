@@ -12,9 +12,8 @@
 │  │  ├── ipc                  IPC 層。口のまとまりごとに 1 つのファイル（connection.ts、app.ts …）
 │  │  ├── features             機能層。機能ごとに 1 つのディレクトリ
 │  │  │  ├── connection       接続と診断（docs/spec/connection.md）
-│  │  │  ├── containers       コンテナ（docs/spec/containers.md）
+│  │  │  ├── containers       コンテナ（docs/spec/containers.md）。変換層の関数は convert.ts に置く
 │  │  │  └── …               仕様のファイルと同じ単位で並べる
-│  │  ├── convert              変換層
 │  │  ├── engine-api           Engine API 層
 │  │  ├── os                   OS の窓口
 │  │  ├── log                  ログの記録。どの層からも呼ぶ
@@ -69,6 +68,13 @@ renderer は `src/renderer/index.html`）。
 
 **機能層の中だけは、機能ごとに分ける。** ディレクトリの単位は、仕様のファイル（`docs/spec/`）と同じにする。
 仕様を変えたときに、直す機能のディレクトリが 1 つに決まる。
+
+**変換層の関数は、使う機能のディレクトリの `convert.ts` に置く**（例: `features/containers/convert.ts`）。どの機能でも、ファイルの名前は `convert.ts` にする。
+
+**why: 機能の処理と、その機能が使う応答の直し方を、1 つのディレクトリで読める。** 変換層だけを別のディレクトリにすると、1 つの機能を直すときに、2 つのディレクトリを行き来することになる。
+
+**`convert.ts` は、同じディレクトリの機能のファイルを読み込まない。** 読み込んでよいのは、`engine-api` の応答の型と、`src/shared` の画面の型だけ。
+同じディレクトリに置くと、読み込みのパスに層の名前が出ないので、「下の層は上の層を呼ばない」（`layers.md`）を、この決まりで守る。
 
 ## renderer は、画面ごとに分ける
 

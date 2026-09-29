@@ -34,6 +34,9 @@ export function startSilentEngine(
   });
 }
 
+/** エンジンの代わりのサーバが、要求 1 つに返す応答。 */
+export type FakeResponse = { status: number; body: string };
+
 /**
  * テストで使う。エンジンの代わりに、どの要求にも決めた応答を返すサーバを unix ソケットで立てる。
  * ただし /events で終わる要求には、本物のエンジンと同じく、本文を送らずに接続を開いたままにする。
@@ -44,15 +47,28 @@ export function startFakeEngine(
   body: string,
   socketPath: string = unusedSocketPath(),
 ): Promise<FakeEngine> {
+  return startFakeEngineWith(() => ({ status, body }), socketPath);
+}
+
+/**
+ * テストで使う。startFakeEngine と同じサーバを、要求の URL ごとに respond が決めた応答を返すように立てる。
+ * /events で終わる要求の扱いは startFakeEngine と同じ。
+ */
+export function startFakeEngineWith(
+  respond: (url: string) => FakeResponse,
+  socketPath: string = unusedSocketPath(),
+): Promise<FakeEngine> {
   const requestedUrls: string[] = [];
   const server = http.createServer((request, response) => {
     const url = request.url ?? "";
     requestedUrls.push(url);
-    response.writeHead(status, { "Content-Type": "application/json" });
     if (url.endsWith("/events")) {
+      response.writeHead(200, { "Content-Type": "application/json" });
       response.flushHeaders();
       return;
     }
+    const { status, body } = respond(url);
+    response.writeHead(status, { "Content-Type": "application/json" });
     response.end(body);
   });
   const dropConnections = () => server.closeAllConnections();

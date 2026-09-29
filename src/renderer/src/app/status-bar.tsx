@@ -9,6 +9,7 @@ import { Button, Group, Loader, Text } from "@mantine/core";
 import type { ColorSchemeSetting } from "../../../shared/color-scheme";
 import type { ConnectionState } from "../../../shared/connection";
 import type { LanguageSetting, LanguageState } from "../../../shared/language";
+import { iconColorOf, type IconColor } from "../components/icon-color";
 import { ColorSchemeButton } from "./color-scheme-button";
 import { LanguageMenu } from "./language-menu";
 import type { AppMessages } from "./messages";
@@ -146,8 +147,6 @@ function StateIcon(props: { connection: ConnectionState }) {
   }
 }
 
-// why: 色は Mantine の CSS の変数で渡す（design-policy.md の原則 16）。
-// -filled の変数は、配色（ライトとダーク）に合わせて濃さが変わる。
-function iconPropsOf(color: "green" | "blue" | "gray" | "red" | "yellow") {
-  return { size: ICON_SIZE, color: `var(--mantine-color-${color}-filled)`, "aria-hidden": true };
+function iconPropsOf(color: IconColor) {
+  return { size: ICON_SIZE, color: iconColorOf(color), "aria-hidden": true };
 }

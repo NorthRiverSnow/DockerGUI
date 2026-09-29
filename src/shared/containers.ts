@@ -1,0 +1,38 @@
+import { z } from "zod";
+
+/** コンテナの状態（docs/spec/containers.md の「状態の呼び方」）。exited だけは終了コードを持つ。 */
+export const containerStateSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("running") }),
+  z.object({ kind: z.literal("paused") }),
+  z.object({ kind: z.literal("restarting") }),
+  z.object({ kind: z.literal("created") }),
+  z.object({ kind: z.literal("exited"), exitCode: z.number() }),
+  z.object({ kind: z.literal("removing") }),
+  z.object({ kind: z.literal("dead") }),
+]);
+
+export type ContainerState = z.infer<typeof containerStateSchema>;
+
+/** 外に公開しているポートの対応。publicPort が外、privatePort がコンテナの中。 */
+export const publishedPortSchema = z.object({
+  publicPort: z.number(),
+  privatePort: z.number(),
+  protocol: z.string(),
+});
+
+export type PublishedPort = z.infer<typeof publishedPortSchema>;
+
+/** コンテナの一覧の 1 行（docs/spec/containers.md の「出す列」）。 */
+export const containerRowSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  image: z.string(),
+  state: containerStateSchema,
+  ports: z.array(publishedPortSchema),
+  /** 最後に起動した時刻（エポックからのミリ秒）。一度も起動していなければ undefined。 */
+  startedAt: z.number().optional(),
+  /** 最後に終了した時刻（エポックからのミリ秒）。一度も終了していなければ undefined。 */
+  finishedAt: z.number().optional(),
+});
+
+export type ContainerRow = z.infer<typeof containerRowSchema>;

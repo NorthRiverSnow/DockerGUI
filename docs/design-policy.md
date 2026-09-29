@@ -34,12 +34,15 @@ Windows で確認できないことに対して、次の 3 つで備える。
 | ツールチェーン | Vite+（`vp`） | パッケージ管理・テスト・lint・整形・タスク実行を 1 つのコマンドで行える |
 | 画面 | React | 資料が最も多く、詰まったときに調べがつく |
 | 画面の部品 | Mantine 9（9.6.2 で確認） | 下に理由を書く |
+| 国旗 | `circle-flags` 2.8.3 | 丸い国旗の SVG 集。使う旗だけをアプリに同梱でき、外部のサーバから読み込まない |
+| アイコン | Phosphor Icons（`@phosphor-icons/react` 2.1.10 で確認） | Mantine 9 の文書が勧めている。Mantine の文書の例で使われ、Mantine のパッケージにも依存するものがある（Mantine の文書で確認） |
 | 見た目 | CSS Modules（Vite に同梱） | 部品ごとに CSS のファイルを分けられ、クラス名がほかの部品とぶつからない。Mantine の見た目もふつうの CSS なので、見た目の付け方が 1 つで済む |
 | CSS の検査 | stylelint 17 と `stylelint-use-logical` 2（17.15.0 と 2.1.3 で確認） | 原則 15 と原則 16 を検査で守らせる。Vite+ に同梱されていないので、別に入れる |
 | Electron のビルド | electron-vite 5（安定版）+ Vite 7 | main・preload・renderer の 3 つを 1 つの設定でビルドでき、preload を CommonJS で出力する設定を持つ |
-| テスト | Vitest（Vite+ に同梱） | 別途の導入が要らない |
+| テスト | Vitest 4（Vite+ 0.3.3 に同梱の 4.1.11） | 別途の導入が要らない |
+| 画面のテスト | jsdom 30 と Testing Library（`@testing-library/react` 16.3.3 で確認） | Electron を起動せずに、Vitest の中で View を描き、ボタンを押せる。Testing Library は、画面を読む人と同じく、ボタンの名前で要素を探す |
 | lint と整形 | oxlint と oxfmt（Vite+ に同梱） | ESLint と Prettier を別途入れずに済む |
-| 画面部品の確認 | Storybook | Electron を起動せずに、コンテナが 1 つも無いときや失敗したときの見た目を確認できる |
+| 画面部品の確認 | Storybook 10（10.6.0 で確認） | Electron を起動せずに、コンテナが 1 つも無いときや失敗したときの見た目を確認できる |
 | ログの記録 | `electron-log` | OS ごとの置き場所の判定、ファイルの回転、renderer からの転送を自分で書かずに済む |
 | ターミナルの表示 | `@xterm/xterm` | ターミナルの制御文字を解釈して画面に出す部分を自分で書かずに済む |
 | 値の検査 | zod 4（4.6.5 で確認） | スキーマから TypeScript の型を作れるので、検査と型を 2 回書かずに済む。資料が多い（原則 12） |
@@ -71,10 +74,7 @@ Tauri は配布するファイルが小さく、使うメモリも少ない。�
 - **画面に出す形に直結した型を、最初から定義できる。** 既存のライブラリの型を
   画面用の型へ直す層が 1 つ減る。
 
-**接続の乗っ取りを自作で作れるかは、確かめていない**（`design/main.md` の「確かめていないこと」）。
-作れなければ、ターミナルの経路だけ dockerode を使うかを判断し直す。
-dockerode でも子プロセスの経路は作れる——下で使う docker-modem は `http.Agent` を差し替えられ、
-接続の乗っ取りも同じ Agent を通る（docker-modem のソースで確認）。
+**接続の乗っ取りを、自作で作れることを確かめた**（`design/main.md` の「使う Engine API の一覧」の「ターミナル」）。
 
 ### 画面の部品に Mantine を使う理由
 
@@ -112,10 +112,13 @@ Vite 8 に対応した electron-vite 6 は beta しか出ていない。
 
 | Vite の出どころ | 版 | 使う場面 |
 | --- | --- | --- |
-| Vite+ に同梱 | 8 | `vp test` と `vp build` が内部で使う |
+| Vite+ に同梱 | 8 | `vp test` と `vp build` が内部で使う（Vite+ 0.3.3 で確認。`vp test` の Vitest は、Vite+ に同梱の Vite 8 を読み込む） |
 | プロジェクトの依存 | 7 | `electron-vite` が main・preload・renderer をビルドするときに使う |
 
 **アプリのビルドに `vp build` は使わない。** `vp run build` が `electron-vite build` を呼ぶ形にする。
+
+**プロジェクトの中の Vite を、Vite+ の Vite に置き換える設定（pnpm の `overrides`）を入れない。**
+`vp create` の雛形はこの設定を入れる。入れると、electron-vite にも Vite 8 が渡る。electron-vite 5 が受け付ける Vite は 7 まで（npm の登録情報の `peerDependencies` で確認）。
 
 ### Storybook を使う条件
 
@@ -125,7 +128,7 @@ Storybook は Electron ではなく**ブラウザ**で画面部品を描く。`w
 - **View は `window.api` を直接呼ばない**（原則 14）。
 - **main を呼ぶ口を 1 つのモジュールに集める。** Storybook では main を呼ぶモジュールを差し替える。
 
-**Storybook はテストではなく、見た目を確認する手段として使う。**
+**Storybook はテストではなく、見た目を確認する手段として使う。** 動きは、画面のテスト（`renderer.md` の「View のテスト」）で確かめる。
 「振る舞いには書く。見た目には書かない」（`CLAUDE.md` の「テスト」）は変えない。
 Storybook が担うのは、Electron を起動せずに、コンテナが 1 つも無いときや
 接続に失敗したときの見た目を確かめることに限る。
@@ -141,6 +144,7 @@ Storybook が担うのは、Electron を起動せずに、コンテナが 1 つ�
 | 依存の導入 | `vp install` |
 | 依存の追加 | `vp add <パッケージ名>` |
 | 開発用の起動 | `vp run dev` |
+| 見た目の確認（Storybook） | `vp run storybook`。`http://localhost:6006` を開く |
 | ビルド | `vp run build` |
 | テストの実行 | `vp test` |
 | 整形・lint・型検査をまとめて実行 | `vp check` |
@@ -149,6 +153,16 @@ Storybook が担うのは、Electron を起動せずに、コンテナが 1 つ�
 
 **各ステップの終了条件は、`vp check` と `vp test` と `vp run lint:css` が、すべて正常終了すること。**
 `vp run lint:css` は、stylelint を呼ぶタスク。stylelint は Vite+ に同梱されていないので、`vp check` に含まれない。
+
+**`vp run dev` は、main と preload のファイルを変えると、作り直してアプリを起動し直す**（`package.json` の `dev` で `electron-vite dev --watch` を実行する）。
+renderer のファイルを変えたときは、アプリを起動し直さずに画面だけが新しくなる。
+
+**why: `--watch` を付けないと、main と preload は、アプリを起動し直すまで古いままになる。**
+画面だけが新しくなり、新しいボタンを押しても、古い preload が知らない口の呼び出しを断るので、何も起きない。
+
+**`vp install` の後に、`postinstall` が Electron の本体を入れる**（`package.json` の `postinstall` で `install-electron` を実行する）。
+Electron 44 は、パッケージを入れたときには本体をダウンロードしない。
+pnpm が依存を入れ直して Electron のパッケージの置き場所が変わると、新しい置き場所に本体が無い状態になり、`vp run dev` が起動できない（開発機で確認）。
 
 ## 守る原則 — 構成と安全
 
@@ -388,6 +402,9 @@ Vite+ の型検査が使う TypeScript の版は確かめていないので、zo
 
 **上下の余白は、`margin-top` のままでよい。** 上から下へ行を重ねる向きは、日本語でも英語でも右から左に書く言語でも同じ。
 
+**幅と高さも、`width` と `height` のままでよい。** 右から左に書く言語でも、幅は幅のまま。
+`inline-size` のような書き方は縦書きのためのもので、原則 15 の目的には関わらない。
+
 **CSS の中の左右の指定は、検査で見つける。** `stylelint-use-logical` が、表の「使わない」の列の指定を見つけると、`vp run lint:css` が失敗する。
 
 **Mantine の props で余白を指定するときも、`ms` `me` `ps` `pe` を使う**（`<Group ms="md">`）。
@@ -422,3 +439,53 @@ Mantine の CSS の変数は、`theme.ts` の値と配色に合わせて値が�
 **ターミナルの本文の色は、`@xterm/xterm` の設定に JavaScript で渡す。** `@xterm/xterm` はコンテナの出力を自分で描くので、
 CSS のファイルに書いた色を使わない。色の値は Mantine の CSS の変数から読み出して渡し、配色が変わったら渡し直す
 （`design/renderer.md` の「ターミナルの本文の色は、JavaScript で渡す」）。
+
+### 17. 流れの関数は、手順の関数を呼ぶだけにする
+
+**いくつかの手順を順に行う関数（流れの関数）には、手順の中身を書かない。** 手順ごとに関数を作り、流れの関数はそれを呼んで、結果で分けるだけにする。
+
+```ts
+/** 接続先を探して繋ぐ。止まっていて起動する手段を知っていれば、起動してから繋ぐ。 */
+async function searchAndConnect(connectionContext: ConnectionContext): Promise<void> {
+  const attempt = beginAttempt(connectionContext);
+  const found = await searchEngine(connectionContext);
+  switch (found.kind) {
+    case "running":
+      await connectEngine(connectionContext, found.target, attempt, { ifUnreachable: "stopped" });
+      return;
+    case "startable":
+      await startAndConnect(connectionContext, found.target, attempt);
+      return;
+    // …
+  }
+}
+```
+
+**`createXxx` のように値をまとめて返す関数の中に、処理を書き込まない。** 中に置くのは、持つ値の用意と、外に出す操作を関数につなぐことだけにする。
+処理は外の関数にして、持つ値を引数で受け取る（例: `src/main/features/connection/connection.ts` の `createConnection` と `ConnectionContext`）。
+
+**main の入口（`src/main/index.ts`）は、部品を作ってつなぐだけにする。** 判断や計算は、機能層か OS の窓口に置き、`index.ts` はそれを呼ぶ。
+`index.ts` に書くのは、窓を作ることと、Electron の値（`app.getPath` の場所、`nativeTheme` など）を渡して機能層の部品を作ることだけ。
+
+**口に機能層の関数をつなぐ処理は、IPC 層に、口のまとまりごとに 1 つのファイルで置く**（`src/main/ipc/connection.ts` の `registerConnectionChannels`、`src/main/ipc/app.ts` の `registerAppChannels`）。
+まとまりは、`docs/design/ipc.md` の口の一覧の見出し（`connection`、`containers`、`app` …）に合わせる。`index.ts` は、作った部品を渡して呼ぶだけにする。
+
+**why: 口は機能を作るたびに増え、全部で 50 を超える。** `index.ts` につなぐと、`index.ts` の大部分が口をつなぐ行になる。
+まとまりを `ipc.md` の見出しに合わせれば、`ipc.md` の表とファイルを 1 対 1 で見比べられる。
+`createXxx` ごとには分けない。配色と画面の言語は別の部品だが、どちらも `app` の口なので、`createXxx` ごとに分けると `app` の口が複数のファイルに散る。
+
+**why: `index.ts` に処理を書くと、Electron を起動しないと確かめられない。** 機能層と OS の窓口に置けば、Electron の値の代わりを渡してテストできる。
+
+**why: 流れと手順が混ざると、何がどの順に起きるかを、細かい処理を読み飛ばしながら探すことになる。**
+流れの関数が手順の呼び出しだけなら、流れは上から読むだけで分かり、手順の中身は手順の関数を開いたときだけ読めばよい。
+`createXxx` の中に処理を書き込むと、`createXxx` の中の変数に縛られて、処理を外に出せなくなる。
+
+### 18. 書き方で意図を隠さない
+
+| 書かない | 書く | why |
+| --- | --- | --- |
+| 分かれ道の条件の中に、`!` や型の書き方を詰め込む（`!(LIST as readonly string[]).includes(x)`） | 条件に名前を付けた関数にする（`if (!isNotificationChannel(channel))`） | `!` が型の書き方に埋もれると、条件を逆に読み違える |
+| `as` で、型の検査をすり抜けて形を合わせる（関数に項目を後から付けて `as` で型に合わせる、など） | ふつうのオブジェクトを返す | `as` を使うと、項目の付け忘れを型の検査で見つけられない |
+| 型ですでに決まっている値に、`satisfies` で型を確かめ直す | 書かない | 型で守っているように見えるが、何も増えない。実行するときに確かめているのは別の処理なのに、型で守っていると読み違える |
+| 後から差し替える値を、差し替える場所を書かずに置く（最初に何もしない関数を入れておく、など） | 型の説明に、差し替える場所と差し替える値を書く（`src/main/features/connection/context.ts` の `Attempt` の `abort`） | 差し替える場所が別のファイルにあると、何もしない関数が置かれている理由が読めない |
+

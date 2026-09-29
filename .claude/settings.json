@@ -1,0 +1,65 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(pnpm *)",
+      "Bash(pkill *)",
+      "Bash(killall *)"
+    ],
+    "ask": [
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(docker pull *)",
+      "Bash(docker rm *)",
+      "Bash(docker rmi *)",
+      "Bash(docker stop *)",
+      "Bash(docker kill *)",
+      "Bash(docker start *)",
+      "Bash(docker restart *)",
+      "Bash(docker pause *)",
+      "Bash(docker unpause *)",
+      "Bash(docker container rm *)",
+      "Bash(docker container stop *)",
+      "Bash(docker container prune *)",
+      "Bash(docker image rm *)",
+      "Bash(docker image prune *)",
+      "Bash(docker volume rm *)",
+      "Bash(docker volume prune *)",
+      "Bash(docker network rm *)",
+      "Bash(docker network prune *)",
+      "Bash(docker builder prune *)",
+      "Bash(docker system prune *)",
+      "Bash(docker compose down *)",
+      "Bash(docker compose stop *)",
+      "Bash(docker compose rm *)",
+      "Bash(colima stop *)",
+      "Bash(colima delete *)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR/.claude/hooks/check-after-edit.sh\"",
+            "timeout": 120,
+            "statusMessage": "直したファイルの検査とテストを実行しています…"
+          }
+        ]
+      }
+    ]
+  },
+  "skillOverrides": {
+    "docs": "off",
+    "docx": "off",
+    "pptx": "off",
+    "xlsx": "off",
+    "pdf": "off",
+    "morning": "off",
+    "import-memory": "off",
+    "managementdocs-dashboard-fix": "off"
+  }
+}

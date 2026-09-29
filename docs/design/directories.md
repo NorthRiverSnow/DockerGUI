@@ -8,8 +8,8 @@
 .
 ├── src
 │  ├── main                     main
-│  │  ├── index.ts             起動の入口。ウィンドウを作り、IPC 層を登録する
-│  │  ├── ipc                  IPC 層
+│  │  ├── index.ts             起動の入口。窓と機能層の部品を作り、IPC 層の口に渡す
+│  │  ├── ipc                  IPC 層。口のまとまりごとに 1 つのファイル（connection.ts、app.ts …）
 │  │  ├── features             機能層。機能ごとに 1 つのディレクトリ
 │  │  │  ├── connection       接続と診断（docs/spec/connection.md）
 │  │  │  ├── containers       コンテナ（docs/spec/containers.md）
@@ -26,6 +26,7 @@
 │     ├── index.html            画面の入口
 │     └── src
 │        ├── main.tsx           React を起動する
+│        ├── app                アプリ全体の Model・View・Controller と App
 │        ├── api                main の窓口
 │        ├── screens            画面ごとに 1 つのディレクトリ
 │        │  ├── containers     コンテナの画面の Model・View・Controller
@@ -35,9 +36,14 @@
 │        └── theme.ts           Mantine の見た目の設定（renderer.md）
 ├── out                          ビルドの出力先。git には入れない
 ├── docs
-├── electron.vite.config.ts      ビルドの設定
+├── .storybook                   Storybook の設定（renderer.md の「Storybook で見本を見る」）
+├── electron.vite.config.ts      ビルドの設定（electron-vite）
+├── vite.config.ts               検査の設定（vp check）
+├── tsconfig.json                型の検査の設定
 ├── postcss.config.cjs           Mantine が使う、CSS の変換の設定
 ├── stylelint.config.mjs         CSS の検査の設定（design-policy.md の原則 15、原則 16）
+├── pnpm-workspace.yaml          インストール時のスクリプトを許すパッケージ
+├── pnpm-lock.yaml               依存の版を固定する。vp install が書く
 └── package.json
 ```
 
@@ -79,6 +85,7 @@ screens/containers
 ├── controller.test.ts Controller のテスト
 ├── screen.tsx         Controller を呼び、View に props で渡す（renderer.md）
 ├── view.tsx           View
+├── view.test.tsx      View のテスト（renderer.md の「View のテスト」）
 ├── view.module.css    View の見た目のうち、Mantine の props で書けないもの
 └── view.stories.tsx   View の Storybook（Storybook を入れた後）
 ```
@@ -86,6 +93,10 @@ screens/containers
 **why: 1 つの画面を直すとき、Model・View・Controller を一緒に直すことが多い。**
 main と違い、renderer には層を越える読み込みの向きの決まりが Model・View・Controller の 3 つしか無く
 （`design-policy.md` の原則 14）、ファイルの名前で分かる。
+
+**アプリ全体の Model と Controller は `app` に置く**（`renderer.md` の「アプリ全体の状態」）。
+画面のディレクトリと同じファイルの分け方にし、`screen.tsx` の代わりに、アプリの一番上の部品を `app.tsx` に置く。
+`app` は `screens` に入れない。**画面ではなく、画面を並べる側だから。**
 
 **2 つ以上の画面で使う部品は `components` に、2 つ以上の画面で使う文の関数は `messages` に置く**（一覧、確認の画面、状態バー、待たせるときの文など）。
 1 つの画面でしか使わない部品は、その画面のディレクトリに置く。
@@ -115,7 +126,10 @@ main・preload・renderer の 3 つのビルドの設定と、型検査の設定
 **why: 対象を動かしたり消したりしたときに、テストも一緒に動く。**
 テストを別のディレクトリにまとめると、対象を消したときにテストだけが残る。
 Vitest は、既定で `.test.ts` で終わるファイルを探すので、設定が要らない
-（Vitest 5 の文書で確認。既定の探し方は `**/*.{test,spec}.?(c|m)[jt]s?(x)`）。
+（Vite+ 0.3.3 に同梱の Vitest 4.1.11 で確認。`vp test` が、既定の探し方を `**/*.{test,spec}.?(c|m)[jt]s?(x)` と出力した）。
 
-**Vite+ に同梱されている Vitest の版では、確かめていない。** 実装を始めるときに、
-`vp test` が隣に置いたテストを見つけることを確かめる。
+**2 つ以上のテストのファイルで使う、テスト用の関数は `<名前>.test-helper.ts` に置く**（例: エンジンの代わりのサーバを立てる `fake-engine.test-helper.ts`）。
+使うテストのファイルと同じディレクトリに置く。
+
+**why: アプリのコードと区別できる名前にする。** 名前に `.test` が入るので、ファイルの一覧でテスト用だと分かる。
+名前の終わりが `.test.ts` ではないので、Vitest はテストのファイルとして実行しない（`vp test list` で確認）。

@@ -98,6 +98,28 @@ function useContainersController(deps: {
 テストでは、決めた応答を返す見せかけの窓口を引数に渡し、Controller が Model に正しい出来事を渡すかを確かめる。
 main も Electron も起動せずに済む。
 
+### View のテスト
+
+**View のテストでは、状態ごとに出すボタンと、ボタンを押したときに呼ぶ関数を確かめる。** 色と配置は確かめない
+（`CLAUDE.md` の「テスト」——見た目には書かない。見た目は Storybook で確かめる）。
+
+| 確かめること | 例 |
+| --- | --- |
+| 状態ごとに出すボタン | 「接続不可」で原因が「応答がありません」か「エンジンが見つかりません」なら ［再試行］ だけを出す |
+| ボタンと、呼ぶ関数の結び付き | ［再試行］ を押すと `onRetry` を呼ぶ |
+| 状態から作った文が、画面に出ているか | 「再接続待ち」で、残りの秒数を出す |
+
+**要素は、ボタンの名前と役割で探す**（Testing Library の `getByRole`）。CSS のクラス名では探さない。
+クラス名で探すと、見た目を直しただけでテストが失敗する。
+
+**Controller の hook は、Testing Library の `renderHook` で呼んで確かめる**（`src/renderer/src/app/controller.test.ts`）。
+main の窓口の代わり（`src/renderer/src/api/fake-main-api.test-helper.ts`）を渡し、どの窓口がどの順で呼ばれたかと、知らせを届けた後の状態を確かめる。
+
+**テストのファイルの 1 行目に `// @vitest-environment jsdom` を書く。** 書いたファイルだけを、ブラウザの代わりの jsdom の中で実行する。
+main のテストは Node のまま実行する。
+
+**why: Mantine は、OS の配色を `window.matchMedia` で読む。** jsdom には `window.matchMedia` が無いので、テストの中で、どの条件にも当てはまらないと答える関数を置く。
+
 ## main の窓口（`src/renderer/src/api`）
 
 **`window.api` を呼ぶ処理を、1 つのモジュールに集める**（`design-policy.md` の「Storybook を使う条件」）。
@@ -130,14 +152,13 @@ main も Electron も起動せずに済む。
 | 絞り込みの入力 | 一覧を出す各画面 | `common.md` の「並び順と絞り込み」（対象を切り替えても消さない） |
 | 画面の切り替えの状態（タグの無いイメージを出すかなど） | 切り替えを持つ画面 | `settings.md` の「設定の画面に出すもの」 |
 | 画面の言語 | すべての画面 | `common.md` の「言語を選ぶ」 |
-| 配色の設定（自動 / ライト / ダーク） | 状態バー。配色のメニューで、選んでいる値を示す | `common.md` の「配色を選ぶ」 |
 
 アプリ全体の Controller も、Model（純関数）と Controller（hook）に分ける。
 **アプリの一番上の部品（App）がアプリ全体の Controller を呼び、状態を props で各画面の screen に渡す。**
 
 ```
 App                       アプリ全体の Controller を呼ぶ。main の窓口を作る
-├── 状態バー           接続の状態と、配色の設定と、画面の言語を props で受け取る
+├── 状態バー           接続の状態と、画面の言語を props で受け取る
 ├── 左の一覧           選んでいる対象を props で受け取る
 └── 右の領域           開いているタブと、選んでいるタブを props で受け取る
     └── 画面の screen  main の窓口と、使うアプリ全体の状態を props で受け取る
@@ -204,6 +225,8 @@ Model を「状態 + 出来事 → 次の状態」の純関数にしてあるの
 
 **main が画面の言語（`"ja"` か `"en"`）を決め、renderer に渡す**（`ipc.md` の「共通の口（`stream` と `app`）」の `app:getLanguage`）。
 renderer は、OS の言語を自分で読まない。
+**main は、設定が「自動」のとき、Electron の `app.getPreferredSystemLanguages()` の最初の言語で決める**（`src/main/features/settings/language.ts`）。
+最初の言語が `ja` か `ja-` で始まるなら日本語、それ以外は英語。開発機では `["ja-JP"]` を返し、macOS の言語の設定の順と一致した。
 `Language` の型（`"ja" | "en"`）は、IPC で渡す値の型なので `src/shared` に置く（`ipc.md` の「形の正は `src/shared` のスキーマ」）。
 
 **why: メニューバーのメニューは main が作るので、main も画面の言語を知る必要がある。**
@@ -211,6 +234,21 @@ main と renderer がそれぞれ OS の言語を読むと、2 つの判定が�
 
 **画面の言語は、アプリ全体の状態に入れる**（「アプリ全体の状態」）。
 App が画面の言語を props で各画面の screen に渡し、screen が画面の言語で文の組を選ぶ。
+
+**言語を選んだ後の画面の言語は、`app:setLanguage` の応答で受け取る。** 「自動」を選んだときの言語は、main が OS の言語から決めるので、renderer は選んだ時点では分からない。
+知らせの口は置かない。画面の言語を変えるのは renderer だけで、起動したときの言語は、窓を見せる前に `app:getLanguage` で受け取っている。
+
+**画面の言語が届くまでは、窓を見せる知らせ（`app:rendererPainted`）を送らない**（`main.md` の「窓は、renderer が描き終えてから見せる」）。
+届く前に見せると、仮の言語（日本語）で描いた文が、届いた言語に変わるのが見える。
+
+### 言語のメニュー
+
+**状態バーの右端に、いまの画面の言語の国旗のボタンを置く。** 押すと「自動」「日本語」「English」のメニューが開く（`docs/spec/common.md` の「言語を選ぶ」）。
+国旗は、`circle-flags` の SVG をアプリに同梱して出す。旗の画像は読み上げの対象から外し、ボタンの名前（`aria-label`）を言語の名前にする。
+言語の名前は、どの画面の言語でも同じ文字で出すので、`messages.ts` ではなく `language-menu.tsx` に置く。「自動」だけは、いまの画面の言語の文にする。
+
+**選んでいる設定は、メニューの項目の左のチェックと、`aria-current` で示す。** Mantine のメニューは、項目の役割（`role`）を `menuitem` に固定し、
+`menuitem` には、選んでいることを表す `aria-checked` を付けられない。
 
 ### 文は、言語ごとの組を 1 つのファイルに並べる
 
@@ -285,6 +323,15 @@ DockerGUI のアプリの状態の渡し方の決まりで、ライブラリの�
 
 **why: props で書くと、余白の大きさを Mantine の段階（`xs` から `xl`）から選ぶことになる。** 画面ごとに余白の大きさがばらつかない。
 
+### 配色のボタン
+
+**状態バーの右端に、配色を切り替えるボタンを置く**（`docs/spec/common.md` の「配色を選ぶ」）。ボタンは、アイコンだけで文を出さない。
+いま表示している配色のアイコン（ライトは太陽、ダークは月）を出し、押すと反対の配色を `app:setColorScheme` で main に送る。
+画面を読み上げる機能のために、切り替わる先を名前（`aria-label`）にする（「ダークに切り替える」）。
+
+**いま表示している配色は、Mantine の `useComputedColorScheme` で読む。** renderer は、配色をアプリ全体の状態に持たない。
+一度も切り替えていない間は、OS の配色が変わると表示も変わるので、renderer が値を持つと、表示と食い違う。
+
 ### 配色は main が決め、renderer は OS の配色として受け取る
 
 **main が、配色の設定を Electron の `nativeTheme.themeSource` に入れる**（`"system"` `"light"` `"dark"` のどれか。`ipc.md` の `app:setColorScheme`）。
@@ -296,6 +343,26 @@ Mantine は `prefers-color-scheme` に合わせるので、main が `nativeTheme
 
 **why: 配色を決める場所を、main の 1 つにする。** renderer が Mantine の配色を切り替えると、メニューの配色は変わらず、画面とメニューで配色が分かれる。
 加えて、Mantine は切り替えた配色をブラウザの保存領域（`localStorage`）に保存するので、配色を保存する場所が設定ファイルと 2 つになる。
+
+### Storybook で見本を見る
+
+**見本のファイル（`*.stories.tsx`）は、描く部品の隣に置き、状態ごとに 1 つの見本を書く**（`directories.md` の `view.stories.tsx`）。
+`vp run storybook` で起動し、`http://localhost:6006` を開く。
+
+**Storybook の上の帯で、配色（ライト / ダーク）と画面の言語（日本語 / English）を切り替える。** 設定は `.storybook/preview.tsx` に書く。
+
+| 切り替えるもの | 切り替え方 |
+| --- | --- |
+| 配色 | `MantineProvider` の `forceColorScheme` に、選んだ配色を渡す |
+| 画面の言語 | 見本の `render` が、選んだ言語の文の組を部品に渡す |
+
+**why: アプリでは、配色と画面の言語を main が決める**（「配色は main が決め、renderer は OS の配色として受け取る」「言語を決めるのは main」）。
+Storybook には main が無いので、上の帯で選んだものを直接渡す。
+
+**Storybook は、この PC からだけ開けるようにする**（`package.json` の `storybook` で `--host localhost` を付ける）。
+**利用状況を Storybook の開発元に送らない**（`.storybook/main.ts` の `disableTelemetry`）。
+
+**why: Storybook は、既定では同じネットワークのほかの機械からも開ける。** 見本は開発中の画面で、ほかの人に見せる理由が無い。
 
 ## 例外になる画面
 
@@ -344,10 +411,8 @@ function terminalThemeOf(style: CSSStyleDeclaration): ITheme {
 
 | 確かめていないこと | いつ確かめるか |
 | --- | --- |
-| Controller の hook のテストに使う道具 | 最初の画面を実装するとき |
 | 隠したターミナルを見せ直したときに、`@xterm/xterm` で行数と桁数を測り直す方法 | ターミナルを実装するとき |
 | ログの本文の、見えている範囲だけを描く方法 | ログの画面を実装するとき |
 | React が描き終えた時点を、確認を返す処理から知る方法 | ログの画面を実装するとき |
 | メニューバーのメニューの文を、main のどこに置くか | メニューを実装するとき |
 | `@xterm/xterm` に、作った後で `theme` を渡し直せるか。`terminalThemeOf` で読む Mantine の CSS の変数の名前 | ターミナルを実装するとき |
-| Storybook で、ライトとダークの見本を切り替える方法 | Storybook を入れるとき |

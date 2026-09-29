@@ -13,7 +13,7 @@
 | --- | --- | --- | --- |
 | `wsl.exe` の引数の組み立て | `wslCommandOf` | ディストロの名前と、ディストロの中で実行するコマンド | `wsl.exe` と、渡す引数 |
 | 接続先の判定 | `distrosOf` | `wsl.exe -l -q` の標準出力のバイト列 | ディストロの名前の一覧 |
-| 接続先の判定 | `endpointOf` | `docker context ls --format json` の標準出力 | 繋ぐソケットのパスか、名前付きパイプの名前 |
+| 接続先の判定 | `currentContextOf` | `docker context ls --format json` の標準出力 | いまのコンテキストの名前と、繋ぐソケットのパスか名前付きパイプの名前 |
 | パスの変換 | `mountRootOf` | ディストロの中で実行した `wslpath -a 'C:\'` の標準出力 | ドライブを置いている場所（既定は `/mnt/`） |
 | パスの変換 | `wslPathOf` | Windows のパスと、接続しているディストロ | WSL のパス、または変換できない理由 |
 
@@ -21,7 +21,7 @@
 
 **why: Windows でしか確かめられないコードの場所を、ディレクトリで分かるようにする。**
 Windows で不具合が報告されたときに、まず読む場所が 1 つに決まる。
-子プロセスを起動する処理は、macOS でも使う `os` の `process` に置き、`src/main/os/windows` には置かない。
+子プロセスを起動する処理は、macOS でも使う `os` の `command` に置き、`src/main/os/windows` には置かない。
 
 **why: 各節の表の例を、そのままテストにする。** 実機で確かめられないので、入力と出力の組をテストで固定するしかない（原則 3）。
 
@@ -85,23 +85,25 @@ type Endpoint =
   | { kind: "unixSocket"; path: string }
   | { kind: "namedPipe"; name: string };
 
-function endpointOf(output: string): Endpoint | undefined;
+function currentContextOf(output: string): { name: string; endpoint: Endpoint } | undefined;
 ```
+
+**コンテキストの名前も返す。** 状態バーに出すエンジンの名前（「接続先: colima」の colima）に使う（`docs/spec/connection.md` の「接続の状態」）。
 
 **`docker context ls --format json` は、1 行に 1 件の JSON を返す**
 （開発機の Docker CLI 29.8.1 で確認。`Current` と `DockerEndpoint` の項目がある）。
 **`Current` が `true` の行の `DockerEndpoint` を読む。** 各行は zod のスキーマで検査する（`design-policy.md` の原則 12）。
 
-| `DockerEndpoint` | 返すもの | 確かめたか |
+| `DockerEndpoint` | 返すもののうち、繋ぐソケット | 確かめたか |
 | --- | --- | --- |
 | `unix:///Users/me/.colima/default/docker.sock` | `{ kind: "unixSocket", path: "/Users/me/.colima/default/docker.sock" }` | 開発機で確認 |
 | `npipe:////./pipe/docker_engine` | `{ kind: "namedPipe", name: "\\\\.\\pipe\\docker_engine" }` | **確かめられない** |
-| `tcp://192.168.1.10:2375`、`ssh://me@host` | `undefined` | 遠隔のホストへの接続は対象にしない（`overview.md` の「対象にしないもの」） |
+| `tcp://192.168.1.10:2375`、`ssh://me@host` | 名前も含めて `undefined` を返す | 遠隔のホストへの接続は対象にしない（`overview.md` の「対象にしないもの」） |
 
 **名前付きパイプの名前は、区切りを `\` に直して返す。** Node の文書に、名前付きパイプの名前は `\\.\pipe\` か `\\?\pipe\` で始まる必要があると書かれている
 （Node の `net` の文書で確認）。区切りが `/` のままで繋がるかは、文書に書かれていない。
 
-**macOS でも `endpointOf` を使う。** `unix://` の行は、開発機で毎日読まれる。
+**macOS でも `currentContextOf` を使う。** `unix://` の行は、開発機で毎日読まれる。
 
 ## パスの変換
 
@@ -172,7 +174,7 @@ function mountRootOf(output: string): string | undefined;
 | `-e` が、ディストロの中のシェルを通さずにコマンドを実行する指定であること | `wslCommandOf` |
 | `wsl.exe -l -q` が返す文字コード | `distrosOf` |
 | Docker Desktop が作るディストロの名前が `docker-desktop` と `docker-desktop-data` か | `distrosOf` |
-| Windows の Docker Desktop のコンテキストが返す `DockerEndpoint` の形 | `endpointOf` |
+| Windows の Docker Desktop のコンテキストが返す `DockerEndpoint` の形 | `currentContextOf` |
 | **空白を含む引数が、`wsl.exe` を通って、空白を含んだ 1 つの引数のまま届くか。** Windows のプロセスは引数を 1 本の文字列で受け取るので、Node が組み立てた文字列を `wsl.exe` が分け直す | `wslCommandOf` |
 | `-e` で実行すると、ログインしたときのシェルの設定が読まれない。`docker` が `/usr/bin` のような標準の場所に無いと、見つからない可能性がある | `wslCommandOf` |
 | Windows のファイルを選ぶ画面が、ディストロの中のファイルに `\\wsl.localhost\` と `\\wsl$\` のどちらの形を返すか | `wslPathOf`（両方を受け付けてある） |

@@ -15,8 +15,7 @@ import {
   rowOperationsOf,
   type RunningOperation,
 } from "./model";
-
-const ICON_SIZE = 16;
+import { ICON_SIZE } from "../../components/icon-size";
 
 /** 操作のボタン 1 つの大きさ（Mantine の ActionIcon の md）と、ボタンの間の隙間。 */
 const BUTTON_SIZE = 28;

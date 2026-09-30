@@ -103,6 +103,8 @@ main と違い、renderer には層を越える読み込みの向きの決まり
 （`design-policy.md` の原則 14）、ファイルの名前で分かる。
 
 **View の部品は、部品ごとに 1 つのファイルに分ける。** ファイルの名前は、部品の名前の単語を小文字にして `-` でつないだもの（`RowActions` なら `row-actions.tsx`）にする。
+**外に出さない部品は、使う部品と同じファイルに置く**（`container-table.tsx` の `ContainerTableRows`）。
+外に出さない部品は、使う部品の中身の一部なので、使う部品と一緒に読み、一緒に直す。
 `view.tsx` には、画面の状態ごとに部品を選ぶ部品（`ContainersView`）だけを置く。
 部品の見た目のうち Mantine の props で書けないものは、部品のファイルと同じ名前の `.module.css` に書く（`container-table.tsx` なら `container-table.module.css`）。
 
@@ -113,6 +115,7 @@ main と違い、renderer には層を越える読み込みの向きの決まり
 `app` は `screens` に入れない。**画面ではなく、画面を並べる側だから。**
 
 **2 つ以上の画面で使う部品は `components` に、2 つ以上の画面で使う文の関数は `messages` に置く**（一覧、確認の画面、状態バー、待たせるときの文など）。
+2 つ以上の画面の部品が使う値（アイコンの色の `icon-color.ts`、アイコンの大きさの `icon-size.ts`）も `components` に置く。
 1 つの画面でしか使わない部品は、その画面のディレクトリに置く。
 **2 つ目の画面で使うことになった時点で、`components` に移す。**
 

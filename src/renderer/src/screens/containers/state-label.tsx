@@ -12,8 +12,7 @@ import {
 import { Group, Text } from "@mantine/core";
 import type { ContainerState } from "../../../../shared/containers";
 import { iconColorOf, type IconColor } from "../../components/icon-color";
-
-const ICON_SIZE = 16;
+import { ICON_SIZE } from "../../components/icon-size";
 
 type StateLook = { color: IconColor; icon: Icon };
 

@@ -13,8 +13,7 @@ import { iconColorOf, type IconColor } from "../components/icon-color";
 import { ColorSchemeButton } from "./color-scheme-button";
 import { LanguageMenu } from "./language-menu";
 import type { AppMessages } from "./messages";
-
-const ICON_SIZE = 16;
+import { ICON_SIZE } from "../components/icon-size";
 
 /** 状態バーの高さ。View が AppShell の上の領域の高さに使う。 */
 export const STATUS_BAR_HEIGHT = 48;

@@ -71,10 +71,7 @@ export function ContainerTable(
   );
 }
 
-/**
- * コンテナ 1 つの行。停止処理中なら行の下に停止の知らせを、失敗があれば行の下に失敗の知らせを続け、1 つの行に見せる。
- * 停止処理中の行の右端には、操作のボタンを出さない。
- */
+/** コンテナ 1 つの行と、行の知らせ（docs/spec/containers.md の「行の知らせ」）。 */
 function ContainerTableRows(props: {
   row: ContainerRow;
   running: RunningOperation[] | undefined;

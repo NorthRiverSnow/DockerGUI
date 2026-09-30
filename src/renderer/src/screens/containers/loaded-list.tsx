@@ -6,8 +6,7 @@ import type { ContainerRow } from "../../../../shared/containers";
 import { ContainerTable, type RowOperationProps } from "./container-table";
 import type { ContainersMessages } from "./messages";
 import { visibleRowsOf, type ContainersFilter } from "./model";
-
-const ICON_SIZE = 16;
+import { ICON_SIZE } from "../../components/icon-size";
 
 /** 絞り込みの見出しと、絞り込んだ一覧。 */
 export function LoadedList(

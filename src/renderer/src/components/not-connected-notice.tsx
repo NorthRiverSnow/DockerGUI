@@ -2,7 +2,7 @@ import { PlugsIcon } from "@phosphor-icons/react";
 import { Stack, Text, ThemeIcon, Title } from "@mantine/core";
 import type { NotConnectedMessages } from "../messages/not-connected";
 
-const ICON_SIZE = 36;
+const NOTICE_ICON_SIZE = 36;
 const ICON_CIRCLE_SIZE = 72;
 
 /**
@@ -13,7 +13,7 @@ export function NotConnectedNotice(props: { messages: NotConnectedMessages }) {
   return (
     <Stack align="center" gap="sm" py="xl" ta="center">
       <ThemeIcon size={ICON_CIRCLE_SIZE} radius="xl" variant="light" color="gray">
-        <PlugsIcon size={ICON_SIZE} aria-hidden />
+        <PlugsIcon size={NOTICE_ICON_SIZE} aria-hidden />
       </ThemeIcon>
       <Title order={4}>{props.messages.title}</Title>
       <Text c="dimmed" size="sm">

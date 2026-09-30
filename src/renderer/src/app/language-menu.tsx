@@ -4,8 +4,8 @@ import japanFlag from "circle-flags/flags/jp.svg";
 import unitedStatesFlag from "circle-flags/flags/us.svg";
 import type { Language, LanguageSetting, LanguageState } from "../../../shared/language";
 import type { AppMessages } from "./messages";
+import { ICON_SIZE } from "../components/icon-size";
 
-const ICON_SIZE = 16;
 const FLAG_SIZE = 20;
 
 /**

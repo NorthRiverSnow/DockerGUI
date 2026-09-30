@@ -1,19 +1,40 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import type { ConnectionState } from "../../../../shared/connection";
+import type { ContainerOperation } from "../../../../shared/containers";
 import type { MainApi } from "../../api/main-api";
 import { INITIAL_CONTAINERS_STATE, nextContainersState, type ContainersState } from "./model";
 
 /** 「3 分前」の表示を進める間隔。 */
 const CLOCK_REFRESH_MS = 30_000;
 
+/** 操作の応答を待っている間に、経過した時間の表示を進める間隔。 */
+const RUNNING_CLOCK_REFRESH_MS = 1000;
+
+/** 操作ごとに、main の窓口のどの関数を呼ぶか。 */
+const OPERATION_REQUESTS: Record<
+  ContainerOperation,
+  (api: MainApi, ids: string[]) => ReturnType<MainApi["startContainers"]>
+> = {
+  start: (api, ids) => api.startContainers(ids),
+  pause: (api, ids) => api.pauseContainers(ids),
+  unpause: (api, ids) => api.unpauseContainers(ids),
+  stop: (api, ids) => api.stopContainers(ids),
+  kill: (api, ids) => api.killContainers(ids),
+  restart: (api, ids) => api.restartContainers(ids),
+  remove: (api, ids) => api.removeContainers(ids),
+};
+
 export function useContainersController(deps: {
   api: MainApi;
   connection: ConnectionState | undefined;
 }): {
   state: ContainersState;
-  /** 「時間」の列を出すための、いまの時刻。30 秒ごとに進む。 */
+  /** 「時間」の列と経過した時間を出すための、いまの時刻。30 秒ごとに、操作の応答を待っている間は 1 秒ごとに進む。 */
   now: number;
   reload: () => void;
+  /** ids のコンテナに operation を送る。応答が届くまで、operation を state.running に持つ。 */
+  operate: (operation: ContainerOperation, ids: string[]) => void;
+  dismissFailure: (id: string) => void;
 } {
   const [state, dispatch] = useReducer(nextContainersState, INITIAL_CONTAINERS_STATE);
   const [now, setNow] = useState(Date.now);
@@ -60,12 +81,31 @@ export function useContainersController(deps: {
     });
   }, [deps.api, connected]);
 
+  const operationRunning = Object.keys(state.running).length > 0;
   useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), CLOCK_REFRESH_MS);
+    const timer = setInterval(
+      () => setNow(Date.now()),
+      operationRunning ? RUNNING_CLOCK_REFRESH_MS : CLOCK_REFRESH_MS,
+    );
     return () => clearInterval(timer);
-  }, []);
+  }, [operationRunning]);
 
   const reload = useCallback(() => setLoadCount((count) => count + 1), []);
 
-  return { state, now, reload };
+  const operate = useCallback(
+    (operation: ContainerOperation, ids: string[]) => {
+      dispatch({ kind: "operationStarted", operation, ids, startedAt: Date.now() });
+      void OPERATION_REQUESTS[operation](deps.api, ids).then((result) =>
+        dispatch({ kind: "operationFinished", operation, ids, result }),
+      );
+    },
+    [deps.api],
+  );
+
+  const dismissFailure = useCallback(
+    (id: string) => dispatch({ kind: "failureDismissed", id }),
+    [],
+  );
+
+  return { state, now, reload, operate, dismissFailure };
 }

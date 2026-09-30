@@ -1,0 +1,23 @@
+/*
+ * コンテナ 1 つの行と、行の下の知らせ（停止処理中、失敗）を、1 つの行に見せる。
+ * why: Mantine の表は、行（tr）ごとに下の線を引き、マウスを重ねた行（tr）だけに色を付ける。
+ * コンテナ 1 つを 1 つの tbody にまとめ、線と色を tbody の単位に付け直す。
+ */
+
+.container > tr {
+  border-bottom: none;
+}
+
+.container:not(:last-child) > tr:last-child {
+  border-bottom: calc(0.0625rem * var(--mantine-scale)) solid var(--table-border-color);
+}
+
+.container > tr + tr > td {
+  padding-top: 0;
+}
+
+@media (hover: hover) {
+  .container:hover {
+    background-color: var(--table-hover-color);
+  }
+}

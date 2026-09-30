@@ -1,8 +1,13 @@
-import type { ContainerState, PublishedPort } from "../../../../shared/containers";
+import type {
+  ContainerOperation,
+  ContainerState,
+  PublishedPort,
+} from "../../../../shared/containers";
 import type { Language } from "../../../../shared/language";
 import type { Failure } from "../../../../shared/result";
 import { FAILURE_CAUSES } from "../../messages/failure";
 import { NOT_CONNECTED_MESSAGES, type NotConnectedMessages } from "../../messages/not-connected";
+import { ELAPSED_TEXTS } from "../../messages/waiting";
 
 export type ContainersMessages = {
   columns: { state: string; name: string; image: string; ports: string; time: string };
@@ -17,12 +22,44 @@ export type ContainersMessages = {
   /** 読み込めなかったとき（docs/spec/common.md の「失敗の見せ方」）。 */
   loadFailed: (failure: Failure) => string;
   reload: string;
+  /** 操作のボタンの名前（docs/spec/containers.md の「操作」）。 */
+  operations: Record<ContainerOperation, string>;
+  /** 操作のボタンを並べる列の見出し。画面には出さず、読み上げに使う。 */
+  operationsColumn: string;
+  /** 停止処理中の行の文（docs/spec/containers.md の「停止は待たされる」）。 */
+  stopping: (name: string) => string;
+  /** 経過した時間（docs/spec/common.md の「待たせるときの表示」）。 */
+  elapsed: (milliseconds: number) => string;
+  /** 操作の失敗（docs/spec/common.md の「失敗の見せ方」）。 */
+  operationFailed: (operation: ContainerOperation, name: string, failure: Failure) => string;
+  /** 失敗の知らせを閉じるボタンの名前。 */
+  closeFailure: string;
 };
 
 /** 公開しているポートの対応。どの言語でも同じ形で出す（例: 8080 → 80）。 */
 export function portsTextOf(ports: PublishedPort[]): string {
   return ports.map((port) => `${port.publicPort} → ${port.privatePort}`).join(", ");
 }
+
+const JA_OPERATION_NAMES: Record<ContainerOperation, string> = {
+  start: "起動",
+  pause: "一時停止",
+  unpause: "再開",
+  stop: "停止",
+  kill: "強制停止",
+  restart: "再起動",
+  remove: "削除",
+};
+
+const EN_OPERATION_NAMES: Record<ContainerOperation, string> = {
+  start: "Start",
+  pause: "Pause",
+  unpause: "Resume",
+  stop: "Stop",
+  kill: "Force stop",
+  restart: "Restart",
+  remove: "Remove",
+};
 
 export const CONTAINERS_MESSAGES: Record<Language, ContainersMessages> = {
   ja: {
@@ -58,6 +95,13 @@ export const CONTAINERS_MESSAGES: Record<Language, ContainersMessages> = {
     },
     loadFailed: (failure) => `コンテナの一覧を読み込めませんでした。${FAILURE_CAUSES.ja(failure)}`,
     reload: "もう一度読み込む",
+    operations: JA_OPERATION_NAMES,
+    operationsColumn: "操作",
+    stopping: (name) => `${name} を停止しています…`,
+    elapsed: ELAPSED_TEXTS.ja,
+    operationFailed: (operation, name, failure) =>
+      `コンテナ ${name} を${JA_OPERATION_NAMES[operation]}できませんでした。${FAILURE_CAUSES.ja(failure)}`,
+    closeFailure: "閉じる",
   },
   en: {
     columns: { state: "State", name: "Name", image: "Image", ports: "Ports", time: "Time" },
@@ -93,6 +137,13 @@ export const CONTAINERS_MESSAGES: Record<Language, ContainersMessages> = {
     },
     loadFailed: (failure) => `Couldn't load the containers. ${FAILURE_CAUSES.en(failure)}`,
     reload: "Reload",
+    operations: EN_OPERATION_NAMES,
+    operationsColumn: "Actions",
+    stopping: (name) => `Stopping ${name}…`,
+    elapsed: ELAPSED_TEXTS.en,
+    operationFailed: (operation, name, failure) =>
+      `Couldn't ${EN_OPERATION_NAMES[operation].toLowerCase()} container ${name}. ${FAILURE_CAUSES.en(failure)}`,
+    closeFailure: "Close",
   },
 };
 

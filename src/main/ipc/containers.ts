@@ -1,7 +1,8 @@
+import type { ContainerOperation } from "../../shared/containers";
 import type { Result } from "../../shared/result";
 import type { EngineClient } from "../engine-api/client";
 import { containerRowsOf } from "../features/containers/containers";
-import { operateContainers, type ContainerOperation } from "../features/containers/operations";
+import { operateContainers } from "../features/containers/operations";
 import { registerRequestHandler } from "./ipc";
 
 /** containers: の口を、コンテナの機能の関数につなぐ（docs/design/ipc.md の「コンテナ（containers）」）。 */

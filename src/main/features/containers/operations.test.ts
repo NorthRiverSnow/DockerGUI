@@ -6,7 +6,8 @@ import {
   type FakeResponse,
 } from "../../engine-api/fake-engine.test-helper";
 import { socketAgentOf } from "../../os/agent";
-import { operateContainers, type ContainerOperation } from "./operations";
+import type { ContainerOperation } from "../../../shared/containers";
+import { operateContainers } from "./operations";
 
 let engine: FakeEngine | undefined;
 

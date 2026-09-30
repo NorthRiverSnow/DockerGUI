@@ -25,7 +25,11 @@ export function ContainersScreen(props: {
       filter={props.filter}
       now={controller.now}
       messages={CONTAINERS_MESSAGES[props.language]}
+      running={controller.state.running}
+      failures={controller.state.failures}
       onReload={controller.reload}
+      onOperate={controller.operate}
+      onDismissFailure={controller.dismissFailure}
       onFilterTextChange={props.onFilterTextChange}
       onHideNonRunningChange={props.onHideNonRunningChange}
     />

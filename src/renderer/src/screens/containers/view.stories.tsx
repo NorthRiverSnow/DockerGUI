@@ -85,7 +85,11 @@ const meta = {
     now: NOW,
     messages: CONTAINERS_MESSAGES.ja,
     filter: { text: "", hideNonRunning: false },
+    running: {},
+    failures: {},
     onReload: fn(),
+    onOperate: fn(),
+    onDismissFailure: fn(),
     onFilterTextChange: fn(),
     onHideNonRunningChange: fn(),
   },
@@ -131,3 +135,44 @@ export const Failed: Story = {
 };
 
 export const NotConnected: Story = { name: "未接続", args: { list: { kind: "notConnected" } } };
+
+export const OperationRunning: Story = {
+  name: "操作の応答を待っている",
+  args: {
+    running: {
+      a1: [{ operation: "restart", startedAt: NOW - 2000 }],
+      e5: [{ operation: "start", startedAt: NOW - 1000 }],
+    },
+  },
+};
+
+export const Stopping: Story = {
+  name: "停止処理中",
+  args: {
+    running: {
+      a1: [{ operation: "stop", startedAt: NOW - 4000 }],
+      b2: [
+        { operation: "stop", startedAt: NOW - 7000 },
+        { operation: "kill", startedAt: NOW - 1000 },
+      ],
+    },
+  },
+};
+
+export const OperationFailed: Story = {
+  name: "操作に失敗した",
+  args: {
+    failures: {
+      a1: {
+        operation: "stop",
+        failure: {
+          kind: "expected",
+          code: "engineRejected",
+          engineMessage:
+            "cannot stop container: web-1: tried to kill container, but did not receive an exit event",
+        },
+      },
+      f6: { operation: "start", failure: { kind: "expected", code: "engineUnreachable" } },
+    },
+  },
+};

@@ -90,15 +90,23 @@ screens/containers
 ├── controller.ts      Controller
 ├── controller.test.ts Controller のテスト
 ├── screen.tsx         Controller を呼び、View に props で渡す（renderer.md）
-├── view.tsx           View
+├── view.tsx           View。画面の状態ごとに、出す部品を選ぶ
+├── <部品>.tsx         View の部品（state-label.tsx、row-actions.tsx など）
 ├── view.test.tsx      View のテスト（renderer.md の「View のテスト」）
 ├── view.module.css    View の見た目のうち、Mantine の props で書けないもの
+├── <部品>.module.css  部品の見た目のうち、Mantine の props で書けないもの（container-table.module.css など）
 └── view.stories.tsx   View の Storybook（Storybook を入れた後）
 ```
 
 **why: 1 つの画面を直すとき、Model・View・Controller を一緒に直すことが多い。**
 main と違い、renderer には層を越える読み込みの向きの決まりが Model・View・Controller の 3 つしか無く
 （`design-policy.md` の原則 14）、ファイルの名前で分かる。
+
+**View の部品は、部品ごとに 1 つのファイルに分ける。** ファイルの名前は、部品の名前の単語を小文字にして `-` でつないだもの（`RowActions` なら `row-actions.tsx`）にする。
+`view.tsx` には、画面の状態ごとに部品を選ぶ部品（`ContainersView`）だけを置く。
+部品の見た目のうち Mantine の props で書けないものは、部品のファイルと同じ名前の `.module.css` に書く（`container-table.tsx` なら `container-table.module.css`）。
+
+**why: 1 つの画面の部品は、機能を足すたびに増える。** `view.tsx` に並べると、直す部品を探すのに、ほかの部品を読み飛ばすことになる。
 
 **アプリ全体の Model と Controller は `app` に置く**（`renderer.md` の「アプリ全体の状態」）。
 画面のディレクトリと同じファイルの分け方にし、`screen.tsx` の代わりに、アプリの一番上の部品を `app.tsx` に置く。

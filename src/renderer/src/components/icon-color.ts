@@ -1,11 +1,17 @@
-/** 状態を表すアイコンに付ける色。状態バーと、一覧の状態の列で使う。 */
-export type IconColor = "green" | "yellow" | "blue" | "gray" | "red" | "orange";
+export const ICON_COLORS = ["green", "yellow", "blue", "gray", "red", "orange"] as const;
+
+/** 状態を表すアイコンに付ける色。状態バーと、一覧の状態の列と操作のボタンで使う。 */
+export type IconColor = (typeof ICON_COLORS)[number];
+
+/** アイコンの色の CSS の変数の名前。値は、theme.ts の CSS_VARIABLES_RESOLVER が配色ごとに入れる。 */
+export function iconColorVariableOf(color: IconColor): `--dockergui-icon-${IconColor}` {
+  return `--dockergui-icon-${color}`;
+}
 
 /**
- * アイコンの color に渡す値を返す。
- * why: 色は Mantine の CSS の変数で渡す（design-policy.md の原則 16）。-filled の変数は、配色に合わせて濃さが変わる。
- * ただし灰だけは、ダークでは -filled が暗い灰になり、背景に沈んで見えない。灰は、どちらの配色でも読める薄い文字の色（dimmed）にする。
+ * アイコンの color に渡す値を返す。配色ごとの濃さは theme.ts の CSS_VARIABLES_RESOLVER が決める。
+ * why: 色は Mantine の CSS の変数で渡す（design-policy.md の原則 16）。
  */
 export function iconColorOf(color: IconColor): string {
-  return color === "gray" ? "var(--mantine-color-dimmed)" : `var(--mantine-color-${color}-filled)`;
+  return `var(${iconColorVariableOf(color)})`;
 }

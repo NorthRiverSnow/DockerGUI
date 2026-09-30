@@ -1,3 +1,4 @@
+import type { ContainerOperation } from "../../../shared/containers";
 import type { BatchResult, Result } from "../../../shared/result";
 import type { EngineClient } from "../../engine-api/client";
 import {
@@ -13,15 +14,6 @@ import {
 } from "../../engine-api/containers";
 import { unexpectedResultOf } from "../../failures/unexpected";
 import { containerNameOf } from "./convert";
-
-export type ContainerOperation =
-  | "start"
-  | "pause"
-  | "unpause"
-  | "stop"
-  | "kill"
-  | "restart"
-  | "remove";
 
 /**
  * 操作ごとの、操作できるコンテナの状態（docs/spec/containers.md の「操作」の表の「出す状態」）。

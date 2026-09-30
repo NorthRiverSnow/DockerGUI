@@ -11,6 +11,8 @@ export type FakeMainApi = {
   calls: string[];
   /** いちばん古い、まだ応答していない listContainers に、result を返す。 */
   answerContainers: (result: Awaited<ReturnType<MainApi["listContainers"]>>) => void;
+  /** いちばん古い、まだ応答していないコンテナの操作に、result を返す。 */
+  answerOperation: (result: Result<BatchResult>) => void;
   /** containers:containersChanged の知らせを届ける。 */
   notifyContainersChanged: (rows: ContainerRow[]) => void;
   /** options.holdScreenSettings のときに、getScreenSettings の応答を返す。 */
@@ -20,14 +22,13 @@ export type FakeMainApi = {
 };
 
 const OK: Result<undefined> = { ok: true, value: undefined };
-const NOTHING_OPERATED: Result<BatchResult> = { ok: true, value: [] };
 
 /**
  * テストで使う。main の窓口の代わり。呼ばれた窓口の名前を calls に残す。
  * getLanguage は answerLanguage を呼ぶまで、getConnectionState はいつまでも終わらない。
  * setLanguage は、選んだ設定と、「自動」なら日本語、それ以外は選んだ言語を返す。
  * listContainers は、answerContainers を呼ぶまで終わらない。
- * コンテナの操作は、呼ばれた窓口の名前と ID を calls に残し、すぐに、何も実行しなかった結果を返す。
+ * コンテナの操作は、呼ばれた窓口の名前と ID を `stopContainers:id-1,id-2` の形で calls に残し、answerOperation を呼ぶまで終わらない。
  * getScreenSettings は、すぐに既定の切り替えを返す。options.holdScreenSettings なら、answerScreenSettings を呼ぶまで終わらない。
  */
 export function fakeMainApi(options: { holdScreenSettings?: boolean } = {}): FakeMainApi {
@@ -36,6 +37,11 @@ export function fakeMainApi(options: { holdScreenSettings?: boolean } = {}): Fak
   let answerSettings: () => void = () => {};
   const containersListeners: ((rows: ContainerRow[]) => void)[] = [];
   const containerAnswers: ((result: Awaited<ReturnType<MainApi["listContainers"]>>) => void)[] = [];
+  const operationAnswers: ((result: Result<BatchResult>) => void)[] = [];
+  const operated = (name: string) => {
+    calls.push(name);
+    return new Promise<Result<BatchResult>>((resolve) => operationAnswers.push(resolve));
+  };
   const called = <T>(name: string, value: T) => {
     calls.push(name);
     return Promise.resolve(value);
@@ -81,13 +87,13 @@ export function fakeMainApi(options: { holdScreenSettings?: boolean } = {}): Fak
       calls.push("listContainers");
       return new Promise((resolve) => containerAnswers.push(resolve));
     },
-    startContainers: (ids) => called(`startContainers:${ids.join(",")}`, NOTHING_OPERATED),
-    pauseContainers: (ids) => called(`pauseContainers:${ids.join(",")}`, NOTHING_OPERATED),
-    unpauseContainers: (ids) => called(`unpauseContainers:${ids.join(",")}`, NOTHING_OPERATED),
-    stopContainers: (ids) => called(`stopContainers:${ids.join(",")}`, NOTHING_OPERATED),
-    killContainers: (ids) => called(`killContainers:${ids.join(",")}`, NOTHING_OPERATED),
-    restartContainers: (ids) => called(`restartContainers:${ids.join(",")}`, NOTHING_OPERATED),
-    removeContainers: (ids) => called(`removeContainers:${ids.join(",")}`, NOTHING_OPERATED),
+    startContainers: (ids) => operated(`startContainers:${ids.join(",")}`),
+    pauseContainers: (ids) => operated(`pauseContainers:${ids.join(",")}`),
+    unpauseContainers: (ids) => operated(`unpauseContainers:${ids.join(",")}`),
+    stopContainers: (ids) => operated(`stopContainers:${ids.join(",")}`),
+    killContainers: (ids) => operated(`killContainers:${ids.join(",")}`),
+    restartContainers: (ids) => operated(`restartContainers:${ids.join(",")}`),
+    removeContainers: (ids) => operated(`removeContainers:${ids.join(",")}`),
     onContainersChanged: (listener) => {
       containersListeners.push(listener);
       return () => {
@@ -106,5 +112,6 @@ export function fakeMainApi(options: { holdScreenSettings?: boolean } = {}): Fak
     },
     answerScreenSettings: () => answerSettings(),
     answerContainers: (result) => containerAnswers.shift()?.(result),
+    answerOperation: (result) => operationAnswers.shift()?.(result),
   };
 }

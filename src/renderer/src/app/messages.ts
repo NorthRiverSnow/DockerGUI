@@ -3,6 +3,7 @@ import type { ConnectionState } from "../../../shared/connection";
 import type { Language } from "../../../shared/language";
 import type { Failure } from "../../../shared/result";
 import { FAILURE_CAUSES } from "../messages/failure";
+import { ELAPSED_TEXTS } from "../messages/waiting";
 import type { Target } from "./model";
 
 export type AppMessages = {
@@ -37,7 +38,7 @@ export const APP_MESSAGES: Record<Language, AppMessages> = {
       diagnostics: "診断",
       settings: "設定",
     },
-    elapsed: (milliseconds) => `経過 ${minutesAndSecondsOf(milliseconds)}`,
+    elapsed: ELAPSED_TEXTS.ja,
     buttons: {
       cancel: "中止",
       start: "起動",
@@ -84,7 +85,7 @@ export const APP_MESSAGES: Record<Language, AppMessages> = {
       diagnostics: "Diagnostics",
       settings: "Settings",
     },
-    elapsed: (milliseconds) => `Elapsed ${minutesAndSecondsOf(milliseconds)}`,
+    elapsed: ELAPSED_TEXTS.en,
     buttons: {
       cancel: "Cancel",
       start: "Start",
@@ -131,12 +132,4 @@ function isEngineNotFound(failure: Failure): boolean {
 /** time までの残りの秒数。端数は切り上げ、過ぎていれば 0 を返す。 */
 function secondsUntil(time: number, now: number): number {
   return Math.max(0, Math.ceil((time - now) / 1000));
-}
-
-/** 00:18 のように、分と秒を 2 桁ずつで返す。1 時間を超えても、分の桁を増やして表す。 */
-function minutesAndSecondsOf(milliseconds: number): string {
-  const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }

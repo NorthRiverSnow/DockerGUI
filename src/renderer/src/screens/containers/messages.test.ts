@@ -73,3 +73,27 @@ describe("notConnected", () => {
     expect(CONTAINERS_MESSAGES.en.notConnected).toBe(NOT_CONNECTED_MESSAGES.en);
   });
 });
+
+describe("operationFailed", () => {
+  const failure = {
+    kind: "expected",
+    code: "engineRejected",
+    engineMessage: "cannot stop",
+  } as const;
+
+  it("何ができなかったかを、コンテナの名前と操作の名前で書き、原因を続ける", () => {
+    expect(CONTAINERS_MESSAGES.ja.operationFailed("unpause", "web-1", failure)).toBe(
+      "コンテナ web-1 を再開できませんでした。cannot stop",
+    );
+    expect(CONTAINERS_MESSAGES.en.operationFailed("kill", "web-1", failure)).toBe(
+      "Couldn't force stop container web-1. cannot stop",
+    );
+  });
+});
+
+describe("stopping", () => {
+  it("停止しているコンテナの名前を入れる", () => {
+    expect(CONTAINERS_MESSAGES.ja.stopping("web-1")).toBe("web-1 を停止しています…");
+    expect(CONTAINERS_MESSAGES.en.stopping("web-1")).toBe("Stopping web-1…");
+  });
+});

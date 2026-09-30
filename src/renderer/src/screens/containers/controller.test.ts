@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { act, cleanup, renderHook } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vite-plus/test";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import type { ConnectionState } from "../../../../shared/connection";
+import type { ContainerOperation } from "../../../../shared/containers";
 import { fakeMainApi } from "../../api/fake-main-api.test-helper";
 import { useContainersController } from "./controller";
 import { rowOf } from "./rows.test-helper";
@@ -104,5 +105,73 @@ describe("useContainersController", () => {
     act(() => fake.notifyContainersChanged(ROWS));
 
     expect(hook.result.current.state.list).toEqual({ kind: "notConnected" });
+  });
+});
+
+describe("useContainersController の操作", () => {
+  it.each<[ContainerOperation, string]>([
+    ["start", "startContainers"],
+    ["pause", "pauseContainers"],
+    ["unpause", "unpauseContainers"],
+    ["stop", "stopContainers"],
+    ["kill", "killContainers"],
+    ["restart", "restartContainers"],
+    ["remove", "removeContainers"],
+  ])("%s を頼むと、main の窓口の %s に ID を送る", (operation, apiName) => {
+    const { fake, hook } = controllerWith(CONNECTED);
+
+    act(() => hook.result.current.operate(operation, ["id-web-1", "id-db-1"]));
+
+    expect(fake.calls).toContain(`${apiName}:id-web-1,id-db-1`);
+  });
+
+  it("応答が届くまでは、応答を待っている操作として持ち、届いたら外して、失敗を行に残す", async () => {
+    const { fake, hook } = controllerWith(CONNECTED);
+    await act(async () => fake.answerContainers({ ok: true, value: ROWS }));
+    const failure = { kind: "expected", code: "engineRejected", engineMessage: "no" } as const;
+
+    act(() => hook.result.current.operate("stop", ["id-web-1"]));
+    expect(hook.result.current.state.running["id-web-1"]?.map((item) => item.operation)).toEqual([
+      "stop",
+    ]);
+    await act(async () =>
+      fake.answerOperation({
+        ok: true,
+        value: [{ target: "web-1", result: { ok: false, failure } }],
+      }),
+    );
+
+    expect(hook.result.current.state.running).toEqual({});
+    expect(hook.result.current.state.failures).toEqual({
+      "id-web-1": { operation: "stop", failure },
+    });
+  });
+
+  it("失敗を閉じると、行の失敗を消す", async () => {
+    const { fake, hook } = controllerWith(CONNECTED);
+    await act(async () => fake.answerContainers({ ok: true, value: ROWS }));
+    act(() => hook.result.current.operate("stop", ["id-web-1"]));
+    await act(async () => fake.answerOperation({ ok: false, failure: { kind: "unexpected" } }));
+
+    act(() => hook.result.current.dismissFailure("id-web-1"));
+
+    expect(hook.result.current.state.failures).toEqual({});
+  });
+
+  it("応答を待っている間は、経過した時間を出すために、いまの時刻を 1 秒ごとに進める", () => {
+    vi.useFakeTimers();
+    try {
+      const { hook } = controllerWith(CONNECTED);
+      act(() => hook.result.current.operate("stop", ["id-web-1"]));
+      const before = hook.result.current.now;
+
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+
+      expect(hook.result.current.now).toBe(before + 1000);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

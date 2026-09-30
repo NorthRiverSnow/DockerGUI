@@ -22,10 +22,7 @@ const ICON_SIZE = 16;
 const BUTTON_SIZE = 28;
 const BUTTON_GAP = 4;
 
-/**
- * 操作のボタンを最大の数だけ並べたときの幅。ボタンの列の見出しに付け、列の幅を行の状態によらず同じにする。
- * why: 列の幅は、いちばん幅の広い行で決まる。ボタンが 3 つ並ぶ行が停止処理中になってボタンが消えると、列が狭まり、ほかの列が横に動く。
- */
+/** 操作のボタンを最大の数だけ並べたときの幅。 */
 export const ROW_ACTIONS_WIDTH =
   MAX_ROW_OPERATIONS * BUTTON_SIZE + (MAX_ROW_OPERATIONS - 1) * BUTTON_GAP;
 
@@ -33,7 +30,8 @@ type OperationLook = { icon: Icon; color: IconColor };
 
 /**
  * 行の操作のボタンのアイコンと色（docs/spec/containers.md の「操作」）。
- * 強制停止と削除は、アイコンのボタンにしないので持たない。
+ * 強制停止は、停止処理中の知らせの文のボタンにするので持たない。
+ * TODO: 削除のボタンを追加するステップ 6c で、削除のアイコンと色を追加する。
  */
 const OPERATION_LOOKS: Partial<Record<ContainerOperation, OperationLook>> = {
   start: { icon: PlayIcon, color: "green" },

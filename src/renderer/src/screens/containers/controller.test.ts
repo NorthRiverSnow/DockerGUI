@@ -125,7 +125,7 @@ describe("useContainersController の操作", () => {
     expect(fake.calls).toContain(`${apiName}:id-web-1,id-db-1`);
   });
 
-  it("応答が届くまでは、応答を待っている操作として持ち、届いたら外して、失敗を行に残す", async () => {
+  it("操作を頼むと、応答が届くまで操作を応答を待っている操作に持ち、応答が届いたら応答を待っている操作から外して、失敗を行に残す", async () => {
     const { fake, hook } = controllerWith(CONNECTED);
     await act(async () => fake.answerContainers({ ok: true, value: ROWS }));
     const failure = { kind: "expected", code: "engineRejected", engineMessage: "no" } as const;

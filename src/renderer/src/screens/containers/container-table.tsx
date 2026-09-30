@@ -10,7 +10,8 @@ import {
   type RunningOperation,
 } from "./model";
 import { ROW_ACTIONS_WIDTH, RowActions } from "./row-actions";
-import { FailureNotice, StoppingNotice } from "./row-notices";
+import { FailureNotice } from "./failure-notice";
+import { StoppingNotice } from "./stopping-notice";
 import { StateLabel } from "./state-label";
 import classes from "./container-table.module.css";
 
@@ -47,6 +48,7 @@ export function ContainerTable(
           <Table.Th>{messages.columns.ports}</Table.Th>
           <Table.Th>{messages.columns.time}</Table.Th>
           <Table.Th>
+            {/* why: 表の列の幅は、いちばん幅の広い行で決まる。ボタンが並ぶ行が停止処理中になってボタンが消えると、列が狭まり、ほかの列が横に動く。見出しの幅を、ボタンを最大の数だけ並べた幅に固定する。 */}
             <Box w={ROW_ACTIONS_WIDTH}>
               <VisuallyHidden>{messages.operationsColumn}</VisuallyHidden>
             </Box>

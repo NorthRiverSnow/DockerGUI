@@ -202,7 +202,7 @@ describe("nextContainersState の操作", () => {
 });
 
 describe("MAX_ROW_OPERATIONS", () => {
-  it("どの状態の行に並ぶボタンの数とも、最大の数が一致する", () => {
+  it("状態ごとに行に並ぶボタンの数のうち、いちばん多い数と等しい", () => {
     const states: ContainerState[] = [
       { kind: "running" },
       { kind: "paused" },

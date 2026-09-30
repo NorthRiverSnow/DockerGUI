@@ -5,11 +5,7 @@ export const THEME = createTheme({});
 
 type Shade = { color: MantineColor; shade: number };
 
-/**
- * 状態と操作のアイコンの色に使う、Mantine の色と濃さ。配色ごとに選ぶ。
- * 背景と、マウスを重ねた行の背景の両方に対して、3:1 以上の差がつく濃さにする（WCAG 2.1 の達成基準 1.4.11「非テキストのコントラスト」）。
- * why: ライトの白い背景では、Mantine の黄は、いちばん濃い 9 でも 3:1 に届かない。ライトの黄だけは、橙の 8 を使う。
- */
+/** 状態と操作のアイコンの色に使う、配色ごとの Mantine の色と濃さ（docs/design/renderer.md の「色と背景のコントラスト」）。 */
 const ICON_SHADES: Record<IconColor, { light: Shade; dark: Shade }> = {
   green: { light: { color: "green", shade: 9 }, dark: { color: "green", shade: 5 } },
   yellow: { light: { color: "orange", shade: 8 }, dark: { color: "yellow", shade: 5 } },

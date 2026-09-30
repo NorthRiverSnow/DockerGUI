@@ -63,7 +63,7 @@ export function nextContainersState(
     case "loadFailed":
       return { ...state, list: { kind: "failed", failure: event.failure } };
     case "disconnected":
-      // why: 失敗は、切れる前のエンジンのコンテナについてのもの。接続し直した後の一覧には、当てはまらない。
+      // why: 接続が切れたら、操作の失敗の知らせを消す（docs/spec/containers.md の「行の知らせ」）。
       return { ...state, list: { kind: "notConnected" }, failures: {} };
     case "operationStarted":
       return startedState(state, event.operation, event.ids, event.startedAt);
@@ -97,7 +97,7 @@ function finishedState(
 ): ContainersState {
   const running = { ...state.running };
   for (const id of ids) {
-    const remaining = withoutFirst(running[id] ?? [], operation);
+    const remaining = withoutOneOperation(running[id] ?? [], operation);
     if (remaining.length === 0) {
       delete running[id];
     } else {
@@ -152,7 +152,7 @@ function withoutKeys<T>(record: Record<string, T>, keys: string[]): Record<strin
 }
 
 /** operations から、operation の操作を 1 つだけ外す。 */
-function withoutFirst(
+function withoutOneOperation(
   operations: RunningOperation[],
   operation: ContainerOperation,
 ): RunningOperation[] {
@@ -160,7 +160,10 @@ function withoutFirst(
   return index === -1 ? operations : operations.toSpliced(index, 1);
 }
 
-/** 1 つの行に並ぶ操作のボタンの、最大の数（動作中の行の、一時停止・停止・再起動）。 */
+/**
+ * 1 つの行に並ぶ操作のボタンの、最大の数（動作中の行の、一時停止・停止・再起動）。
+ * TODO: 削除のボタンを追加するステップ 6c で、削除の分を数に入れる。
+ */
 export const MAX_ROW_OPERATIONS = 3;
 
 /**

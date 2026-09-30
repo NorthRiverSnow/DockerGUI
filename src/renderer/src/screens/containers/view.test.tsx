@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vite-plus/test";
 import { THEME } from "../../theme";
 import { CONTAINERS_MESSAGES } from "./messages";
-import type { ContainersList } from "./model";
+import type { ContainersFilter, ContainersList } from "./model";
 import { rowOf } from "./rows.test-helper";
 import { ContainersView } from "./view";
 
@@ -28,14 +28,28 @@ beforeAll(() => {
 // why: Testing Library は、テストの関数が全体に置かれていないと、描いた要素を自動では片付けない。
 afterEach(cleanup);
 
-function renderView(list: ContainersList) {
-  const onReload = vi.fn();
+/** filter を書かなければ、絞り込まない。 */
+function renderView(
+  list: ContainersList,
+  filter: ContainersFilter = { text: "", hideNonRunning: false },
+) {
+  const handlers = {
+    onReload: vi.fn(),
+    onFilterTextChange: vi.fn(),
+    onHideNonRunningChange: vi.fn(),
+  };
   render(
     <MantineProvider theme={THEME}>
-      <ContainersView list={list} now={NOW} messages={CONTAINERS_MESSAGES.ja} onReload={onReload} />
+      <ContainersView
+        list={list}
+        filter={filter}
+        now={NOW}
+        messages={CONTAINERS_MESSAGES.ja}
+        {...handlers}
+      />
     </MantineProvider>,
   );
-  return { onReload };
+  return handlers;
 }
 
 const cellTexts = () =>
@@ -99,5 +113,60 @@ describe("ContainersView", () => {
 
     expect(screen.queryByRole("table")).toBeNull();
     expect(document.querySelector('[aria-busy="true"]')).not.toBeNull();
+  });
+});
+
+describe("ContainersView の絞り込み", () => {
+  const rows = [
+    rowOf("web-1", { kind: "running" }, { image: "nginx:1.27" }),
+    rowOf("db-1", { kind: "exited", exitCode: 0 }, { image: "postgres:16" }),
+  ];
+  const names = () => cellTexts().map((cells) => cells[1]);
+
+  it("入力した文字を名前かイメージの名前に含む行だけを、大文字と小文字を区別せずに出す", () => {
+    renderView({ kind: "loaded", rows }, { text: "POSTGRES", hideNonRunning: false });
+
+    expect(names()).toEqual(["db-1"]);
+  });
+
+  it("動作中でないコンテナを隠す切り替えが入っていれば、動作中のコンテナだけを出す", () => {
+    renderView({ kind: "loaded", rows }, { text: "", hideNonRunning: true });
+
+    expect(names()).toEqual(["web-1"]);
+  });
+
+  it("絞り込みに当てはまる行が無ければ、表の代わりに、当てはまらないことを出す", () => {
+    renderView({ kind: "loaded", rows }, { text: "mysql", hideNonRunning: false });
+
+    expect(screen.queryByRole("table")).toBeNull();
+    expect(screen.getByText("絞り込みに当てはまるコンテナがありません")).toBeTruthy();
+  });
+
+  it("入力すると、入力した文字を onFilterTextChange に渡す", () => {
+    const handlers = renderView({ kind: "loaded", rows });
+
+    fireEvent.change(screen.getByRole("textbox", { name: "名前かイメージで絞り込む" }), {
+      target: { value: "web" },
+    });
+
+    expect(handlers.onFilterTextChange).toHaveBeenCalledExactlyOnceWith("web");
+  });
+
+  it("切り替えを押すと、入れたかどうかを onHideNonRunningChange に渡す", () => {
+    const handlers = renderView({ kind: "loaded", rows });
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "動作中でないコンテナを隠す" }));
+
+    expect(handlers.onHideNonRunningChange).toHaveBeenCalledExactlyOnceWith(true);
+  });
+
+  it("Cmd/Ctrl + F で、絞り込みの入力に移る", () => {
+    renderView({ kind: "loaded", rows });
+
+    fireEvent.keyDown(document.documentElement, { key: "f", ctrlKey: true, metaKey: true });
+
+    expect(document.activeElement).toBe(
+      screen.getByRole("textbox", { name: "名前かイメージで絞り込む" }),
+    );
   });
 });

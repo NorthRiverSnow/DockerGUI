@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useReducer, useState } from "react";
 import type { ColorSchemeSetting } from "../../../shared/color-scheme";
 import type { LanguageSetting } from "../../../shared/language";
+import type { ScreenSettingChange } from "../../../shared/screen-settings";
 import type { MainApi } from "../api/main-api";
 import { INITIAL_APP_STATE, nextAppState, type AppState, type Target } from "./model";
 
@@ -19,6 +20,8 @@ export function useAppController(deps: { api: MainApi }): {
   giveUpReconnecting: () => void;
   switchColorScheme: (colorScheme: ColorSchemeSetting) => void;
   selectLanguage: (setting: LanguageSetting) => void;
+  changeFilter: (text: string) => void;
+  changeScreenSetting: (change: ScreenSettingChange) => void;
 } {
   const [state, dispatch] = useReducer(nextAppState, INITIAL_APP_STATE);
   const [now, setNow] = useState(Date.now);
@@ -45,15 +48,23 @@ export function useAppController(deps: { api: MainApi }): {
     });
   }, [deps.api]);
 
+  useEffect(() => {
+    void deps.api.getScreenSettings().then((result) => {
+      if (result.ok) {
+        dispatch({ kind: "screenSettingsReceived", screenSettings: result.value });
+      }
+    });
+  }, [deps.api]);
+
   // why: useEffect は、React が画面を描き終えた後に呼ばれる。Mantine が背景を塗った後なので、
   // この時点で窓を見せれば、白い背景が見えない（docs/design/main.md の「窓は、renderer が描き終えてから見せる」）。
-  // 画面の言語が届くまでは知らせない。届く前に見せると、仮の言語で描いた文が、届いた言語に変わるのが見える。
-  const languageReceived = state.language !== undefined;
+  // 画面の言語と画面ごとの設定が届くまでは知らせない。届く前に見せると、仮の値で描いた画面が、届いた値に変わるのが見える。
+  const settingsReceived = state.language !== undefined && state.screenSettings !== undefined;
   useEffect(() => {
-    if (languageReceived) {
+    if (settingsReceived) {
       void deps.api.notifyRendererPainted();
     }
-  }, [deps.api, languageReceived]);
+  }, [deps.api, settingsReceived]);
 
   const showsTime =
     state.connection !== undefined &&
@@ -88,6 +99,17 @@ export function useAppController(deps: { api: MainApi }): {
       }),
     [deps.api],
   );
+  const changeFilter = useCallback((text: string) => {
+    dispatch({ kind: "filterChanged", text });
+  }, []);
+  // why: 画面ごとの設定は、変えた時点で画面に反映する。main に送るのは、アプリを開き直したときのために覚えてもらうため。
+  const changeScreenSetting = useCallback(
+    (change: ScreenSettingChange) => {
+      dispatch({ kind: "screenSettingChanged", change });
+      void deps.api.setScreenSetting(change);
+    },
+    [deps.api],
+  );
   const switchColorScheme = useCallback(
     (colorScheme: ColorSchemeSetting) => void deps.api.setColorScheme(colorScheme),
     [deps.api],
@@ -105,5 +127,7 @@ export function useAppController(deps: { api: MainApi }): {
     giveUpReconnecting,
     switchColorScheme,
     selectLanguage,
+    changeFilter,
+    changeScreenSetting,
   };
 }

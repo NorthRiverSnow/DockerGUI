@@ -84,7 +84,10 @@ const meta = {
     list: { kind: "loaded", rows: ROWS },
     now: NOW,
     messages: CONTAINERS_MESSAGES.ja,
+    filter: { text: "", hideNonRunning: false },
     onReload: fn(),
+    onFilterTextChange: fn(),
+    onHideNonRunningChange: fn(),
   },
   // why: 画面の言語の文は、上の帯で選んだ言語で render が上書きする。Controls で書き換えても効かないので、欄に出さない。
   argTypes: { messages: { table: { disable: true } } },
@@ -99,6 +102,21 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Loaded: Story = { name: "読み込み済み（すべての状態）" };
+
+export const Filtered: Story = {
+  name: "名前かイメージで絞り込んだ",
+  args: { filter: { text: "node", hideNonRunning: false } },
+};
+
+export const HideNonRunning: Story = {
+  name: "動作中でないコンテナを隠した",
+  args: { filter: { text: "", hideNonRunning: true } },
+};
+
+export const NoMatch: Story = {
+  name: "絞り込みに当てはまる行が無い",
+  args: { filter: { text: "mysql", hideNonRunning: false } },
+};
 
 export const Empty: Story = {
   name: "1 件も無い",

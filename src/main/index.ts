@@ -6,6 +6,7 @@ import { createWindowReveal } from "./features/app/window-reveal";
 import { createConnection } from "./features/connection/connection";
 import { createColorScheme } from "./features/settings/color-scheme";
 import { createScreenLanguage } from "./features/settings/language";
+import { createScreenSettingsStore } from "./features/settings/screen-settings";
 import { openSettingsStore } from "./features/settings/settings-store";
 import { registerAppChannels } from "./ipc/app";
 import { registerConnectionChannels } from "./ipc/connection";
@@ -77,6 +78,8 @@ const screenLanguage = createScreenLanguage({
   systemLanguages: () => app.getPreferredSystemLanguages(),
 });
 
+const screenSettings = createScreenSettingsStore({ store: settingsStore });
+
 void app.whenReady().then(() => {
   const window = createMainWindow();
   const windowReveal = createWindowReveal({
@@ -85,7 +88,7 @@ void app.whenReady().then(() => {
       setTimeout(callback, milliseconds);
     },
   });
-  registerAppChannels({ colorScheme, screenLanguage, windowReveal });
+  registerAppChannels({ colorScheme, screenLanguage, screenSettings, windowReveal });
   void connection.connect();
 });
 

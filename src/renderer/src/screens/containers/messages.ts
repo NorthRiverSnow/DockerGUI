@@ -13,6 +13,7 @@ export type ContainersMessages = {
   /** 1 件も無いとき（docs/spec/containers.md の「1 件も無いとき」）。 */
   empty: { title: string; hint: string };
   notConnected: NotConnectedMessages;
+  filter: { placeholder: string; hideNonRunning: string; noMatch: string };
   /** 読み込めなかったとき（docs/spec/common.md の「失敗の見せ方」）。 */
   loadFailed: (failure: Failure) => string;
   reload: string;
@@ -50,6 +51,11 @@ export const CONTAINERS_MESSAGES: Record<Language, ContainersMessages> = {
       hint: "Compose の画面からプロジェクトを起動すると、コンテナが増えます",
     },
     notConnected: NOT_CONNECTED_MESSAGES.ja,
+    filter: {
+      placeholder: "名前かイメージで絞り込む",
+      hideNonRunning: "動作中でないコンテナを隠す",
+      noMatch: "絞り込みに当てはまるコンテナがありません",
+    },
     loadFailed: (failure) => `コンテナの一覧を読み込めませんでした。${FAILURE_CAUSES.ja(failure)}`,
     reload: "もう一度読み込む",
   },
@@ -80,6 +86,11 @@ export const CONTAINERS_MESSAGES: Record<Language, ContainersMessages> = {
       hint: "Start a project from the Compose screen to create containers",
     },
     notConnected: NOT_CONNECTED_MESSAGES.en,
+    filter: {
+      placeholder: "Filter by name or image",
+      hideNonRunning: "Hide containers that are not running",
+      noMatch: "No containers match the filter",
+    },
     loadFailed: (failure) => `Couldn't load the containers. ${FAILURE_CAUSES.en(failure)}`,
     reload: "Reload",
   },

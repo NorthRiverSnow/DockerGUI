@@ -35,6 +35,26 @@ export function nextContainersState(
   }
 }
 
+/** 絞り込みの条件（docs/spec/containers.md の「絞り込み」）。 */
+export type ContainersFilter = {
+  /** 名前かイメージの名前に、この文字を含むコンテナだけを出す。大文字と小文字を区別しない。空なら絞り込まない。 */
+  text: string;
+  /** true なら、動作中でないコンテナを隠す。 */
+  hideNonRunning: boolean;
+};
+
+/** 絞り込みの条件に当てはまる行を、一覧に出す順に並べて返す。 */
+export function visibleRowsOf(rows: ContainerRow[], filter: ContainersFilter): ContainerRow[] {
+  const text = filter.text.trim().toLowerCase();
+  return sortedRowsOf(
+    rows.filter(
+      (row) =>
+        (!filter.hideNonRunning || row.state.kind === "running") &&
+        (row.name.toLowerCase().includes(text) || row.image.toLowerCase().includes(text)),
+    ),
+  );
+}
+
 /** 動作中のコンテナを先に、それぞれの中では名前の順に並べる（docs/spec/containers.md の「並び順」）。 */
 export function sortedRowsOf(rows: ContainerRow[]): ContainerRow[] {
   const isRunning = (row: ContainerRow) => row.state.kind === "running";

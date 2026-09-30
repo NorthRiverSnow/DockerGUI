@@ -13,6 +13,8 @@ export const REQUEST_CHANNELS = [
   "app:rendererPainted",
   "app:getLanguage",
   "app:setLanguage",
+  "app:getScreenSettings",
+  "app:setScreenSetting",
   "containers:listContainers",
 ] as const;
 export const NOTIFICATION_CHANNELS = ["connection:connectionStateChanged"] as const;

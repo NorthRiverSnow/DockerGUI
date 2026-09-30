@@ -24,6 +24,10 @@ export type MainApi = {
   setLanguage: (
     setting: RequestArgument<"app:setLanguage">,
   ) => Promise<RequestResponse["app:setLanguage"]>;
+  getScreenSettings: () => Promise<RequestResponse["app:getScreenSettings"]>;
+  setScreenSetting: (
+    change: RequestArgument<"app:setScreenSetting">,
+  ) => Promise<RequestResponse["app:setScreenSetting"]>;
   listContainers: () => Promise<RequestResponse["containers:listContainers"]>;
   /** 最初に描き終えたことを main に知らせる。main は知らせを受けてから窓を見せる。 */
   notifyRendererPainted: () => Promise<RequestResponse["app:rendererPainted"]>;
@@ -72,6 +76,14 @@ export function realMainApiOf(windowApi: WindowApi): MainApi {
       windowApi.invoke("app:getLanguage") as Promise<RequestResponse["app:getLanguage"]>,
     setLanguage: (setting) =>
       windowApi.invoke("app:setLanguage", setting) as Promise<RequestResponse["app:setLanguage"]>,
+    getScreenSettings: () =>
+      windowApi.invoke("app:getScreenSettings") as Promise<
+        RequestResponse["app:getScreenSettings"]
+      >,
+    setScreenSetting: (change) =>
+      windowApi.invoke("app:setScreenSetting", change) as Promise<
+        RequestResponse["app:setScreenSetting"]
+      >,
     listContainers: () =>
       windowApi.invoke("containers:listContainers") as Promise<
         RequestResponse["containers:listContainers"]

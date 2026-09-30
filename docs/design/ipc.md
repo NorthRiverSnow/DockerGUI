@@ -310,6 +310,8 @@ main は renderer を信用しない（原則 1）。main の側でも、届い�
 | `app:getLanguage` | 要求 | 画面の言語の設定（自動 / 日本語 / English）と、画面の言語（`ja` か `en`）を返す。設定が「自動」なら、OS の言語から決めた言語を返す | `common.md` の「言語を選ぶ」 |
 | `app:setLanguage` | 操作 | 画面の言語の設定を変えて保存し、メニューバーのメニューを作り直す。変えた後の設定と、設定から決めた画面の言語（`ja` か `en`）を返す | 同じ |
 | `app:setColorScheme` | 操作 | 切り替えた配色（ライト / ダーク）を保存し、Electron の `nativeTheme.themeSource` に入れる。設定の画面の「OS に合わせる」では、保存した配色を消す（設定の画面を作るときに、送る値に追加する） | `common.md` の「配色を選ぶ」、`settings.md` の「配色・言語」 |
+| `app:getScreenSettings` | 要求 | 画面ごとの設定（動作中でないコンテナを隠すか、など）を返す | `settings.md` の「設定の画面に出すもの」 |
+| `app:setScreenSetting` | 操作 | 画面ごとの設定 1 つを変えて保存し、変えた後のすべての設定を返す | 同じ |
 | `app:rendererPainted` | 要求 | renderer が最初に描き終えたことを知らせる。main は、知らせを受けてから窓を見せる | `main.md` の「窓は、renderer が描き終えてから見せる」 |
 
 **画面の言語と配色の知らせの口は置かない。** 画面の言語を変えるのは renderer だけなので、`app:setLanguage` の応答で足りる。

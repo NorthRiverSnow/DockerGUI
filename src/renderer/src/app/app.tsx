@@ -27,6 +27,14 @@ export function App(props: { api: MainApi }) {
             api={props.api}
             connection={controller.state.connection}
             language={language}
+            filter={{
+              text: controller.state.filterText,
+              hideNonRunning: controller.state.screenSettings?.hideNonRunningContainers ?? false,
+            }}
+            onFilterTextChange={controller.changeFilter}
+            onHideNonRunningChange={(hide) =>
+              controller.changeScreenSetting({ name: "hideNonRunningContainers", value: hide })
+            }
           />
         ) : undefined
       }

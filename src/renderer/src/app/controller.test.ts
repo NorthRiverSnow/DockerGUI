@@ -40,4 +40,28 @@ describe("useAppController", () => {
     expect(fake.calls).toContain("setLanguage:en");
     expect(result.current.state.language).toEqual({ setting: "en", language: "en" });
   });
+
+  it("画面ごとの設定を変えると、すぐに状態に入れ、main に送って覚えてもらう", async () => {
+    const fake = fakeMainApi();
+    const { result } = renderHook(() => useAppController({ api: fake.api }));
+    await act(async () => {});
+
+    act(() =>
+      result.current.changeScreenSetting({ name: "hideNonRunningContainers", value: true }),
+    );
+
+    expect(result.current.state.screenSettings).toEqual({ hideNonRunningContainers: true });
+    expect(fake.calls).toContain("setScreenSetting:hideNonRunningContainers=true");
+  });
+
+  it("画面の言語が届いても、画面ごとの設定が届くまでは、描き終えたことを知らせない", async () => {
+    const fake = fakeMainApi({ holdScreenSettings: true });
+    renderHook(() => useAppController({ api: fake.api }));
+
+    await act(async () => fake.answerLanguage({ setting: "auto", language: "ja" }));
+    expect(paintedCount(fake.calls)).toBe(0);
+
+    await act(async () => fake.answerScreenSettings());
+    expect(paintedCount(fake.calls)).toBe(1);
+  });
 });

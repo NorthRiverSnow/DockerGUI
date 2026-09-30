@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { NotificationChannel, RequestChannel } from "./channels";
 import { colorSchemeSettingSchema } from "./color-scheme";
 import type { ContainerRow } from "./containers";
+import { screenSettingChangeSchema, type ScreenSettings } from "./screen-settings";
 import { languageSettingSchema, type LanguageState } from "./language";
 import { connectionStateSchema, type ConnectionState } from "./connection";
 import type { Result } from "./result";
@@ -19,6 +20,8 @@ export const REQUEST_DEFINITIONS = {
   "app:rendererPainted": { argument: z.undefined(), changesState: false },
   "app:getLanguage": { argument: z.undefined(), changesState: false },
   "app:setLanguage": { argument: languageSettingSchema, changesState: true },
+  "app:getScreenSettings": { argument: z.undefined(), changesState: false },
+  "app:setScreenSetting": { argument: screenSettingChangeSchema, changesState: true },
   "containers:listContainers": { argument: z.undefined(), changesState: false },
 } satisfies Record<RequestChannel, { argument: z.ZodType; changesState: boolean }>;
 
@@ -40,6 +43,9 @@ export type RequestResponse = {
   "app:getLanguage": Result<LanguageState>;
   /** 変えた後の設定と、設定から決めた画面の言語。 */
   "app:setLanguage": Result<LanguageState>;
+  "app:getScreenSettings": Result<ScreenSettings>;
+  /** 変えた後の、画面ごとのすべての設定。 */
+  "app:setScreenSetting": Result<ScreenSettings>;
   "containers:listContainers": Result<ContainerRow[]>;
 };
 

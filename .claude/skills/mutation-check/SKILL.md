@@ -42,6 +42,19 @@ cp <作業用の一時フォルダ>/target.bak path/to/target.ts     # 戻す
 
 ---
 
+## DockerGUI で使うスクリプト
+
+`.claude/skills/mutation-check/scripts/mutate.py` が、退避・壊す・テストの実行・戻すを 1 回で行う。
+
+```bash
+python3 .claude/skills/mutation-check/scripts/mutate.py <ファイル> '<壊す前>' '<壊した後>' <名前> <作業用の一時フォルダ>
+```
+
+- `KILLED` なら守っている。`SURVIVED` なら「4. 生き残ったら」に進む
+- テストは全件を実行するので、関係ないテストが失敗しても `KILLED` になる。怪しいときは、失敗したテストの名前を確かめる
+- **利用者の `vp run dev` が動いている間は、`src/main` と `src/preload` を壊さない**（Skill の `app-check`）
+- 件数が多いときは、エージェントの `mutation-checker` に任せる
+
 ## 3. 壊して、失敗を見る
 
 **壊した判断を守っているテストのファイルだけを実行する。** 全件だと、関係ない失敗と区別が付かない。

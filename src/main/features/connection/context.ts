@@ -22,6 +22,8 @@ export type ConnectionDeps = {
   /** task を intervalMs ごとに実行し続ける。前の task が終わっていなくても、時間が来たら次を実行する。 */
   repeat: (task: () => Promise<void>, intervalMs: number) => void;
   onStateChanged: (state: ConnectionState) => void;
+  /** 接続済みの間に、エンジンの /events から出来事が 1 件届くたびに呼ぶ。出来事の形は検査していない。 */
+  onEngineEvent: (event: unknown) => void;
 };
 
 /** 1 回の起動や接続の試み。connection.ts の cancel が、cancelled を true にしてから abort を呼ぶ。 */

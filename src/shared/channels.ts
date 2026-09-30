@@ -17,7 +17,10 @@ export const REQUEST_CHANNELS = [
   "app:setScreenSetting",
   "containers:listContainers",
 ] as const;
-export const NOTIFICATION_CHANNELS = ["connection:connectionStateChanged"] as const;
+export const NOTIFICATION_CHANNELS = [
+  "connection:connectionStateChanged",
+  "containers:containersChanged",
+] as const;
 
 export type RequestChannel = (typeof REQUEST_CHANNELS)[number];
 export type NotificationChannel = (typeof NOTIFICATION_CHANNELS)[number];

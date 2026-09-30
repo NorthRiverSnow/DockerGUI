@@ -8,6 +8,10 @@ export type FakeEngine = {
   socketPath: string;
   /** 受け取った要求の URL。受け取った順に並ぶ。 */
   requestedUrls: string[];
+  /** 開いている /events の応答すべてに、event を 1 行の JSON として送る。 */
+  sendEvent: (event: unknown) => void;
+  /** 開いている /events の応答すべてに、text をそのまま送る。行の途中で区切って送るときに使う。 */
+  sendEventText: (text: string) => void;
   /** 繋がっている接続をすべて切る。サーバは動いたままで、新しい接続を受け付ける。 */
   dropConnections: () => void;
   /** 繋がっている接続をすべて切ってから、サーバを止め、ソケットのファイルを消す。 */
@@ -59,18 +63,24 @@ export function startFakeEngineWith(
   socketPath: string = unusedSocketPath(),
 ): Promise<FakeEngine> {
   const requestedUrls: string[] = [];
+  const eventResponses: http.ServerResponse[] = [];
   const server = http.createServer((request, response) => {
     const url = request.url ?? "";
     requestedUrls.push(url);
     if (url.endsWith("/events")) {
       response.writeHead(200, { "Content-Type": "application/json" });
       response.flushHeaders();
+      eventResponses.push(response);
       return;
     }
     const { status, body } = respond(url);
     response.writeHead(status, { "Content-Type": "application/json" });
     response.end(body);
   });
+  const sendEventText = (text: string) => {
+    for (const response of eventResponses) response.write(text);
+  };
+  const sendEvent = (event: unknown) => sendEventText(`${JSON.stringify(event)}\n`);
   const dropConnections = () => server.closeAllConnections();
   const close = () =>
     new Promise<void>((resolve) => {
@@ -81,6 +91,8 @@ export function startFakeEngineWith(
       dropConnections();
     });
   return new Promise((resolve) => {
-    server.listen(socketPath, () => resolve({ socketPath, requestedUrls, dropConnections, close }));
+    server.listen(socketPath, () =>
+      resolve({ socketPath, requestedUrls, sendEvent, sendEventText, dropConnections, close }),
+    );
   });
 }

@@ -76,4 +76,33 @@ describe("useContainersController", () => {
 
     expect(listCalls(fake.calls)).toBe(2);
   });
+
+  it("一覧が変わった知らせが届いたら、読み込み中に戻さずに、知らせの行で一覧を入れ替える", async () => {
+    const { fake, hook } = controllerWith(CONNECTED);
+    await act(async () => fake.answerContainers({ ok: true, value: ROWS }));
+    const changed = [rowOf("web-1", { kind: "exited", exitCode: 0 })];
+
+    act(() => fake.notifyContainersChanged(changed));
+
+    expect(hook.result.current.state.list).toEqual({ kind: "loaded", rows: changed });
+  });
+
+  it("読み込みの途中で一覧が変わった知らせが届いたら、遅れて届いた読み込みの応答は捨てる", async () => {
+    const { fake, hook } = controllerWith(CONNECTED);
+    const changed = [rowOf("web-1", { kind: "exited", exitCode: 0 })];
+
+    act(() => fake.notifyContainersChanged(changed));
+    await act(async () => fake.answerContainers({ ok: true, value: ROWS }));
+
+    expect(hook.result.current.state.list).toEqual({ kind: "loaded", rows: changed });
+  });
+
+  it("接続が切れた後に届いた知らせでは、未接続を上書きしない", async () => {
+    const { fake, hook } = controllerWith(CONNECTED);
+    hook.rerender({ connection: STOPPED });
+
+    act(() => fake.notifyContainersChanged(ROWS));
+
+    expect(hook.result.current.state.list).toEqual({ kind: "notConnected" });
+  });
 });

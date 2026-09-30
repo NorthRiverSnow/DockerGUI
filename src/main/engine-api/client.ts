@@ -4,8 +4,11 @@ import type { Result } from "../../shared/result";
 
 export type EngineClient = {
   get: <T>(path: string, schema: z.ZodType<T>) => Promise<Result<T>>;
-  /** 本文が続く GET の要求（`/events` など）を送り、開いたままにする。 */
-  watch: (path: string) => EngineWatch;
+  /**
+   * 本文が続く GET の要求（`/events` など）を送り、開いたままにする。
+   * 本文の 1 行を JSON として読むたびに onLine を呼ぶ。JSON として読めない行は飛ばす。
+   */
+  watch: (path: string, onLine: (line: unknown) => void) => EngineWatch;
 };
 
 export type EngineWatch = {
@@ -20,19 +23,30 @@ const engineErrorSchema = z.object({ message: z.string() });
 export function engineClientOf(agent: http.Agent, apiVersion: string): EngineClient {
   return {
     get: (path, schema) => requestJson(agent, "GET", `/v${apiVersion}${path}`, schema),
-    watch: (path) => watchOf(agent, `/v${apiVersion}${path}`),
+    watch: (path, onLine) => watchOf(agent, `/v${apiVersion}${path}`, onLine),
   };
 }
 
-// TODO: 一覧の更新を作るステップで、本文の 1 行ごとに JSON を読んで渡す（docs/design/main.md の「ストリームの読み方」）
-function watchOf(agent: http.Agent, path: string): EngineWatch {
+function watchOf(agent: http.Agent, path: string, onLine: (line: unknown) => void): EngineWatch {
   let finish: () => void = () => {};
   const ended = new Promise<void>((resolve) => {
     finish = resolve;
   });
   const request = http.request({ agent, method: "GET", path, host: "docker" }, (response) => {
-    // why: 本文を読まずにおくと、受け取った本文がたまり続ける。読み捨てて、終わったことだけを知る。
-    response.resume();
+    // why: 本文は、1 行 1 件の JSON で届く（docs/design/main.md の「ストリームの読み方」）。
+    // 届く区切りは行の区切りと一致しないので、行の途中までを残しておき、次に届いた分とつなげてから読む。
+    let pending = "";
+    response.setEncoding("utf8");
+    response.on("data", (chunk: string) => {
+      const lines = (pending + chunk).split("\n");
+      pending = lines.pop() ?? "";
+      for (const line of lines) {
+        const parsed = parsedLineOf(line);
+        if (parsed !== undefined) {
+          onLine(parsed);
+        }
+      }
+    });
     response.on("close", finish);
   });
   request.on("error", finish);
@@ -107,6 +121,16 @@ function connectionFailureOf(error: NodeJS.ErrnoException): Result<never> {
   return error.code === "ENOENT" || error.code === "ECONNREFUSED"
     ? { ok: false, failure: { kind: "expected", code: "engineUnreachable" } }
     : { ok: false, failure: { kind: "unexpected" } };
+}
+
+/** 1 行を JSON として読む。読めない行（空の行を含む）は undefined にする。 */
+function parsedLineOf(line: string): unknown {
+  try {
+    return JSON.parse(line) as unknown;
+  } catch {
+    // TODO: ログの記録（src/main/log）を作るステップで、読めなかった行をログに書く（design-policy.md の原則 9）
+    return undefined;
+  }
 }
 
 function rejectedResultOf(body: string): Result<never> {

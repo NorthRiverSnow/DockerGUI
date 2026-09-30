@@ -172,6 +172,7 @@ function connectionWith(options: {
   sleep?: FakeSleep["sleep"];
   repeat?: FakeRepeat["repeat"];
   refreshPath?: () => Promise<void>;
+  onEngineEvent?: (event: unknown) => void;
 }): {
   connection: Connection;
   states: ConnectionState[];
@@ -182,6 +183,7 @@ function connectionWith(options: {
   const connection = createConnection({
     runCommand: runCommandWith(options.runCommand, options.start ?? fakeStartCommand()),
     refreshPath: options.refreshPath ?? (async () => {}),
+    onEngineEvent: options.onEngineEvent ?? (() => {}),
     homeDir,
     defaultSocketPath: unusedSocketPath(),
     autoStart: options.autoStart ?? true,
@@ -778,5 +780,23 @@ describe("接続していないエンジンの定期的な確認", () => {
 
     expect(kindsOf(states)).not.toContain("runningNotConnected");
     expect(connection.state().kind).toBe("connected");
+  });
+});
+
+describe("エンジンの出来事", () => {
+  it("接続済みの間に /events に届いた出来事を、onEngineEvent に渡す", async () => {
+    const engine = await fakeEngineAt();
+    const events: unknown[] = [];
+    const { connection } = connectionWith({
+      runCommand: fakeCommands({ contextSocketPath: engine.socketPath, colimaInstalled: false }),
+      onEngineEvent: (event) => events.push(event),
+    });
+    await connection.connect();
+    await untilWatching(engine);
+
+    engine.sendEvent({ Type: "container", Action: "start", Actor: { ID: "a1" } });
+    await until(() => events.length === 1);
+
+    expect(events).toEqual([{ Type: "container", Action: "start", Actor: { ID: "a1" } }]);
   });
 });

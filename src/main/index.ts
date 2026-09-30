@@ -4,6 +4,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { app, BrowserWindow, nativeTheme } from "electron";
 import { createWindowReveal } from "./features/app/window-reveal";
 import { createConnection } from "./features/connection/connection";
+import { createContainersRefresher } from "./features/containers/refresh";
 import { createColorScheme } from "./features/settings/color-scheme";
 import { createScreenLanguage } from "./features/settings/language";
 import { createScreenSettingsStore } from "./features/settings/screen-settings";
@@ -58,6 +59,17 @@ const connection = createConnection({
   },
   onStateChanged: (state) =>
     sendNotificationToAllWindows("connection:connectionStateChanged", state),
+  // why: containersRefresher は connection.client() を使うので、connection の後に作る。
+  // 出来事は接続した後にしか届かず、そのときには containersRefresher はできている。
+  onEngineEvent: (event) => containersRefresher.handleEvent(event),
+});
+
+const containersRefresher = createContainersRefresher({
+  client: () => connection.client(),
+  onRowsChanged: (rows) => sendNotificationToAllWindows("containers:containersChanged", rows),
+  setTimer: (callback, milliseconds) => {
+    setTimeout(callback, milliseconds);
+  },
 });
 
 registerConnectionChannels(connection);

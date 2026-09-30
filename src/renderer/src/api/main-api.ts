@@ -29,6 +29,10 @@ export type MainApi = {
     change: RequestArgument<"app:setScreenSetting">,
   ) => Promise<RequestResponse["app:setScreenSetting"]>;
   listContainers: () => Promise<RequestResponse["containers:listContainers"]>;
+  /** 受け取りをやめる関数を返す。 */
+  onContainersChanged: (
+    listener: (rows: NotificationValue<"containers:containersChanged">) => void,
+  ) => () => void;
   /** 最初に描き終えたことを main に知らせる。main は知らせを受けてから窓を見せる。 */
   notifyRendererPainted: () => Promise<RequestResponse["app:rendererPainted"]>;
   onConnectionStateChanged: (
@@ -88,6 +92,10 @@ export function realMainApiOf(windowApi: WindowApi): MainApi {
       windowApi.invoke("containers:listContainers") as Promise<
         RequestResponse["containers:listContainers"]
       >,
+    onContainersChanged: (listener) =>
+      windowApi.on("containers:containersChanged", (value) =>
+        listener(value as NotificationValue<"containers:containersChanged">),
+      ),
     notifyRendererPainted: () =>
       windowApi.invoke("app:rendererPainted") as Promise<RequestResponse["app:rendererPainted"]>,
     onConnectionStateChanged: (listener) =>

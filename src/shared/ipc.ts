@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { NotificationChannel, RequestChannel } from "./channels";
 import { colorSchemeSettingSchema } from "./color-scheme";
-import type { ContainerRow } from "./containers";
+import { containerRowSchema, type ContainerRow } from "./containers";
 import { screenSettingChangeSchema, type ScreenSettings } from "./screen-settings";
 import { languageSettingSchema, type LanguageState } from "./language";
 import { connectionStateSchema, type ConnectionState } from "./connection";
@@ -51,6 +51,7 @@ export type RequestResponse = {
 
 export const NOTIFICATION_SCHEMAS = {
   "connection:connectionStateChanged": connectionStateSchema,
+  "containers:containersChanged": z.array(containerRowSchema),
 } satisfies Record<NotificationChannel, z.ZodType>;
 
 export type NotificationValue<C extends NotificationChannel> = z.infer<

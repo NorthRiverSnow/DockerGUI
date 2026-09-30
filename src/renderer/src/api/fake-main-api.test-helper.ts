@@ -1,3 +1,4 @@
+import type { ContainerRow } from "../../../shared/containers";
 import type { LanguageState } from "../../../shared/language";
 import { DEFAULT_SCREEN_SETTINGS } from "../../../shared/screen-settings";
 import type { Result } from "../../../shared/result";
@@ -10,6 +11,8 @@ export type FakeMainApi = {
   calls: string[];
   /** いちばん古い、まだ応答していない listContainers に、result を返す。 */
   answerContainers: (result: Awaited<ReturnType<MainApi["listContainers"]>>) => void;
+  /** containers:containersChanged の知らせを届ける。 */
+  notifyContainersChanged: (rows: ContainerRow[]) => void;
   /** options.holdScreenSettings のときに、getScreenSettings の応答を返す。 */
   answerScreenSettings: () => void;
   /** getLanguage の応答を返す。呼ぶまで getLanguage は終わらない。 */
@@ -29,6 +32,7 @@ export function fakeMainApi(options: { holdScreenSettings?: boolean } = {}): Fak
   const calls: string[] = [];
   let answer: (state: LanguageState) => void = () => {};
   let answerSettings: () => void = () => {};
+  const containersListeners: ((rows: ContainerRow[]) => void)[] = [];
   const containerAnswers: ((result: Awaited<ReturnType<MainApi["listContainers"]>>) => void)[] = [];
   const called = <T>(name: string, value: T) => {
     calls.push(name);
@@ -75,6 +79,12 @@ export function fakeMainApi(options: { holdScreenSettings?: boolean } = {}): Fak
       calls.push("listContainers");
       return new Promise((resolve) => containerAnswers.push(resolve));
     },
+    onContainersChanged: (listener) => {
+      containersListeners.push(listener);
+      return () => {
+        containersListeners.splice(containersListeners.indexOf(listener), 1);
+      };
+    },
     notifyRendererPainted: () => called("notifyRendererPainted", OK),
     onConnectionStateChanged: () => () => {},
   };
@@ -82,6 +92,9 @@ export function fakeMainApi(options: { holdScreenSettings?: boolean } = {}): Fak
     api,
     calls,
     answerLanguage: (state) => answer(state),
+    notifyContainersChanged: (rows) => {
+      for (const listener of containersListeners) listener(rows);
+    },
     answerScreenSettings: () => answerSettings(),
     answerContainers: (result) => containerAnswers.shift()?.(result),
   };

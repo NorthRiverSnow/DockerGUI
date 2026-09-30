@@ -81,18 +81,22 @@ describe("watch", () => {
     return { fakeEngine, client: engineClientOf(socketAgentOf(fakeEngine.socketPath), "1.54") };
   }
 
-  /** エンジンの代わりのサーバが、要求を受け取るまで待つ。 */
-  async function untilRequested(fakeEngine: FakeEngine): Promise<void> {
-    while (fakeEngine.requestedUrls.length === 0) {
+  /** condition が true になるまで待つ。 */
+  async function until(condition: () => boolean): Promise<void> {
+    while (!condition()) {
       await new Promise((resolve) => setTimeout(resolve, 5));
     }
   }
+
+  /** エンジンの代わりのサーバが、要求を受け取るまで待つ。 */
+  const untilRequested = (fakeEngine: FakeEngine) =>
+    until(() => fakeEngine.requestedUrls.length > 0);
 
   it("開いている間は終わらず、エンジンが接続を切ったら ended が解決する", async () => {
     const { fakeEngine, client } = await watchingClient();
     let ended = false;
 
-    const watch = client.watch("/events");
+    const watch = client.watch("/events", () => {});
     void watch.ended.then(() => {
       ended = true;
     });
@@ -108,7 +112,7 @@ describe("watch", () => {
   it("close を呼ぶと、ended が解決する", async () => {
     const { fakeEngine, client } = await watchingClient();
 
-    const watch = client.watch("/events");
+    const watch = client.watch("/events", () => {});
     await untilRequested(fakeEngine);
     watch.close();
 
@@ -118,6 +122,19 @@ describe("watch", () => {
   it("エンジンが止まっていて、ソケットのファイルが無ければ、ended が解決する", async () => {
     const client = engineClientOf(socketAgentOf(unusedSocketPath()), "1.54");
 
-    await client.watch("/events").ended;
+    await client.watch("/events", () => {}).ended;
+  });
+
+  it("本文の 1 行を JSON として読むたびに onLine に渡し、行の途中で区切られても、つなげてから読む", async () => {
+    const { fakeEngine, client } = await watchingClient();
+    const lines: unknown[] = [];
+
+    client.watch("/events", (line) => lines.push(line));
+    await untilRequested(fakeEngine);
+    fakeEngine.sendEventText('{"Type":"container","Act');
+    fakeEngine.sendEventText('ion":"start"}\n\nnot json\n{"Type":"image"}\n');
+    await until(() => lines.length === 2);
+
+    expect(lines).toEqual([{ Type: "container", Action: "start" }, { Type: "image" }]);
   });
 });

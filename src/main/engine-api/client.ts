@@ -4,6 +4,10 @@ import type { Result } from "../../shared/result";
 
 export type EngineClient = {
   get: <T>(path: string, schema: z.ZodType<T>) => Promise<Result<T>>;
+  /** 本文を返さない POST の要求を送る。失敗の返し方は get と同じ。304 は成功として返す。 */
+  post: (path: string) => Promise<Result<undefined>>;
+  /** 本文を返さない DELETE の要求を送る。失敗の返し方は post と同じ。 */
+  delete: (path: string) => Promise<Result<undefined>>;
   /**
    * 本文が続く GET の要求（`/events` など）を送り、開いたままにする。
    * 本文の 1 行を JSON として読むたびに onLine を呼ぶ。JSON として読めない行は飛ばす。
@@ -23,6 +27,8 @@ const engineErrorSchema = z.object({ message: z.string() });
 export function engineClientOf(agent: http.Agent, apiVersion: string): EngineClient {
   return {
     get: (path, schema) => requestJson(agent, "GET", `/v${apiVersion}${path}`, schema),
+    post: (path) => requestWithoutBody(agent, "POST", `/v${apiVersion}${path}`),
+    delete: (path) => requestWithoutBody(agent, "DELETE", `/v${apiVersion}${path}`),
     watch: (path, onLine) => watchOf(agent, `/v${apiVersion}${path}`, onLine),
   };
 }
@@ -60,13 +66,51 @@ function watchOf(agent: http.Agent, path: string, onLine: (line: unknown) => voi
  * エンジンに繋がらなければ、engineUnreachable を返す。
  * options.timeoutMs を渡すと、その間に何も届かなければ要求をやめ、engineTimedOut を返す。
  */
-export function requestJson<T>(
+export async function requestJson<T>(
   agent: http.Agent,
   method: string,
   path: string,
   schema: z.ZodType<T>,
   options: { timeoutMs?: number } = {},
 ): Promise<Result<T>> {
+  const response = await sendRequest(agent, method, path, options);
+  if (!response.ok) {
+    return response;
+  }
+  const { status, body } = response.value;
+  return isSuccessStatus(status) ? parsedResultOf(body, schema) : rejectedResultOf(body);
+}
+
+/**
+ * 本文を返さない要求（コンテナの起動など）を 1 つ送る。例外を投げない。
+ * 失敗の返し方は requestJson と同じ。ただし 304 は成功として返す。
+ */
+async function requestWithoutBody(
+  agent: http.Agent,
+  method: string,
+  path: string,
+): Promise<Result<undefined>> {
+  const response = await sendRequest(agent, method, path, {});
+  if (!response.ok) {
+    return response;
+  }
+  const { status, body } = response.value;
+  // why: エンジンは、起動しているコンテナの起動や、止まっているコンテナの停止に、304 を返す。
+  // 要求した状態にはなっているので、成功として扱う。
+  return isSuccessStatus(status) || status === 304
+    ? { ok: true, value: undefined }
+    : rejectedResultOf(body);
+}
+
+type EngineResponse = { status: number; body: string };
+
+/** 要求を 1 つ送り、ステータスコードと本文を返す。繋がらないときと、時間切れのときだけ失敗を返す。 */
+function sendRequest(
+  agent: http.Agent,
+  method: string,
+  path: string,
+  options: { timeoutMs?: number },
+): Promise<Result<EngineResponse>> {
   return new Promise((resolve) => {
     let timedOut = false;
     const request = http.request(
@@ -75,11 +119,13 @@ export function requestJson<T>(
         const chunks: Buffer[] = [];
         response.on("data", (chunk: Buffer) => chunks.push(chunk));
         response.on("end", () => {
-          const body = Buffer.concat(chunks).toString("utf8");
-          const status = response.statusCode ?? 0;
-          resolve(
-            status >= 200 && status < 300 ? parsedResultOf(body, schema) : rejectedResultOf(body),
-          );
+          resolve({
+            ok: true,
+            value: {
+              status: response.statusCode ?? 0,
+              body: Buffer.concat(chunks).toString("utf8"),
+            },
+          });
         });
       },
     );
@@ -99,6 +145,10 @@ export function requestJson<T>(
     );
     request.end();
   });
+}
+
+function isSuccessStatus(status: number): boolean {
+  return status >= 200 && status < 300;
 }
 
 // TODO: ログの記録（src/main/log）を作るステップで、想定していない失敗の原因をログに書く（design-policy.md の原則 9）

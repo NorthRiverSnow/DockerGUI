@@ -36,3 +36,6 @@ export const containerRowSchema = z.object({
 });
 
 export type ContainerRow = z.infer<typeof containerRowSchema>;
+
+/** 操作の口に送る、操作するコンテナの ID の一覧。1 つだけ操作するときも、1 件の一覧で送る。 */
+export const containerIdsSchema = z.array(z.string().min(1));

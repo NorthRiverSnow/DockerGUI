@@ -29,6 +29,27 @@ export type MainApi = {
     change: RequestArgument<"app:setScreenSetting">,
   ) => Promise<RequestResponse["app:setScreenSetting"]>;
   listContainers: () => Promise<RequestResponse["containers:listContainers"]>;
+  startContainers: (
+    ids: RequestArgument<"containers:startContainers">,
+  ) => Promise<RequestResponse["containers:startContainers"]>;
+  pauseContainers: (
+    ids: RequestArgument<"containers:pauseContainers">,
+  ) => Promise<RequestResponse["containers:pauseContainers"]>;
+  unpauseContainers: (
+    ids: RequestArgument<"containers:unpauseContainers">,
+  ) => Promise<RequestResponse["containers:unpauseContainers"]>;
+  stopContainers: (
+    ids: RequestArgument<"containers:stopContainers">,
+  ) => Promise<RequestResponse["containers:stopContainers"]>;
+  killContainers: (
+    ids: RequestArgument<"containers:killContainers">,
+  ) => Promise<RequestResponse["containers:killContainers"]>;
+  restartContainers: (
+    ids: RequestArgument<"containers:restartContainers">,
+  ) => Promise<RequestResponse["containers:restartContainers"]>;
+  removeContainers: (
+    ids: RequestArgument<"containers:removeContainers">,
+  ) => Promise<RequestResponse["containers:removeContainers"]>;
   /** 受け取りをやめる関数を返す。 */
   onContainersChanged: (
     listener: (rows: NotificationValue<"containers:containersChanged">) => void,
@@ -91,6 +112,34 @@ export function realMainApiOf(windowApi: WindowApi): MainApi {
     listContainers: () =>
       windowApi.invoke("containers:listContainers") as Promise<
         RequestResponse["containers:listContainers"]
+      >,
+    startContainers: (ids) =>
+      windowApi.invoke("containers:startContainers", ids) as Promise<
+        RequestResponse["containers:startContainers"]
+      >,
+    pauseContainers: (ids) =>
+      windowApi.invoke("containers:pauseContainers", ids) as Promise<
+        RequestResponse["containers:pauseContainers"]
+      >,
+    unpauseContainers: (ids) =>
+      windowApi.invoke("containers:unpauseContainers", ids) as Promise<
+        RequestResponse["containers:unpauseContainers"]
+      >,
+    stopContainers: (ids) =>
+      windowApi.invoke("containers:stopContainers", ids) as Promise<
+        RequestResponse["containers:stopContainers"]
+      >,
+    killContainers: (ids) =>
+      windowApi.invoke("containers:killContainers", ids) as Promise<
+        RequestResponse["containers:killContainers"]
+      >,
+    restartContainers: (ids) =>
+      windowApi.invoke("containers:restartContainers", ids) as Promise<
+        RequestResponse["containers:restartContainers"]
+      >,
+    removeContainers: (ids) =>
+      windowApi.invoke("containers:removeContainers", ids) as Promise<
+        RequestResponse["containers:removeContainers"]
       >,
     onContainersChanged: (listener) =>
       windowApi.on("containers:containersChanged", (value) =>

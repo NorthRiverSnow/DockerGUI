@@ -8,6 +8,8 @@ export type FakeEngine = {
   socketPath: string;
   /** 受け取った要求の URL。受け取った順に並ぶ。 */
   requestedUrls: string[];
+  /** 受け取った要求の、メソッドと URL（`POST /v1.54/containers/a1/start` の形）。受け取った順に並ぶ。 */
+  requests: string[];
   /** 開いている /events の応答すべてに、event を 1 行の JSON として送る。 */
   sendEvent: (event: unknown) => void;
   /** 開いている /events の応答すべてに、text をそのまま送る。行の途中で区切って送るときに使う。 */
@@ -55,25 +57,28 @@ export function startFakeEngine(
 }
 
 /**
- * テストで使う。startFakeEngine と同じサーバを、要求の URL ごとに respond が決めた応答を返すように立てる。
+ * テストで使う。startFakeEngine と同じサーバを、要求の URL とメソッドごとに respond が決めた応答を返すように立てる。
  * /events で終わる要求の扱いは startFakeEngine と同じ。
  */
 export function startFakeEngineWith(
-  respond: (url: string) => FakeResponse,
+  respond: (url: string, method: string) => FakeResponse,
   socketPath: string = unusedSocketPath(),
 ): Promise<FakeEngine> {
   const requestedUrls: string[] = [];
+  const requests: string[] = [];
   const eventResponses: http.ServerResponse[] = [];
   const server = http.createServer((request, response) => {
     const url = request.url ?? "";
+    const method = request.method ?? "";
     requestedUrls.push(url);
+    requests.push(`${method} ${url}`);
     if (url.endsWith("/events")) {
       response.writeHead(200, { "Content-Type": "application/json" });
       response.flushHeaders();
       eventResponses.push(response);
       return;
     }
-    const { status, body } = respond(url);
+    const { status, body } = respond(url, method);
     response.writeHead(status, { "Content-Type": "application/json" });
     response.end(body);
   });
@@ -92,7 +97,15 @@ export function startFakeEngineWith(
     });
   return new Promise((resolve) => {
     server.listen(socketPath, () =>
-      resolve({ socketPath, requestedUrls, sendEvent, sendEventText, dropConnections, close }),
+      resolve({
+        socketPath,
+        requestedUrls,
+        requests,
+        sendEvent,
+        sendEventText,
+        dropConnections,
+        close,
+      }),
     );
   });
 }

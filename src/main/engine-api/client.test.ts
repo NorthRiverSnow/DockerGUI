@@ -74,6 +74,48 @@ describe("engineClientOf", () => {
   });
 });
 
+describe("post と delete", () => {
+  it("POST と DELETE の要求を、URL の前に使う版を付けて送る", async () => {
+    const client = await clientWith(204, "");
+
+    await client.post("/containers/a1/start");
+    await client.delete("/containers/a1");
+
+    expect(engine?.requests).toEqual([
+      "POST /v1.54/containers/a1/start",
+      "DELETE /v1.54/containers/a1",
+    ]);
+  });
+
+  it.each([204, 304])("応答が %i なら、成功を返す", async (status) => {
+    const client = await clientWith(status, "");
+
+    expect(await client.post("/containers/a1/start")).toEqual({ ok: true, value: undefined });
+  });
+
+  it("応答が 2xx でも 304 でもなければ、エンジンが返した文を engineRejected で返す", async () => {
+    const client = await clientWith(409, '{"message":"container a1 is not running"}');
+
+    expect(await client.delete("/containers/a1")).toEqual({
+      ok: false,
+      failure: {
+        kind: "expected",
+        code: "engineRejected",
+        engineMessage: "container a1 is not running",
+      },
+    });
+  });
+
+  it("エンジンが止まっていて、ソケットのファイルが無ければ、engineUnreachable を返す", async () => {
+    const client = engineClientOf(socketAgentOf(unusedSocketPath()), "1.54");
+
+    expect(await client.post("/containers/a1/start")).toEqual({
+      ok: false,
+      failure: { kind: "expected", code: "engineUnreachable" },
+    });
+  });
+});
+
 describe("watch", () => {
   async function watchingClient() {
     const fakeEngine = await startFakeEngine(200, "");

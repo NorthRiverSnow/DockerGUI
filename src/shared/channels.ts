@@ -16,6 +16,13 @@ export const REQUEST_CHANNELS = [
   "app:getScreenSettings",
   "app:setScreenSetting",
   "containers:listContainers",
+  "containers:startContainers",
+  "containers:pauseContainers",
+  "containers:unpauseContainers",
+  "containers:stopContainers",
+  "containers:killContainers",
+  "containers:restartContainers",
+  "containers:removeContainers",
 ] as const;
 export const NOTIFICATION_CHANNELS = [
   "connection:connectionStateChanged",

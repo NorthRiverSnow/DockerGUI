@@ -46,3 +46,39 @@ export function inspectContainer(
 ): Promise<Result<ContainerInspect>> {
   return client.get(`/containers/${encodeURIComponent(id)}/json`, containerInspectSchema);
 }
+
+/** コンテナを起動する。起動しているコンテナでは、何もせずに成功を返す。 */
+export function startContainer(client: EngineClient, id: string): Promise<Result<undefined>> {
+  return client.post(`/containers/${encodeURIComponent(id)}/start`);
+}
+
+/**
+ * コンテナを停止する。エンジンは SIGTERM を送り、待ち時間（Linux のコンテナでは既定で 10 秒）が過ぎたら SIGKILL を送る。
+ * コンテナが終了するまで返らない。止まっているコンテナでは、何もせずに成功を返す。
+ */
+export function stopContainer(client: EngineClient, id: string): Promise<Result<undefined>> {
+  return client.post(`/containers/${encodeURIComponent(id)}/stop`);
+}
+
+/** コンテナに SIGKILL を送り、即座に終了させる。同じコンテナの停止を待っている要求も、すぐに返る。 */
+export function killContainer(client: EngineClient, id: string): Promise<Result<undefined>> {
+  return client.post(`/containers/${encodeURIComponent(id)}/kill`);
+}
+
+/** コンテナを停止してから起動する。停止は stopContainer と同じく待たされる。 */
+export function restartContainer(client: EngineClient, id: string): Promise<Result<undefined>> {
+  return client.post(`/containers/${encodeURIComponent(id)}/restart`);
+}
+
+export function pauseContainer(client: EngineClient, id: string): Promise<Result<undefined>> {
+  return client.post(`/containers/${encodeURIComponent(id)}/pause`);
+}
+
+export function unpauseContainer(client: EngineClient, id: string): Promise<Result<undefined>> {
+  return client.post(`/containers/${encodeURIComponent(id)}/unpause`);
+}
+
+/** コンテナを削除する。動作中のコンテナは、エンジンが断る（engineRejected）。 */
+export function removeContainer(client: EngineClient, id: string): Promise<Result<undefined>> {
+  return client.delete(`/containers/${encodeURIComponent(id)}`);
+}

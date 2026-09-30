@@ -5,7 +5,7 @@ import type { ContainerInspect, ContainerSummary } from "../../engine-api/contai
 export function containerRowOf(summary: ContainerSummary, inspect: ContainerInspect): ContainerRow {
   return {
     id: summary.Id,
-    name: nameOf(summary.Names),
+    name: containerNameOf(summary),
     image: summary.Image,
     state: stateOf(inspect.State.Status, inspect.State.ExitCode),
     ports: publishedPortsOf(summary.Ports),
@@ -14,9 +14,9 @@ export function containerRowOf(summary: ContainerSummary, inspect: ContainerInsp
   };
 }
 
-// why: Engine API は、コンテナの名前の先頭に / を付けて返す（docker ps は付けずに出す）。
-function nameOf(names: string[]): string {
-  return (names[0] ?? "").replace(/^\//, "");
+export function containerNameOf(summary: ContainerSummary): string {
+  // why: Engine API は、コンテナの名前の先頭に / を付けて返す（docker ps は付けずに出す）。
+  return (summary.Names[0] ?? "").replace(/^\//, "");
 }
 
 function stateOf(status: ContainerInspect["State"]["Status"], exitCode: number): ContainerState {

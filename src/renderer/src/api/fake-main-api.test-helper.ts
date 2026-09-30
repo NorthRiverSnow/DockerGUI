@@ -1,7 +1,7 @@
 import type { ContainerRow } from "../../../shared/containers";
 import type { LanguageState } from "../../../shared/language";
 import { DEFAULT_SCREEN_SETTINGS } from "../../../shared/screen-settings";
-import type { Result } from "../../../shared/result";
+import type { BatchResult, Result } from "../../../shared/result";
 import type { MainApi } from "./main-api";
 
 export type FakeMainApi = {
@@ -20,12 +20,14 @@ export type FakeMainApi = {
 };
 
 const OK: Result<undefined> = { ok: true, value: undefined };
+const NOTHING_OPERATED: Result<BatchResult> = { ok: true, value: [] };
 
 /**
  * テストで使う。main の窓口の代わり。呼ばれた窓口の名前を calls に残す。
  * getLanguage は answerLanguage を呼ぶまで、getConnectionState はいつまでも終わらない。
  * setLanguage は、選んだ設定と、「自動」なら日本語、それ以外は選んだ言語を返す。
  * listContainers は、answerContainers を呼ぶまで終わらない。
+ * コンテナの操作は、呼ばれた窓口の名前と ID を calls に残し、すぐに、何も実行しなかった結果を返す。
  * getScreenSettings は、すぐに既定の切り替えを返す。options.holdScreenSettings なら、answerScreenSettings を呼ぶまで終わらない。
  */
 export function fakeMainApi(options: { holdScreenSettings?: boolean } = {}): FakeMainApi {
@@ -79,6 +81,13 @@ export function fakeMainApi(options: { holdScreenSettings?: boolean } = {}): Fak
       calls.push("listContainers");
       return new Promise((resolve) => containerAnswers.push(resolve));
     },
+    startContainers: (ids) => called(`startContainers:${ids.join(",")}`, NOTHING_OPERATED),
+    pauseContainers: (ids) => called(`pauseContainers:${ids.join(",")}`, NOTHING_OPERATED),
+    unpauseContainers: (ids) => called(`unpauseContainers:${ids.join(",")}`, NOTHING_OPERATED),
+    stopContainers: (ids) => called(`stopContainers:${ids.join(",")}`, NOTHING_OPERATED),
+    killContainers: (ids) => called(`killContainers:${ids.join(",")}`, NOTHING_OPERATED),
+    restartContainers: (ids) => called(`restartContainers:${ids.join(",")}`, NOTHING_OPERATED),
+    removeContainers: (ids) => called(`removeContainers:${ids.join(",")}`, NOTHING_OPERATED),
     onContainersChanged: (listener) => {
       containersListeners.push(listener);
       return () => {

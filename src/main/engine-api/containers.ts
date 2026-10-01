@@ -27,6 +27,10 @@ const containerInspectSchema = z.object({
     /** Engine API の文書が挙げる 7 つの状態（docs/spec/containers.md の「状態の呼び方」）。 */
     Status: z.enum(["created", "running", "paused", "restarting", "removing", "exited", "dead"]),
     ExitCode: z.number(),
+    OOMKilled: z.boolean(),
+    /** 起動に失敗したときの、エンジンが返した失敗の文（docs/spec/containers.md の「終了のわけは、確実に分かるときだけ出す」）。 */
+    Error: z.string(),
+    Health: z.object({ Status: z.enum(["none", "starting", "healthy", "unhealthy"]) }).optional(),
     StartedAt: z.string(),
     FinishedAt: z.string(),
   }),

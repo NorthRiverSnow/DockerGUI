@@ -30,6 +30,7 @@ export function ContainersScreen(props: {
       onReload={controller.reload}
       onOperate={controller.operate}
       onDismissFailure={controller.dismissFailure}
+      onToggleFailureExpansion={controller.toggleFailureExpansion}
       onFilterTextChange={props.onFilterTextChange}
       onHideNonRunningChange={props.onHideNonRunningChange}
     />

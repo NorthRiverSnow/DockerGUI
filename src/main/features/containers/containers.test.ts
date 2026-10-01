@@ -37,10 +37,22 @@ function summaryOf(id: string, name: string) {
   };
 }
 
-function inspectOf(id: string, state: { Status: string; ExitCode: number }) {
+/** コンテナ 1 つの詳細。Error と OOMKilled は、渡さなければ、起動に成功してメモリも足りていたときの値にする。 */
+function inspectOf(
+  id: string,
+  state: {
+    Status: string;
+    ExitCode: number;
+    Health?: { Status: string };
+    Error?: string;
+    OOMKilled?: boolean;
+  },
+) {
   return {
     Id: id,
     State: {
+      Error: "",
+      OOMKilled: false,
       ...state,
       StartedAt: "2026-09-15T06:01:45.381898767Z",
       FinishedAt: "0001-01-01T00:00:00Z",
@@ -76,6 +88,89 @@ describe("containerRowsOf", () => {
         },
       ],
     });
+  });
+
+  it.each([
+    { label: "健康状態が starting", health: { Status: "starting" }, expected: "starting" },
+    { label: "健康状態が healthy", health: { Status: "healthy" }, expected: "healthy" },
+    { label: "健康状態が unhealthy", health: { Status: "unhealthy" }, expected: "unhealthy" },
+    { label: "健康状態が none", health: { Status: "none" }, expected: undefined },
+    { label: "State.Health の項目が無い", health: undefined, expected: undefined },
+  ])(
+    "$label の動作中のコンテナは、行の状態の health を $expected にする",
+    async ({ health, expected }) => {
+      const client = await clientFor((url) =>
+        url.startsWith("/v1.54/containers/json")
+          ? ok([summaryOf("a1", "web-1")])
+          : ok(inspectOf("a1", { Status: "running", ExitCode: 0, Health: health })),
+      );
+
+      const rows = await containerRowsOf(client);
+
+      expect(rows.ok && rows.value[0]?.state).toEqual({ kind: "running", health: expected });
+    },
+  );
+
+  it("動作中でないコンテナの行の状態には、健康状態を入れない", async () => {
+    const client = await clientFor((url) =>
+      url.startsWith("/v1.54/containers/json")
+        ? ok([summaryOf("a1", "web-1")])
+        : ok(inspectOf("a1", { Status: "paused", ExitCode: 0, Health: { Status: "healthy" } })),
+    );
+
+    const rows = await containerRowsOf(client);
+
+    expect(rows.ok && rows.value[0]?.state).toEqual({ kind: "paused" });
+  });
+
+  it.each([
+    {
+      label:
+        "一度も動いていないコンテナが起動に失敗したら、created の行に、起動の失敗と終了コードを入れる",
+      engineState: { Status: "created", ExitCode: 127, Error: "executable file not found" },
+      expected: { kind: "created", exitCode: 127, exitCause: "startFailed" },
+    },
+    {
+      label: "起動したことのないコンテナは、created の行に、起動の失敗を入れない",
+      engineState: { Status: "created", ExitCode: 0 },
+      expected: { kind: "created", exitCode: 0 },
+    },
+    {
+      label:
+        "前に動いていたコンテナが起動に失敗したら、exited の行の終了のわけを startFailed にする",
+      engineState: { Status: "exited", ExitCode: 128, Error: "port is already allocated" },
+      expected: { kind: "exited", exitCode: 128, exitCause: "startFailed" },
+    },
+    {
+      label: "メモリ不足で強制終了されたら、exited の行の終了のわけを oomKilled にする",
+      engineState: { Status: "exited", ExitCode: 137, OOMKilled: true },
+      expected: { kind: "exited", exitCode: 137, exitCause: "oomKilled" },
+    },
+    {
+      label: "起動の失敗とメモリ不足の両方が記録にあれば、終了のわけを startFailed にする",
+      engineState: {
+        Status: "exited",
+        ExitCode: 128,
+        Error: "port is already allocated",
+        OOMKilled: true,
+      },
+      expected: { kind: "exited", exitCode: 128, exitCause: "startFailed" },
+    },
+    {
+      label: "終了のわけがエンジンの記録に無ければ、exited の行に終了のわけを入れない",
+      engineState: { Status: "exited", ExitCode: 143 },
+      expected: { kind: "exited", exitCode: 143 },
+    },
+  ])("$label", async ({ engineState, expected }) => {
+    const client = await clientFor((url) =>
+      url.startsWith("/v1.54/containers/json")
+        ? ok([summaryOf("a1", "web-1")])
+        : ok(inspectOf("a1", engineState)),
+    );
+
+    const rows = await containerRowsOf(client);
+
+    expect(rows.ok && rows.value[0]?.state).toEqual(expected);
   });
 
   it("動作中でないコンテナも含めて読み、コンテナごとに詳細を読む", async () => {

@@ -55,6 +55,7 @@ export function LoadedList(
           failures={props.failures}
           onOperate={props.onOperate}
           onDismissFailure={props.onDismissFailure}
+          onToggleFailureExpansion={props.onToggleFailureExpansion}
         />
       )}
     </Stack>

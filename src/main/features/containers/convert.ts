@@ -1,4 +1,10 @@
-import type { ContainerRow, ContainerState, PublishedPort } from "../../../shared/containers";
+import type {
+  ContainerHealth,
+  ContainerRow,
+  ContainerState,
+  ExitCause,
+  PublishedPort,
+} from "../../../shared/containers";
 import type { ContainerInspect, ContainerSummary } from "../../engine-api/containers";
 
 /** 一覧の 1 件と、同じコンテナの詳細から、一覧の 1 行を作る（docs/spec/containers.md の「出す列」）。 */
@@ -7,7 +13,7 @@ export function containerRowOf(summary: ContainerSummary, inspect: ContainerInsp
     id: summary.Id,
     name: containerNameOf(summary),
     image: summary.Image,
-    state: stateOf(inspect.State.Status, inspect.State.ExitCode),
+    state: stateOf(inspect.State),
     ports: publishedPortsOf(summary.Ports),
     startedAt: timeOf(inspect.State.StartedAt),
     finishedAt: timeOf(inspect.State.FinishedAt),
@@ -19,8 +25,40 @@ export function containerNameOf(summary: ContainerSummary): string {
   return (summary.Names[0] ?? "").replace(/^\//, "");
 }
 
-function stateOf(status: ContainerInspect["State"]["Status"], exitCode: number): ContainerState {
-  return status === "exited" ? { kind: "exited", exitCode } : { kind: status };
+function stateOf(engineState: ContainerInspect["State"]): ContainerState {
+  switch (engineState.Status) {
+    case "created":
+      return {
+        kind: "created",
+        exitCode: engineState.ExitCode,
+        exitCause: engineState.Error === "" ? undefined : "startFailed",
+      };
+    case "exited":
+      return {
+        kind: "exited",
+        exitCode: engineState.ExitCode,
+        exitCause: exitCauseOf(engineState),
+      };
+    case "running":
+      return { kind: "running", health: healthOf(engineState.Health) };
+    default:
+      return { kind: engineState.Status };
+  }
+}
+
+/** 終了のわけが確実に分からなければ undefined（docs/spec/containers.md の「終了のわけは、確実に分かるときだけ出す」）。 */
+function exitCauseOf(engineState: ContainerInspect["State"]): ExitCause | undefined {
+  if (engineState.Error !== "") {
+    return "startFailed";
+  }
+  return engineState.OOMKilled ? "oomKilled" : undefined;
+}
+
+/** ヘルスチェックが無ければ undefined（docs/design/main.md の「コンテナの一覧」）。 */
+function healthOf(engineHealth: ContainerInspect["State"]["Health"]): ContainerHealth | undefined {
+  return engineHealth === undefined || engineHealth.Status === "none"
+    ? undefined
+    : engineHealth.Status;
 }
 
 /**

@@ -76,13 +76,14 @@ describe("shownTimeOf", () => {
 
   it("動いていないコンテナは、終了した時刻を出す", () => {
     expect(shownTimeOf(rowOf("web-1", { kind: "exited", exitCode: 1 }, times))).toBe(2000);
-    for (const kind of ["created", "removing", "dead"] as const) {
+    expect(shownTimeOf(rowOf("web-1", { kind: "created", exitCode: 0 }, times))).toBe(2000);
+    for (const kind of ["removing", "dead"] as const) {
       expect(shownTimeOf(rowOf("web-1", { kind }, times))).toBe(2000);
     }
   });
 
   it("一度も起動していないコンテナは、時刻を出さない", () => {
-    expect(shownTimeOf(rowOf("web-1", { kind: "created" }))).toBeUndefined();
+    expect(shownTimeOf(rowOf("web-1", { kind: "created", exitCode: 0 }))).toBeUndefined();
   });
 });
 
@@ -147,7 +148,9 @@ describe("nextContainersState の操作", () => {
       },
     });
 
-    expect(next.failures).toEqual({ [WEB.id]: { operation: "stop", failure: REJECTED } });
+    expect(next.failures).toEqual({
+      [WEB.id]: { operation: "stop", failure: REJECTED, expanded: false },
+    });
   });
 
   it("応答そのものが失敗なら、送ったコンテナすべての行に失敗を残す", () => {
@@ -161,8 +164,8 @@ describe("nextContainersState の操作", () => {
     });
 
     expect(next.failures).toEqual({
-      [WEB.id]: { operation: "start", failure },
-      [DB.id]: { operation: "start", failure },
+      [WEB.id]: { operation: "start", failure, expanded: false },
+      [DB.id]: { operation: "start", failure, expanded: false },
     });
   });
 
@@ -173,6 +176,47 @@ describe("nextContainersState の操作", () => {
       ids: [WEB.id],
       result: { ok: true, value: [{ target: "web-1", result: { ok: false, failure: REJECTED } }] },
     });
+
+  it("失敗の全文を開く出来事で、その行の失敗を開き、もう一度で閉じる", () => {
+    const opened = nextContainersState(failedState(), {
+      kind: "failureExpansionToggled",
+      id: WEB.id,
+    });
+    const closed = nextContainersState(opened, { kind: "failureExpansionToggled", id: WEB.id });
+
+    expect(opened.failures[WEB.id]?.expanded).toBe(true);
+    expect(closed.failures[WEB.id]?.expanded).toBe(false);
+  });
+
+  it("全文を開いた失敗がある行で、重なっていた別の操作も失敗したら、新しい失敗は閉じた状態で残す", () => {
+    const failedWith = (state: ContainersState, operation: ContainerOperation) =>
+      nextContainersState(state, {
+        kind: "operationFinished",
+        operation,
+        ids: [WEB.id],
+        result: {
+          ok: true,
+          value: [{ target: "web-1", result: { ok: false, failure: REJECTED } }],
+        },
+      });
+    const stopping = started(started(LOADED, "stop", [WEB.id]), "kill", [WEB.id]);
+    const killFailed = nextContainersState(failedWith(stopping, "kill"), {
+      kind: "failureExpansionToggled",
+      id: WEB.id,
+    });
+
+    expect(failedWith(killFailed, "stop").failures[WEB.id]).toEqual({
+      operation: "stop",
+      failure: REJECTED,
+      expanded: false,
+    });
+  });
+
+  it("失敗の無い行で全文を開く出来事が届いても、失敗を作らない", () => {
+    const next = nextContainersState(failedState(), { kind: "failureExpansionToggled", id: DB.id });
+
+    expect(next.failures).toEqual(failedState().failures);
+  });
 
   it("失敗を閉じたら、その行の失敗を消す", () => {
     const next = nextContainersState(failedState(), { kind: "failureDismissed", id: WEB.id });
@@ -193,7 +237,9 @@ describe("nextContainersState の操作", () => {
   it("一覧に残っている行の失敗は、一覧が変わっても残す", () => {
     const next = nextContainersState(failedState(), { kind: "loaded", rows: [WEB] });
 
-    expect(next.failures).toEqual({ [WEB.id]: { operation: "stop", failure: REJECTED } });
+    expect(next.failures).toEqual({
+      [WEB.id]: { operation: "stop", failure: REJECTED, expanded: false },
+    });
   });
 
   it("接続が切れたら、失敗を捨てる", () => {
@@ -207,7 +253,7 @@ describe("MAX_ROW_OPERATIONS", () => {
       { kind: "running" },
       { kind: "paused" },
       { kind: "restarting" },
-      { kind: "created" },
+      { kind: "created", exitCode: 0 },
       { kind: "exited", exitCode: 0 },
       { kind: "removing" },
       { kind: "dead" },

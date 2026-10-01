@@ -35,6 +35,7 @@ export function useContainersController(deps: {
   /** ids のコンテナに operation を送る。応答が届くまで、operation を state.running に持つ。 */
   operate: (operation: ContainerOperation, ids: string[]) => void;
   dismissFailure: (id: string) => void;
+  toggleFailureExpansion: (id: string) => void;
 } {
   const [state, dispatch] = useReducer(nextContainersState, INITIAL_CONTAINERS_STATE);
   const [now, setNow] = useState(Date.now);
@@ -107,5 +108,10 @@ export function useContainersController(deps: {
     [],
   );
 
-  return { state, now, reload, operate, dismissFailure };
+  const toggleFailureExpansion = useCallback(
+    (id: string) => dispatch({ kind: "failureExpansionToggled", id }),
+    [],
+  );
+
+  return { state, now, reload, operate, dismissFailure, toggleFailureExpansion };
 }

@@ -15,8 +15,15 @@ export type ContainersList =
 /** 応答を待っている操作。startedAt は、停止処理中の経過した時間を出すのに使う。 */
 export type RunningOperation = { operation: ContainerOperation; startedAt: number };
 
-/** 利用者が閉じるまで、行の下に残す操作の失敗（docs/spec/common.md の「結果の知らせ方」）。 */
-export type OperationFailure = { operation: ContainerOperation; failure: Failure };
+/**
+ * 利用者が閉じるまで、行の下に残す操作の失敗（docs/spec/common.md の「結果の知らせ方」）。
+ * expanded は、1 行に収まらない原因の文を、利用者が開いているか（docs/spec/containers.md の「行の知らせ」）。
+ */
+export type OperationFailure = {
+  operation: ContainerOperation;
+  failure: Failure;
+  expanded: boolean;
+};
 
 export type ContainersState = {
   list: ContainersList;
@@ -38,7 +45,8 @@ export type ContainersEvent =
       ids: string[];
       result: Result<BatchResult>;
     }
-  | { kind: "failureDismissed"; id: string };
+  | { kind: "failureDismissed"; id: string }
+  | { kind: "failureExpansionToggled"; id: string };
 
 export const INITIAL_CONTAINERS_STATE: ContainersState = {
   list: { kind: "notConnected" },
@@ -71,6 +79,8 @@ export function nextContainersState(
       return finishedState(state, event.operation, event.ids, event.result);
     case "failureDismissed":
       return { ...state, failures: withoutKeys(state.failures, [event.id]) };
+    case "failureExpansionToggled":
+      return { ...state, failures: toggledExpansionOf(state.failures, event.id) };
   }
 }
 
@@ -106,7 +116,7 @@ function finishedState(
   }
   const failures = { ...state.failures };
   for (const { id, failure } of failedContainersOf(state.list, ids, result)) {
-    failures[id] = { operation, failure };
+    failures[id] = { operation, failure, expanded: false };
   }
   return { ...state, running, failures };
 }
@@ -141,6 +151,14 @@ function failuresOfRows(
 ): Record<string, OperationFailure> {
   const ids = new Set(rows.map((row) => row.id));
   return Object.fromEntries(Object.entries(failures).filter(([id]) => ids.has(id)));
+}
+
+function toggledExpansionOf(
+  failures: Record<string, OperationFailure>,
+  id: string,
+): Record<string, OperationFailure> {
+  const failure = failures[id];
+  return failure ? { ...failures, [id]: { ...failure, expanded: !failure.expanded } } : failures;
 }
 
 function withoutKeys<T>(record: Record<string, T>, keys: string[]): Record<string, T> {

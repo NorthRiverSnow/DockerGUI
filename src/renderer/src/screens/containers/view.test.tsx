@@ -24,10 +24,28 @@ beforeAll(() => {
     removeEventListener: () => {},
     dispatchEvent: () => false,
   });
+  // why: 失敗の知らせは、文が幅に収まるかを ResizeObserver で見張る。jsdom には ResizeObserver が無いので、何もしないものを置く。
+  window.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
 });
 
-// why: Testing Library は、テストの関数が全体に置かれていないと、描いた要素を自動では片付けない。
-afterEach(cleanup);
+afterEach(() => {
+  // why: Testing Library は、テストの関数が全体に置かれていないと、描いた要素を自動では片付けない。
+  cleanup();
+  vi.restoreAllMocks();
+});
+
+/** エンジンが engineMessage の文で断った、停止の失敗。 */
+function failureOf(engineMessage: string, expanded: boolean): OperationFailure {
+  return {
+    operation: "stop",
+    failure: { kind: "expected", code: "engineRejected", engineMessage },
+    expanded,
+  };
+}
 
 /** filter を書かなければ、絞り込まない。operations を書かなければ、応答を待っている操作も失敗も無い。 */
 function renderView(
@@ -44,6 +62,7 @@ function renderView(
     onHideNonRunningChange: vi.fn(),
     onOperate: vi.fn(),
     onDismissFailure: vi.fn(),
+    onToggleFailureExpansion: vi.fn(),
   };
   render(
     <MantineProvider theme={THEME}>
@@ -86,7 +105,7 @@ describe("ContainersView", () => {
 
     expect(cellTexts()).toEqual([
       ["動作中", "web-1", "node:22", "8080 → 80", "3 分前", ""],
-      ["異常終了（コード 137）", "db-1", "node:22", "", "2 時間前", ""],
+      ["終了（コード 137）", "db-1", "node:22", "", "2 時間前", ""],
     ]);
   });
 
@@ -190,9 +209,11 @@ describe("ContainersView の操作", () => {
   it.each<[string, ContainerState, string[]]>([
     ["動作中", { kind: "running" }, ["一時停止", "停止", "再起動"]],
     ["一時停止中", { kind: "paused" }, ["再開", "停止"]],
-    ["未起動", { kind: "created" }, ["起動"]],
+    ["未起動", { kind: "created", exitCode: 0 }, ["起動"]],
     ["正常終了", { kind: "exited", exitCode: 0 }, ["起動"]],
-    ["異常終了", { kind: "exited", exitCode: 1 }, ["起動"]],
+    ["終了（コード 1）", { kind: "exited", exitCode: 1 }, ["起動"]],
+    ["起動失敗", { kind: "created", exitCode: 127, exitCause: "startFailed" }, ["起動"]],
+    ["強制終了（メモリ不足）", { kind: "exited", exitCode: 137, exitCause: "oomKilled" }, ["起動"]],
     ["再起動中", { kind: "restarting" }, []],
     ["削除中", { kind: "removing" }, []],
     ["削除失敗", { kind: "dead" }, []],
@@ -266,6 +287,7 @@ describe("ContainersView の操作", () => {
           "id-web-1": {
             operation: "stop",
             failure: { kind: "expected", code: "engineRejected", engineMessage: "cannot stop" },
+            expanded: false,
           },
         },
       },
@@ -280,5 +302,46 @@ describe("ContainersView の操作", () => {
     expect(rowTexts[2]).toBe("コンテナ web-1 を停止できませんでした。cannot stop");
     fireEvent.click(screen.getByRole("button", { name: "閉じる" }));
     expect(handlers.onDismissFailure).toHaveBeenCalledExactlyOnceWith("id-web-1");
+  });
+
+  it("失敗の原因の文が 1 行に収まれば、［全文を表示］ を出さない", () => {
+    vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockReturnValue(100);
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(100);
+    renderView({ kind: "loaded", rows: [rowOf("web-1", { kind: "running" })] }, undefined, {
+      failures: { "id-web-1": failureOf("cannot stop", false) },
+    });
+
+    expect(screen.queryByRole("button", { name: "全文を表示" })).toBeNull();
+  });
+
+  it("失敗の原因の文が 1 行に収まらなければ ［全文を表示］ を出し、押すと行のコンテナの ID を onToggleFailureExpansion に渡す", () => {
+    // why: jsdom は文の幅を測らないので、どの要素も、中身の幅が要素の幅より広いことにする。
+    vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockReturnValue(500);
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(100);
+    const handlers = renderView(
+      { kind: "loaded", rows: [rowOf("web-1", { kind: "running" })] },
+      undefined,
+      {
+        failures: { "id-web-1": failureOf("port is already allocated", false) },
+      },
+    );
+
+    const showFull = screen.getByRole("button", { name: "全文を表示" });
+    expect(showFull.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(showFull);
+    expect(handlers.onToggleFailureExpansion).toHaveBeenCalledExactlyOnceWith("id-web-1");
+  });
+
+  it("全文を開いた失敗は、何ができなかったかと原因を続けて出し、［たたむ］ を出す", () => {
+    renderView({ kind: "loaded", rows: [rowOf("web-1", { kind: "running" })] }, undefined, {
+      failures: { "id-web-1": failureOf("port is already allocated", true) },
+    });
+
+    expect(screen.getByRole("button", { name: "たたむ" }).getAttribute("aria-expanded")).toBe(
+      "true",
+    );
+    expect(screen.getByRole("alert").textContent).toBe(
+      "コンテナ web-1 を停止できませんでした。 port is already allocated",
+    );
   });
 });

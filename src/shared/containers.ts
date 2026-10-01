@@ -1,12 +1,34 @@
 import { z } from "zod";
 
-/** コンテナの状態（docs/spec/containers.md の「状態の呼び方」）。exited だけは終了コードを持つ。 */
+/** 動作中のコンテナの健康状態（docs/spec/containers.md の「動作中のコンテナは、健康状態で呼び分ける」）。 */
+export const containerHealthSchema = z.enum(["starting", "healthy", "unhealthy"]);
+
+export type ContainerHealth = z.infer<typeof containerHealthSchema>;
+
+/** 終了のわけのうち、エンジンの記録から確実に分かるもの（docs/spec/containers.md の「終了のわけは、確実に分かるときだけ出す」）。 */
+export const exitCauseSchema = z.enum(["startFailed", "oomKilled"]);
+
+export type ExitCause = z.infer<typeof exitCauseSchema>;
+
+/**
+ * コンテナの状態（docs/spec/containers.md の「状態の呼び方」）。
+ * running は、ヘルスチェックを書いたコンテナでだけ health を持つ。
+ * created と exited は、終了のわけが確実に分かるときだけ exitCause を持つ。
+ */
 export const containerStateSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("running") }),
+  z.object({ kind: z.literal("running"), health: containerHealthSchema.optional() }),
   z.object({ kind: z.literal("paused") }),
   z.object({ kind: z.literal("restarting") }),
-  z.object({ kind: z.literal("created") }),
-  z.object({ kind: z.literal("exited"), exitCode: z.number() }),
+  z.object({
+    kind: z.literal("created"),
+    exitCode: z.number(),
+    exitCause: z.literal("startFailed").optional(),
+  }),
+  z.object({
+    kind: z.literal("exited"),
+    exitCode: z.number(),
+    exitCause: exitCauseSchema.optional(),
+  }),
   z.object({ kind: z.literal("removing") }),
   z.object({ kind: z.literal("dead") }),
 ]);

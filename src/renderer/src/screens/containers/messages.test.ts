@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import type { ContainerState } from "../../../../shared/containers";
+import type { ContainerHealth, ContainerState } from "../../../../shared/containers";
 import { NOT_CONNECTED_MESSAGES } from "../../messages/not-connected";
 import { CONTAINERS_MESSAGES, portsTextOf } from "./messages";
 
@@ -10,9 +10,9 @@ describe("stateName", () => {
     { state: { kind: "running" }, ja: "動作中", en: "Running" },
     { state: { kind: "paused" }, ja: "一時停止中", en: "Paused" },
     { state: { kind: "restarting" }, ja: "再起動中", en: "Restarting" },
-    { state: { kind: "created" }, ja: "未起動", en: "Created" },
+    { state: { kind: "created", exitCode: 0 }, ja: "未起動", en: "Created" },
     { state: { kind: "exited", exitCode: 0 }, ja: "正常終了", en: "Exited (0)" },
-    { state: { kind: "exited", exitCode: 137 }, ja: "異常終了（コード 137）", en: "Exited (137)" },
+    { state: { kind: "exited", exitCode: 143 }, ja: "終了（コード 143）", en: "Exited (143)" },
     { state: { kind: "removing" }, ja: "削除中", en: "Removing" },
     { state: { kind: "dead" }, ja: "削除失敗", en: "Dead" },
   ];
@@ -21,6 +21,52 @@ describe("stateName", () => {
     expect(CONTAINERS_MESSAGES.ja.stateName(state)).toBe(ja);
     expect(CONTAINERS_MESSAGES.en.stateName(state)).toBe(en);
   });
+});
+
+describe("stateName の、起動の失敗とメモリ不足", () => {
+  const cases: { label: string; state: ContainerState; ja: string; en: string }[] = [
+    {
+      label: "一度も動いていないコンテナの起動の失敗",
+      state: { kind: "created", exitCode: 127, exitCause: "startFailed" },
+      ja: "起動失敗（コード 127）",
+      en: "Created (127)",
+    },
+    {
+      label: "前に動いていたコンテナの起動の失敗",
+      state: { kind: "exited", exitCode: 128, exitCause: "startFailed" },
+      ja: "起動失敗（コード 128）",
+      en: "Exited (128)",
+    },
+    {
+      label: "メモリ不足による強制終了",
+      state: { kind: "exited", exitCode: 137, exitCause: "oomKilled" },
+      ja: "強制終了（メモリ不足）",
+      en: "OOMKilled (137)",
+    },
+  ];
+
+  it.each(cases)("$label は、日本語で「$ja」、英語で「$en」", ({ state, ja, en }) => {
+    expect(CONTAINERS_MESSAGES.ja.stateName(state)).toBe(ja);
+    expect(CONTAINERS_MESSAGES.en.stateName(state)).toBe(en);
+  });
+});
+
+describe("stateName の、動作中のコンテナの健康状態", () => {
+  const cases: { health: ContainerHealth; ja: string; en: string }[] = [
+    { health: "starting", ja: "起動中", en: "Starting" },
+    { health: "healthy", ja: "動作中", en: "Running" },
+    { health: "unhealthy", ja: "動作中（異常）", en: "Running (unhealthy)" },
+  ];
+
+  it.each(cases)(
+    "健康状態が $health の動作中のコンテナは、日本語で「$ja」、英語で「$en」",
+    ({ health, ja, en }) => {
+      const state: ContainerState = { kind: "running", health };
+
+      expect(CONTAINERS_MESSAGES.ja.stateName(state)).toBe(ja);
+      expect(CONTAINERS_MESSAGES.en.stateName(state)).toBe(en);
+    },
+  );
 });
 
 describe("elapsedSince", () => {
@@ -75,19 +121,33 @@ describe("notConnected", () => {
 });
 
 describe("operationFailed", () => {
-  const failure = {
-    kind: "expected",
-    code: "engineRejected",
-    engineMessage: "cannot stop",
-  } as const;
+  it("何ができなかったかを、コンテナの名前と操作の名前で書く", () => {
+    expect(CONTAINERS_MESSAGES.ja.operationFailed("unpause", "web-1")).toBe(
+      "コンテナ web-1 を再開できませんでした。",
+    );
+    expect(CONTAINERS_MESSAGES.en.operationFailed("kill", "web-1")).toBe(
+      "Couldn't force stop container web-1.",
+    );
+  });
+});
 
-  it("何ができなかったかを、コンテナの名前と操作の名前で書き、原因を続ける", () => {
-    expect(CONTAINERS_MESSAGES.ja.operationFailed("unpause", "web-1", failure)).toBe(
-      "コンテナ web-1 を再開できませんでした。cannot stop",
-    );
-    expect(CONTAINERS_MESSAGES.en.operationFailed("kill", "web-1", failure)).toBe(
-      "Couldn't force stop container web-1. cannot stop",
-    );
+describe("failureCause", () => {
+  it("エンジンが断ったときは、エンジンが返した文をそのまま原因にする", () => {
+    const failure = {
+      kind: "expected",
+      code: "engineRejected",
+      engineMessage: "cannot stop",
+    } as const;
+
+    expect(CONTAINERS_MESSAGES.ja.failureCause(failure)).toBe("cannot stop");
+    expect(CONTAINERS_MESSAGES.en.failureCause(failure)).toBe("cannot stop");
+  });
+
+  it("エンジンが応答しなかったときは、言語ごとの文を原因にする", () => {
+    const failure = { kind: "expected", code: "engineUnreachable" } as const;
+
+    expect(CONTAINERS_MESSAGES.ja.failureCause(failure)).toBe("応答がありません");
+    expect(CONTAINERS_MESSAGES.en.failureCause(failure)).toBe("no response");
   });
 });
 

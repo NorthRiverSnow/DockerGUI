@@ -1,0 +1,27 @@
+/*
+ * 収まらない文の中央を「…」にして、先頭と末尾を残す（docs/spec/common.md の「長い名前」）。
+ * why: CSS の text-overflow は、文の端しか切れない。文を前半と後半に分け、前半は末尾を「…」にし、後半は先頭を切る。
+ * 前半と後半は、どちらも自分の文の幅に合わせて縮むので、先頭と末尾がほぼ同じだけ残る。
+ */
+
+.text {
+  display: flex;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.head,
+.tail {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.head {
+  text-overflow: ellipsis;
+}
+
+/* why: 文の向きを右から左にすると、はみ出した分が先頭の側で切れる。「…」は前半に付くので、後半には付けない。 */
+.tail {
+  direction: rtl;
+  text-overflow: clip;
+}

@@ -1,6 +1,8 @@
 import type {
+  ContainerHealth,
   ContainerOperation,
   ContainerState,
+  ExitCause,
   PublishedPort,
 } from "../../../../shared/containers";
 import type { Language } from "../../../../shared/language";
@@ -30,8 +32,13 @@ export type ContainersMessages = {
   stopping: (name: string) => string;
   /** 経過した時間（docs/spec/common.md の「待たせるときの表示」）。 */
   elapsed: (milliseconds: number) => string;
-  /** 操作の失敗（docs/spec/common.md の「失敗の見せ方」）。 */
-  operationFailed: (operation: ContainerOperation, name: string, failure: Failure) => string;
+  /** 操作の失敗の、何ができなかったか（docs/spec/common.md の「失敗の見せ方」）。 */
+  operationFailed: (operation: ContainerOperation, name: string) => string;
+  /** 操作の失敗の原因。 */
+  failureCause: (failure: Failure) => string;
+  /** ［全文を表示］ と ［たたむ］ のボタンの名前（docs/spec/containers.md の「行の知らせ」）。 */
+  showFullFailure: string;
+  collapseFailure: string;
   /** 失敗の知らせを閉じるボタンの名前。 */
   closeFailure: string;
 };
@@ -61,21 +68,45 @@ const EN_OPERATION_NAMES: Record<ContainerOperation, string> = {
   remove: "Remove",
 };
 
+/** docs/spec/containers.md の「終了のわけは、確実に分かるときだけ出す」。 */
+function jaExitedNameOf(exitCode: number, exitCause: ExitCause | undefined): string {
+  switch (exitCause) {
+    case "startFailed":
+      return `起動失敗（コード ${exitCode}）`;
+    case "oomKilled":
+      return "強制終了（メモリ不足）";
+    case undefined:
+      return exitCode === 0 ? "正常終了" : `終了（コード ${exitCode}）`;
+  }
+}
+
+const RUNNING_NAMES: Record<Language, Record<ContainerHealth, string>> = {
+  ja: { starting: "起動中", healthy: "動作中", unhealthy: "動作中（異常）" },
+  en: { starting: "Starting", healthy: "Running", unhealthy: "Running (unhealthy)" },
+};
+
+function runningNameOf(language: Language, health: ContainerHealth | undefined): string {
+  // why: ヘルスチェックの無いコンテナは、healthy と同じに呼ぶ（docs/spec/containers.md の「動作中のコンテナは、健康状態で呼び分ける」）。
+  return RUNNING_NAMES[language][health ?? "healthy"];
+}
+
 export const CONTAINERS_MESSAGES: Record<Language, ContainersMessages> = {
   ja: {
     columns: { state: "状態", name: "名前", image: "イメージ", ports: "ポート", time: "時間" },
     stateName: (state) => {
       switch (state.kind) {
         case "running":
-          return "動作中";
+          return runningNameOf("ja", state.health);
         case "paused":
           return "一時停止中";
         case "restarting":
           return "再起動中";
         case "created":
-          return "未起動";
+          return state.exitCause === "startFailed"
+            ? `起動失敗（コード ${state.exitCode}）`
+            : "未起動";
         case "exited":
-          return state.exitCode === 0 ? "正常終了" : `異常終了（コード ${state.exitCode}）`;
+          return jaExitedNameOf(state.exitCode, state.exitCause);
         case "removing":
           return "削除中";
         case "dead":
@@ -99,8 +130,11 @@ export const CONTAINERS_MESSAGES: Record<Language, ContainersMessages> = {
     operationsColumn: "操作",
     stopping: (name) => `${name} を停止しています…`,
     elapsed: ELAPSED_TEXTS.ja,
-    operationFailed: (operation, name, failure) =>
-      `コンテナ ${name} を${JA_OPERATION_NAMES[operation]}できませんでした。${FAILURE_CAUSES.ja(failure)}`,
+    operationFailed: (operation, name) =>
+      `コンテナ ${name} を${JA_OPERATION_NAMES[operation]}できませんでした。`,
+    failureCause: FAILURE_CAUSES.ja,
+    showFullFailure: "全文を表示",
+    collapseFailure: "たたむ",
     closeFailure: "閉じる",
   },
   en: {
@@ -109,15 +143,17 @@ export const CONTAINERS_MESSAGES: Record<Language, ContainersMessages> = {
     stateName: (state) => {
       switch (state.kind) {
         case "running":
-          return "Running";
+          return runningNameOf("en", state.health);
         case "paused":
           return "Paused";
         case "restarting":
           return "Restarting";
         case "created":
-          return "Created";
+          return state.exitCause === "startFailed" ? `Created (${state.exitCode})` : "Created";
         case "exited":
-          return `Exited (${state.exitCode})`;
+          return state.exitCause === "oomKilled"
+            ? `OOMKilled (${state.exitCode})`
+            : `Exited (${state.exitCode})`;
         case "removing":
           return "Removing";
         case "dead":
@@ -141,8 +177,11 @@ export const CONTAINERS_MESSAGES: Record<Language, ContainersMessages> = {
     operationsColumn: "Actions",
     stopping: (name) => `Stopping ${name}…`,
     elapsed: ELAPSED_TEXTS.en,
-    operationFailed: (operation, name, failure) =>
-      `Couldn't ${EN_OPERATION_NAMES[operation].toLowerCase()} container ${name}. ${FAILURE_CAUSES.en(failure)}`,
+    operationFailed: (operation, name) =>
+      `Couldn't ${EN_OPERATION_NAMES[operation].toLowerCase()} container ${name}.`,
+    failureCause: FAILURE_CAUSES.en,
+    showFullFailure: "Show full message",
+    collapseFailure: "Collapse",
     closeFailure: "Close",
   },
 };

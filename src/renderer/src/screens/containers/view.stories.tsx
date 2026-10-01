@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
 import type { ContainerRow } from "../../../../shared/containers";
 import type { Language } from "../../../../shared/language";
+import type { OperationFailure } from "./model";
 import { CONTAINERS_MESSAGES } from "./messages";
 import { ContainersView } from "./view";
 
@@ -11,7 +12,11 @@ const MINUTE = 60 * 1000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
 
-/** 8 つの状態を 1 つずつ持つ一覧（docs/spec/containers.md の「状態の呼び方」）。 */
+/**
+ * 8 つの状態を 1 つずつと、健康状態が starting と unhealthy の、動作中のコンテナと、
+ * 起動に失敗したコンテナと、メモリ不足で強制終了されたコンテナと、名前とイメージとポートが列に収まらないコンテナを持つ一覧
+ * （docs/spec/containers.md の「状態の呼び方」「動作中のコンテナは、健康状態で呼び分ける」「終了のわけは、確実に分かるときだけ出す」「列の幅」）。
+ */
 const ROWS: ContainerRow[] = [
   {
     id: "a1",
@@ -23,6 +28,35 @@ const ROWS: ContainerRow[] = [
       { publicPort: 8443, privatePort: 443, protocol: "tcp" },
     ],
     startedAt: NOW - 3 * MINUTE,
+  },
+  {
+    id: "i9",
+    name: "graph-1",
+    image: "neo4j:5",
+    state: { kind: "running", health: "starting" },
+    ports: [{ publicPort: 7474, privatePort: 7474, protocol: "tcp" }],
+    startedAt: NOW - 10 * 1000,
+  },
+  {
+    id: "j10",
+    name: "api-1",
+    image: "node:22",
+    state: { kind: "running", health: "unhealthy" },
+    ports: [{ publicPort: 3000, privatePort: 3000, protocol: "tcp" }],
+    startedAt: NOW - 25 * MINUTE,
+  },
+  {
+    id: "m13",
+    name: "example-organization-analytics-pipeline-worker-1",
+    image: "ghcr.io/example-organization/very-long-service:v1.2.3",
+    state: { kind: "running" },
+    ports: [
+      { publicPort: 9000, privatePort: 9000, protocol: "tcp" },
+      { publicPort: 9001, privatePort: 9001, protocol: "tcp" },
+      { publicPort: 9090, privatePort: 9090, protocol: "tcp" },
+      { publicPort: 9443, privatePort: 9443, protocol: "tcp" },
+    ],
+    startedAt: NOW - 5 * DAY,
   },
   {
     id: "b2",
@@ -40,7 +74,13 @@ const ROWS: ContainerRow[] = [
     ports: [],
     startedAt: NOW - 20 * 1000,
   },
-  { id: "d4", name: "seed-1", image: "node:22", state: { kind: "created" }, ports: [] },
+  {
+    id: "d4",
+    name: "seed-1",
+    image: "node:22",
+    state: { kind: "created", exitCode: 0 },
+    ports: [],
+  },
   {
     id: "e5",
     name: "migrate-1",
@@ -54,10 +94,26 @@ const ROWS: ContainerRow[] = [
     id: "f6",
     name: "worker-1",
     image: "node:22",
-    state: { kind: "exited", exitCode: 137 },
+    state: { kind: "exited", exitCode: 143 },
     ports: [],
     startedAt: NOW - 14 * DAY,
     finishedAt: NOW - 13 * DAY,
+  },
+  {
+    id: "k11",
+    name: "batch-1",
+    image: "node:22",
+    state: { kind: "exited", exitCode: 137, exitCause: "oomKilled" },
+    ports: [],
+    startedAt: NOW - 3 * HOUR,
+    finishedAt: NOW - 2 * HOUR,
+  },
+  {
+    id: "l12",
+    name: "proxy-1",
+    image: "nginx:1.27",
+    state: { kind: "created", exitCode: 128, exitCause: "startFailed" },
+    ports: [],
   },
   {
     id: "g7",
@@ -90,6 +146,7 @@ const meta = {
     onReload: fn(),
     onOperate: fn(),
     onDismissFailure: fn(),
+    onToggleFailureExpansion: fn(),
     onFilterTextChange: fn(),
     onHideNonRunningChange: fn(),
   },
@@ -159,6 +216,18 @@ export const Stopping: Story = {
   },
 };
 
+/** 起動の失敗のうち、エンジンが返す文が 1 行に収まらないもの（docs/spec/containers.md の「行の知らせ」）。 */
+const PORT_ALLOCATED_FAILURE: OperationFailure = {
+  operation: "start",
+  failure: {
+    kind: "expected",
+    code: "engineRejected",
+    engineMessage:
+      "failed to set up container networking: driver failed programming external connectivity on endpoint worker-1 (e7886d637117e2b34dcdf76d052f1e439bb5150d914e87e087eb8343dc3db5c5): Bind for 0.0.0.0:8080 failed: port is already allocated",
+  },
+  expanded: false,
+};
+
 export const OperationFailed: Story = {
   name: "操作に失敗した",
   args: {
@@ -171,8 +240,23 @@ export const OperationFailed: Story = {
           engineMessage:
             "cannot stop container: web-1: tried to kill container, but did not receive an exit event",
         },
+        expanded: false,
       },
-      f6: { operation: "start", failure: { kind: "expected", code: "engineUnreachable" } },
+      f6: PORT_ALLOCATED_FAILURE,
+      e5: {
+        operation: "start",
+        failure: { kind: "expected", code: "engineUnreachable" },
+        expanded: false,
+      },
+    },
+  },
+};
+
+export const OperationFailedExpanded: Story = {
+  name: "操作の失敗の全文を開いた",
+  args: {
+    failures: {
+      f6: { ...PORT_ALLOCATED_FAILURE, expanded: true },
     },
   },
 };

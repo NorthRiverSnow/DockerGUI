@@ -143,8 +143,19 @@ describe("useContainersController の操作", () => {
 
     expect(hook.result.current.state.running).toEqual({});
     expect(hook.result.current.state.failures).toEqual({
-      "id-web-1": { operation: "stop", failure },
+      "id-web-1": { operation: "stop", failure, expanded: false },
     });
+  });
+
+  it("失敗の全文を開くと、行の失敗を開いた状態にする", async () => {
+    const { fake, hook } = controllerWith(CONNECTED);
+    await act(async () => fake.answerContainers({ ok: true, value: ROWS }));
+    act(() => hook.result.current.operate("stop", ["id-web-1"]));
+    await act(async () => fake.answerOperation({ ok: false, failure: { kind: "unexpected" } }));
+
+    act(() => hook.result.current.toggleFailureExpansion("id-web-1"));
+
+    expect(hook.result.current.state.failures["id-web-1"]?.expanded).toBe(true);
   });
 
   it("失敗を閉じると、行の失敗を消す", async () => {

@@ -276,10 +276,10 @@ describe("ContainersView の操作", () => {
 
   it("応答を待っている操作のボタンは押せず、ほかの操作のボタンは押せる", () => {
     renderView({ kind: "loaded", rows: [rowOf("web-1", { kind: "running" })] }, undefined, {
-      running: { "id-web-1": [{ operation: "restart", startedAt: NOW }] },
+      running: { "id-web-1": [{ operation: "pause", startedAt: NOW }] },
     });
 
-    expect(screen.getByRole("button", { name: "再起動" }).hasAttribute("disabled")).toBe(true);
+    expect(screen.getByRole("button", { name: "一時停止" }).hasAttribute("disabled")).toBe(true);
     expect(screen.getByRole("button", { name: "停止" }).hasAttribute("disabled")).toBe(false);
   });
 
@@ -320,6 +320,20 @@ describe("ContainersView の操作", () => {
   ])("%s のコンテナの削除の応答を待っている間は、停止処理中の知らせを出す", (_label, state) => {
     renderView({ kind: "loaded", rows: [rowOf("web-1", state)] }, undefined, {
       running: { "id-web-1": [{ operation: "remove", startedAt: NOW - 4000 }] },
+    });
+
+    const [row, notice] = screen.getAllByRole("row").slice(1);
+    expect(row && within(row).queryAllByRole("button")).toEqual([]);
+    expect(notice?.textContent).toBe("web-1 を停止しています… 経過 00:04強制停止");
+  });
+
+  it.each<[string, ContainerState]>([
+    ["動作中", { kind: "running" }],
+    // why: 再起動の途中で、停止が終わってから起動が始まるまで、状態が exited になる。
+    ["終了（コード 137）", { kind: "exited", exitCode: 137 }],
+  ])("%s のコンテナの再起動の応答を待っている間は、停止処理中の知らせを出す", (_label, state) => {
+    renderView({ kind: "loaded", rows: [rowOf("web-1", state)] }, undefined, {
+      running: { "id-web-1": [{ operation: "restart", startedAt: NOW - 4000 }] },
     });
 
     const [row, notice] = screen.getAllByRole("row").slice(1);

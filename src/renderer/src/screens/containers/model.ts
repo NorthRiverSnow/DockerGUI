@@ -269,7 +269,7 @@ function isForceStoppable(state: ContainerState): boolean {
   return state.kind === "running" || state.kind === "paused";
 }
 
-/** 停止処理中なら、停止を待っている操作を返す（docs/spec/containers.md の「停止は待たされる」「削除の確認」）。 */
+/** 停止処理中なら、停止処理中の知らせを出す操作を返す（docs/spec/containers.md の「停止は待たされる」「削除の確認」「再起動は、停止してから起動する」）。 */
 export function stoppingOf(
   running: RunningOperation[] | undefined,
   state: ContainerState,
@@ -277,6 +277,7 @@ export function stoppingOf(
   return running?.find(
     (candidate) =>
       candidate.operation === "stop" ||
+      candidate.operation === "restart" ||
       (candidate.operation === "remove" && isForceStoppable(state)),
   );
 }

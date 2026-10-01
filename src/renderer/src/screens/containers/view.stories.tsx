@@ -210,7 +210,6 @@ export const OperationRunning: Story = {
   name: "操作の応答を待っている",
   args: {
     running: {
-      a1: [{ operation: "restart", startedAt: NOW - 2000 }],
       e5: [{ operation: "start", startedAt: NOW - 1000 }],
     },
   },
@@ -221,6 +220,7 @@ export const Stopping: Story = {
   args: {
     running: {
       a1: [{ operation: "stop", startedAt: NOW - 4000 }],
+      j10: [{ operation: "restart", startedAt: NOW - 2000 }],
       b2: [
         { operation: "stop", startedAt: NOW - 7000 },
         { operation: "kill", startedAt: NOW - 1000 },

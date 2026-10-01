@@ -64,6 +64,7 @@ export type RowOperationProps = {
   onOperate: (operation: ContainerOperation, ids: string[]) => void;
   onDismissFailure: (id: string) => void;
   onToggleFailureExpansion: (id: string) => void;
+  onRequestRemoval: (id: string) => void;
 };
 
 /** コンテナの一覧の表。rows は、出す順に並べた行。 */
@@ -123,6 +124,7 @@ export function ContainerTable(
           onOperate={props.onOperate}
           onDismissFailure={props.onDismissFailure}
           onToggleFailureExpansion={props.onToggleFailureExpansion}
+          onRequestRemoval={props.onRequestRemoval}
         />
       ))}
     </Table>
@@ -151,10 +153,11 @@ function ContainerTableRows(props: {
   onOperate: (operation: ContainerOperation, ids: string[]) => void;
   onDismissFailure: (id: string) => void;
   onToggleFailureExpansion: (id: string) => void;
+  onRequestRemoval: (id: string) => void;
 }) {
   const { row, running, failure, messages } = props;
   const shownTime = shownTimeOf(row);
-  const stopping = stoppingOf(running);
+  const stopping = stoppingOf(running, row.state);
   return (
     <Table.Tbody className={classes.container}>
       <Table.Tr>
@@ -186,6 +189,7 @@ function ContainerTableRows(props: {
               running={running}
               messages={messages}
               onOperate={props.onOperate}
+              onRequestRemoval={props.onRequestRemoval}
             />
           )}
         </Table.Td>

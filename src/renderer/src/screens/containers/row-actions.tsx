@@ -3,6 +3,7 @@ import {
   PauseIcon,
   PlayIcon,
   StopIcon,
+  TrashIcon,
   type Icon,
 } from "@phosphor-icons/react";
 import { ActionIcon, Group, Tooltip } from "@mantine/core";
@@ -30,7 +31,6 @@ type OperationLook = { icon: Icon; color: IconColor };
 /**
  * 行の操作のボタンのアイコンと色（docs/spec/containers.md の「操作」）。
  * 強制停止は、停止処理中の知らせの文のボタンにするので持たない。
- * TODO: 削除のボタンを追加するステップ 6c で、削除のアイコンと色を追加する。
  */
 const OPERATION_LOOKS: Partial<Record<ContainerOperation, OperationLook>> = {
   start: { icon: PlayIcon, color: "green" },
@@ -38,6 +38,7 @@ const OPERATION_LOOKS: Partial<Record<ContainerOperation, OperationLook>> = {
   unpause: { icon: PlayIcon, color: "green" },
   stop: { icon: StopIcon, color: "red" },
   restart: { icon: ArrowClockwiseIcon, color: "blue" },
+  remove: { icon: TrashIcon, color: "red" },
 };
 
 /** 行の右端の操作のボタン。その状態で押せる操作だけを出す（docs/spec/common.md の「その状態で使えないボタンは、出さない」）。 */
@@ -46,6 +47,8 @@ export function RowActions(props: {
   running: RunningOperation[] | undefined;
   messages: ContainersMessages;
   onOperate: (operation: ContainerOperation, ids: string[]) => void;
+  /** ［削除］ を押したときに呼ぶ。削除は、確認の画面を挟む（docs/spec/containers.md の「操作」）。 */
+  onRequestRemoval: (id: string) => void;
 }) {
   const { row, running, messages } = props;
   return (
@@ -60,7 +63,11 @@ export function RowActions(props: {
               color="gray"
               aria-label={messages.operations[operation]}
               loading={isOperationRunning(running, operation)}
-              onClick={() => props.onOperate(operation, [row.id])}
+              onClick={() =>
+                operation === "remove"
+                  ? props.onRequestRemoval(row.id)
+                  : props.onOperate(operation, [row.id])
+              }
             >
               {look && (
                 <look.icon

@@ -95,7 +95,7 @@ async function requestWithoutBody(
     return response;
   }
   const { status, body } = response.value;
-  // why: エンジンは、起動しているコンテナの起動や、止まっているコンテナの停止に、304 を返す。
+  // why: エンジンは、動作中のコンテナの起動や、終了したコンテナの停止に、304 を返す。
   // 要求した状態にはなっているので、成功として扱う。
   return isSuccessStatus(status) || status === 304
     ? { ok: true, value: undefined }

@@ -16,7 +16,7 @@ export function ContainersScreen(props: {
   language: Language;
   filter: ContainersFilter;
   onFilterTextChange: (text: string) => void;
-  onHideNonRunningChange: (hide: boolean) => void;
+  onHideExitedChange: (hide: boolean) => void;
 }) {
   const controller = useContainersController({ api: props.api, connection: props.connection });
   return (
@@ -31,8 +31,12 @@ export function ContainersScreen(props: {
       onOperate={controller.operate}
       onDismissFailure={controller.dismissFailure}
       onToggleFailureExpansion={controller.toggleFailureExpansion}
+      removalConfirmation={controller.state.removalConfirmation}
+      onRequestRemoval={controller.requestRemoval}
+      onCancelRemoval={controller.cancelRemoval}
+      onConfirmRemoval={controller.confirmRemoval}
       onFilterTextChange={props.onFilterTextChange}
-      onHideNonRunningChange={props.onHideNonRunningChange}
+      onHideExitedChange={props.onHideExitedChange}
     />
   );
 }

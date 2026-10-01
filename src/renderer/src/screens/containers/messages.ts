@@ -7,9 +7,11 @@ import type {
 } from "../../../../shared/containers";
 import type { Language } from "../../../../shared/language";
 import type { Failure } from "../../../../shared/result";
+import { CONFIRM_MESSAGES } from "../../messages/confirm";
 import { FAILURE_CAUSES } from "../../messages/failure";
 import { NOT_CONNECTED_MESSAGES, type NotConnectedMessages } from "../../messages/not-connected";
 import { ELAPSED_TEXTS } from "../../messages/waiting";
+import { isStarted, type StartedState } from "./model";
 
 export type ContainersMessages = {
   columns: { state: string; name: string; image: string; ports: string; time: string };
@@ -20,7 +22,7 @@ export type ContainersMessages = {
   /** 1 件も無いとき（docs/spec/containers.md の「1 件も無いとき」）。 */
   empty: { title: string; hint: string };
   notConnected: NotConnectedMessages;
-  filter: { placeholder: string; hideNonRunning: string; noMatch: string };
+  filter: { placeholder: string; hideExited: string; noMatch: string };
   /** 読み込めなかったとき（docs/spec/common.md の「失敗の見せ方」）。 */
   loadFailed: (failure: Failure) => string;
   reload: string;
@@ -41,6 +43,15 @@ export type ContainersMessages = {
   collapseFailure: string;
   /** 失敗の知らせを閉じるボタンの名前。 */
   closeFailure: string;
+  /** 削除の確認の画面（docs/spec/containers.md の「削除の確認」）。 */
+  removalConfirmation: {
+    /** 画面を読み上げる機能に渡す、確認の画面の名前。 */
+    label: string;
+    cancel: string;
+    confirm: string;
+    /** 確認する文（docs/spec/containers.md の「削除の確認」）。 */
+    lines: (name: string, state: ContainerState) => string[];
+  };
 };
 
 /** 公開しているポートの対応。どの言語でも同じ形で出す（例: 8080 → 80）。 */
@@ -90,29 +101,36 @@ function runningNameOf(language: Language, health: ContainerHealth | undefined):
   return RUNNING_NAMES[language][health ?? "healthy"];
 }
 
+function jaStateNameOf(state: ContainerState): string {
+  switch (state.kind) {
+    case "running":
+      return runningNameOf("ja", state.health);
+    case "paused":
+      return "一時停止中";
+    case "restarting":
+      return "再起動中";
+    case "created":
+      return state.exitCause === "startFailed" ? `起動失敗（コード ${state.exitCode}）` : "未起動";
+    case "exited":
+      return jaExitedNameOf(state.exitCode, state.exitCause);
+    case "removing":
+      return "削除中";
+    case "dead":
+      return "削除失敗";
+  }
+}
+
+/** 起動しているコンテナの状態の、英語の文の中での呼び方。 */
+const EN_STARTED_STATE_WORDS: Record<StartedState["kind"], string> = {
+  running: "running",
+  paused: "paused",
+  restarting: "restarting",
+};
+
 export const CONTAINERS_MESSAGES: Record<Language, ContainersMessages> = {
   ja: {
     columns: { state: "状態", name: "名前", image: "イメージ", ports: "ポート", time: "時間" },
-    stateName: (state) => {
-      switch (state.kind) {
-        case "running":
-          return runningNameOf("ja", state.health);
-        case "paused":
-          return "一時停止中";
-        case "restarting":
-          return "再起動中";
-        case "created":
-          return state.exitCause === "startFailed"
-            ? `起動失敗（コード ${state.exitCode}）`
-            : "未起動";
-        case "exited":
-          return jaExitedNameOf(state.exitCode, state.exitCause);
-        case "removing":
-          return "削除中";
-        case "dead":
-          return "削除失敗";
-      }
-    },
+    stateName: jaStateNameOf,
     elapsedSince: (time, now) => relativeTimeOf("ja", time, now),
     empty: {
       title: "コンテナが 1 件もありません",
@@ -121,7 +139,7 @@ export const CONTAINERS_MESSAGES: Record<Language, ContainersMessages> = {
     notConnected: NOT_CONNECTED_MESSAGES.ja,
     filter: {
       placeholder: "名前かイメージで絞り込む",
-      hideNonRunning: "動作中でないコンテナを隠す",
+      hideExited: "終了したコンテナを隠す",
       noMatch: "絞り込みに当てはまるコンテナがありません",
     },
     loadFailed: (failure) => `コンテナの一覧を読み込めませんでした。${FAILURE_CAUSES.ja(failure)}`,
@@ -136,6 +154,18 @@ export const CONTAINERS_MESSAGES: Record<Language, ContainersMessages> = {
     showFullFailure: "全文を表示",
     collapseFailure: "たたむ",
     closeFailure: "閉じる",
+    removalConfirmation: {
+      label: "コンテナの削除の確認",
+      cancel: CONFIRM_MESSAGES.ja.cancel,
+      confirm: "削除する",
+      lines: (name, state) => [
+        `コンテナ ${name} を削除します。`,
+        ...(isStarted(state)
+          ? [`${name} は${jaStateNameOf(state)}なので、停止してから削除します。`]
+          : []),
+        "元に戻せません。",
+      ],
+    },
   },
   en: {
     columns: { state: "State", name: "Name", image: "Image", ports: "Ports", time: "Time" },
@@ -168,7 +198,7 @@ export const CONTAINERS_MESSAGES: Record<Language, ContainersMessages> = {
     notConnected: NOT_CONNECTED_MESSAGES.en,
     filter: {
       placeholder: "Filter by name or image",
-      hideNonRunning: "Hide containers that are not running",
+      hideExited: "Hide exited containers",
       noMatch: "No containers match the filter",
     },
     loadFailed: (failure) => `Couldn't load the containers. ${FAILURE_CAUSES.en(failure)}`,
@@ -183,6 +213,20 @@ export const CONTAINERS_MESSAGES: Record<Language, ContainersMessages> = {
     showFullFailure: "Show full message",
     collapseFailure: "Collapse",
     closeFailure: "Close",
+    removalConfirmation: {
+      label: "Confirm removing the container",
+      cancel: CONFIRM_MESSAGES.en.cancel,
+      confirm: "Remove",
+      lines: (name, state) => [
+        `Container ${name} will be removed.`,
+        ...(isStarted(state)
+          ? [
+              `${name} is ${EN_STARTED_STATE_WORDS[state.kind]}, so it will be stopped and then removed.`,
+            ]
+          : []),
+        "This can't be undone.",
+      ],
+    },
   },
 };
 

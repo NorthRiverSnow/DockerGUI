@@ -51,14 +51,14 @@ export function inspectContainer(
   return client.get(`/containers/${encodeURIComponent(id)}/json`, containerInspectSchema);
 }
 
-/** コンテナを起動する。起動しているコンテナでは、何もせずに成功を返す。 */
+/** コンテナを起動する。動作中のコンテナでは、何もせずに成功を返す。 */
 export function startContainer(client: EngineClient, id: string): Promise<Result<undefined>> {
   return client.post(`/containers/${encodeURIComponent(id)}/start`);
 }
 
 /**
  * コンテナを停止する。エンジンは SIGTERM を送り、待ち時間（Linux のコンテナでは既定で 10 秒）が過ぎたら SIGKILL を送る。
- * コンテナが終了するまで返らない。止まっているコンテナでは、何もせずに成功を返す。
+ * コンテナが終了するまで返らない。終了したコンテナでは、何もせずに成功を返す。
  */
 export function stopContainer(client: EngineClient, id: string): Promise<Result<undefined>> {
   return client.post(`/containers/${encodeURIComponent(id)}/stop`);

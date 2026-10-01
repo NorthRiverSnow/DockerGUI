@@ -169,6 +169,41 @@ describe("useContainersController の操作", () => {
     expect(hook.result.current.state.failures).toEqual({});
   });
 
+  it("削除を頼むと、確認の画面を開き、main の窓口には何も送らない", async () => {
+    const { fake, hook } = controllerWith(CONNECTED);
+    await act(async () => fake.answerContainers({ ok: true, value: ROWS }));
+
+    act(() => hook.result.current.requestRemoval("id-web-1"));
+
+    expect(hook.result.current.state.removalConfirmation).toEqual({ row: ROWS[0], opened: true });
+    expect(fake.calls.filter((call) => call.startsWith("removeContainers"))).toEqual([]);
+  });
+
+  it("削除をやめると、確認の画面を閉じ、main の窓口には何も送らない", async () => {
+    const { fake, hook } = controllerWith(CONNECTED);
+    await act(async () => fake.answerContainers({ ok: true, value: ROWS }));
+    act(() => hook.result.current.requestRemoval("id-web-1"));
+
+    act(() => hook.result.current.cancelRemoval());
+
+    expect(hook.result.current.state.removalConfirmation?.opened).toBe(false);
+    expect(fake.calls.filter((call) => call.startsWith("removeContainers"))).toEqual([]);
+  });
+
+  it("削除を確定すると、確認の画面を閉じ、main の窓口にコンテナの ID を送る", async () => {
+    const { fake, hook } = controllerWith(CONNECTED);
+    await act(async () => fake.answerContainers({ ok: true, value: ROWS }));
+    act(() => hook.result.current.requestRemoval("id-web-1"));
+
+    act(() => hook.result.current.confirmRemoval("id-web-1"));
+
+    expect(hook.result.current.state.removalConfirmation?.opened).toBe(false);
+    expect(hook.result.current.state.running["id-web-1"]?.map((item) => item.operation)).toEqual([
+      "remove",
+    ]);
+    expect(fake.calls).toContain("removeContainers:id-web-1");
+  });
+
   it("応答を待っている間は、経過した時間を出すために、いまの時刻を 1 秒ごとに進める", () => {
     vi.useFakeTimers();
     try {

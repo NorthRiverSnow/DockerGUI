@@ -151,6 +151,56 @@ describe("failureCause", () => {
   });
 });
 
+describe("removalConfirmation", () => {
+  it("確認の画面の名前とボタンの名前は、言語ごとの文にする", () => {
+    const { lines: _ja, ...ja } = CONTAINERS_MESSAGES.ja.removalConfirmation;
+    const { lines: _en, ...en } = CONTAINERS_MESSAGES.en.removalConfirmation;
+
+    expect(ja).toEqual({ label: "コンテナの削除の確認", cancel: "やめる", confirm: "削除する" });
+    expect(en).toEqual({
+      label: "Confirm removing the container",
+      cancel: "Cancel",
+      confirm: "Remove",
+    });
+  });
+
+  it("削除の前に停止しない状態なら、削除することと、元に戻せないことを並べる", () => {
+    const state: ContainerState = { kind: "exited", exitCode: 0 };
+
+    expect(CONTAINERS_MESSAGES.ja.removalConfirmation.lines("web-1", state)).toEqual([
+      "コンテナ web-1 を削除します。",
+      "元に戻せません。",
+    ]);
+    expect(CONTAINERS_MESSAGES.en.removalConfirmation.lines("web-1", state)).toEqual([
+      "Container web-1 will be removed.",
+      "This can't be undone.",
+    ]);
+  });
+
+  const stoppedCases: { state: ContainerState; ja: string; en: string }[] = [
+    { state: { kind: "running" }, ja: "動作中", en: "running" },
+    { state: { kind: "running", health: "starting" }, ja: "起動中", en: "running" },
+    { state: { kind: "paused" }, ja: "一時停止中", en: "paused" },
+    { state: { kind: "restarting" }, ja: "再起動中", en: "restarting" },
+  ];
+
+  it.each(stoppedCases)(
+    "$ja のコンテナなら、行の状態の呼び方で、停止してから削除することも入れる",
+    ({ state, ja, en }) => {
+      expect(CONTAINERS_MESSAGES.ja.removalConfirmation.lines("web-1", state)).toEqual([
+        "コンテナ web-1 を削除します。",
+        `web-1 は${ja}なので、停止してから削除します。`,
+        "元に戻せません。",
+      ]);
+      expect(CONTAINERS_MESSAGES.en.removalConfirmation.lines("web-1", state)).toEqual([
+        "Container web-1 will be removed.",
+        `web-1 is ${en}, so it will be stopped and then removed.`,
+        "This can't be undone.",
+      ]);
+    },
+  );
+});
+
 describe("stopping", () => {
   it("停止しているコンテナの名前を入れる", () => {
     expect(CONTAINERS_MESSAGES.ja.stopping("web-1")).toBe("web-1 を停止しています…");

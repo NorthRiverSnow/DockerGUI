@@ -36,6 +36,12 @@ export function useContainersController(deps: {
   operate: (operation: ContainerOperation, ids: string[]) => void;
   dismissFailure: (id: string) => void;
   toggleFailureExpansion: (id: string) => void;
+  /** id のコンテナの、削除の確認の画面を開く。 */
+  requestRemoval: (id: string) => void;
+  /** 削除の確認の画面を閉じる。削除しない。 */
+  cancelRemoval: () => void;
+  /** 削除の確認の画面を閉じて、id のコンテナを削除する。 */
+  confirmRemoval: (id: string) => void;
 } {
   const [state, dispatch] = useReducer(nextContainersState, INITIAL_CONTAINERS_STATE);
   const [now, setNow] = useState(Date.now);
@@ -113,5 +119,30 @@ export function useContainersController(deps: {
     [],
   );
 
-  return { state, now, reload, operate, dismissFailure, toggleFailureExpansion };
+  const requestRemoval = useCallback(
+    (id: string) => dispatch({ kind: "removalRequested", id }),
+    [],
+  );
+
+  const cancelRemoval = useCallback(() => dispatch({ kind: "removalConfirmationClosed" }), []);
+
+  const confirmRemoval = useCallback(
+    (id: string) => {
+      dispatch({ kind: "removalConfirmationClosed" });
+      operate("remove", [id]);
+    },
+    [operate],
+  );
+
+  return {
+    state,
+    now,
+    reload,
+    operate,
+    dismissFailure,
+    toggleFailureExpansion,
+    requestRemoval,
+    cancelRemoval,
+    confirmRemoval,
+  };
 }

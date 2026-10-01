@@ -29,11 +29,11 @@ export function App(props: { api: MainApi }) {
             language={language}
             filter={{
               text: controller.state.filterText,
-              hideNonRunning: controller.state.screenSettings?.hideNonRunningContainers ?? false,
+              hideExited: controller.state.screenSettings?.hideExitedContainers ?? false,
             }}
             onFilterTextChange={controller.changeFilter}
-            onHideNonRunningChange={(hide) =>
-              controller.changeScreenSetting({ name: "hideNonRunningContainers", value: hide })
+            onHideExitedChange={(hide) =>
+              controller.changeScreenSetting({ name: "hideExitedContainers", value: hide })
             }
           />
         ) : undefined

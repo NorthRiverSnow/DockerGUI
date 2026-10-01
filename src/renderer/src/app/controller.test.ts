@@ -46,12 +46,10 @@ describe("useAppController", () => {
     const { result } = renderHook(() => useAppController({ api: fake.api }));
     await act(async () => {});
 
-    act(() =>
-      result.current.changeScreenSetting({ name: "hideNonRunningContainers", value: true }),
-    );
+    act(() => result.current.changeScreenSetting({ name: "hideExitedContainers", value: true }));
 
-    expect(result.current.state.screenSettings).toEqual({ hideNonRunningContainers: true });
-    expect(fake.calls).toContain("setScreenSetting:hideNonRunningContainers=true");
+    expect(result.current.state.screenSettings).toEqual({ hideExitedContainers: true });
+    expect(fake.calls).toContain("setScreenSetting:hideExitedContainers=true");
   });
 
   it("画面の言語が届いても、画面ごとの設定が届くまでは、描き終えたことを知らせない", async () => {

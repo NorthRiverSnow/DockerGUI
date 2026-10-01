@@ -29,7 +29,7 @@ describe("openSettingsStore", () => {
     expect(openSettingsStore(filePath).current()).toEqual({
       colorScheme: undefined,
       language: "auto",
-      screenSettings: { hideNonRunningContainers: false },
+      screenSettings: { hideExitedContainers: false },
     });
   });
 
@@ -39,7 +39,7 @@ describe("openSettingsStore", () => {
     expect(openSettingsStore(filePath).current()).toEqual({
       colorScheme: "dark",
       language: "auto",
-      screenSettings: { hideNonRunningContainers: false },
+      screenSettings: { hideExitedContainers: false },
     });
   });
 
@@ -51,7 +51,7 @@ describe("openSettingsStore", () => {
     expect(store.current()).toEqual({
       colorScheme: "light",
       language: "auto",
-      screenSettings: { hideNonRunningContainers: false },
+      screenSettings: { hideExitedContainers: false },
     });
   });
 
@@ -61,7 +61,7 @@ describe("openSettingsStore", () => {
     expect(openSettingsStore(filePath).current()).toEqual({
       colorScheme: undefined,
       language: "auto",
-      screenSettings: { hideNonRunningContainers: false },
+      screenSettings: { hideExitedContainers: false },
     });
   });
 
@@ -72,18 +72,18 @@ describe("openSettingsStore", () => {
   });
 
   it("変えた画面ごとの設定を設定ファイルに書き、開き直しても同じ設定を読む", () => {
-    openSettingsStore(filePath).update({ screenSettings: { hideNonRunningContainers: true } });
+    openSettingsStore(filePath).update({ screenSettings: { hideExitedContainers: true } });
 
     expect(openSettingsStore(filePath).current().screenSettings).toEqual({
-      hideNonRunningContainers: true,
+      hideExitedContainers: true,
     });
   });
 
   it("画面ごとの設定の値が正しくなければ、その設定だけを既定の値にする", () => {
-    writeStored('{"screenSettings":{"hideNonRunningContainers":"yes"}}');
+    writeStored('{"screenSettings":{"hideExitedContainers":"yes"}}');
 
     expect(openSettingsStore(filePath).current().screenSettings).toEqual({
-      hideNonRunningContainers: false,
+      hideExitedContainers: false,
     });
   });
 
@@ -103,7 +103,7 @@ describe("openSettingsStore", () => {
     expect(store.current()).toEqual({
       colorScheme: undefined,
       language: "auto",
-      screenSettings: { hideNonRunningContainers: false },
+      screenSettings: { hideExitedContainers: false },
     });
     expect(readFileSync(`${filePath}.broken`, "utf8")).toBe("{ broken");
     expect(existsSync(filePath)).toBe(false);

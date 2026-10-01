@@ -133,6 +133,15 @@ const ROWS: ContainerRow[] = [
   },
 ];
 
+/** ROWS の中の、id のコンテナの行。 */
+function storyRowOf(id: string): ContainerRow {
+  const row = ROWS.find((candidate) => candidate.id === id);
+  if (!row) {
+    throw new Error(`ROWS に ${id} の行が無い`);
+  }
+  return row;
+}
+
 const meta = {
   title: "コンテナ/一覧",
   component: ContainersView,
@@ -140,15 +149,19 @@ const meta = {
     list: { kind: "loaded", rows: ROWS },
     now: NOW,
     messages: CONTAINERS_MESSAGES.ja,
-    filter: { text: "", hideNonRunning: false },
+    filter: { text: "", hideExited: false },
     running: {},
     failures: {},
+    removalConfirmation: undefined,
     onReload: fn(),
     onOperate: fn(),
     onDismissFailure: fn(),
     onToggleFailureExpansion: fn(),
+    onRequestRemoval: fn(),
+    onCancelRemoval: fn(),
+    onConfirmRemoval: fn(),
     onFilterTextChange: fn(),
-    onHideNonRunningChange: fn(),
+    onHideExitedChange: fn(),
   },
   // why: 画面の言語の文は、上の帯で選んだ言語で render が上書きする。Controls で書き換えても効かないので、欄に出さない。
   argTypes: { messages: { table: { disable: true } } },
@@ -166,17 +179,17 @@ export const Loaded: Story = { name: "読み込み済み（すべての状態）
 
 export const Filtered: Story = {
   name: "名前かイメージで絞り込んだ",
-  args: { filter: { text: "node", hideNonRunning: false } },
+  args: { filter: { text: "node", hideExited: false } },
 };
 
-export const HideNonRunning: Story = {
-  name: "動作中でないコンテナを隠した",
-  args: { filter: { text: "", hideNonRunning: true } },
+export const HideExited: Story = {
+  name: "終了したコンテナを隠した",
+  args: { filter: { text: "", hideExited: true } },
 };
 
 export const NoMatch: Story = {
   name: "絞り込みに当てはまる行が無い",
-  args: { filter: { text: "mysql", hideNonRunning: false } },
+  args: { filter: { text: "mysql", hideExited: false } },
 };
 
 export const Empty: Story = {
@@ -214,6 +227,28 @@ export const Stopping: Story = {
       ],
     },
   },
+};
+
+/** 動作中・一時停止中・再起動中のコンテナの削除（docs/spec/containers.md の「削除の確認」）。 */
+export const RemovalRunning: Story = {
+  name: "削除の応答を待っている",
+  args: {
+    running: {
+      a1: [{ operation: "remove", startedAt: NOW - 3000 }],
+      b2: [{ operation: "remove", startedAt: NOW - 5000 }],
+      c3: [{ operation: "remove", startedAt: NOW - 1000 }],
+    },
+  },
+};
+
+export const RemovalConfirmation: Story = {
+  name: "削除の確認",
+  args: { removalConfirmation: { row: storyRowOf("e5"), opened: true } },
+};
+
+export const RemovalConfirmationOfRunning: Story = {
+  name: "動作中のコンテナの削除の確認",
+  args: { removalConfirmation: { row: storyRowOf("a1"), opened: true } },
 };
 
 /** 起動の失敗のうち、エンジンが返す文が 1 行に収まらないもの（docs/spec/containers.md の「行の知らせ」）。 */

@@ -207,7 +207,8 @@ Model を「状態 + 出来事 → 次の状態」の純関数にしてあるの
 
 ### 確認の画面（`confirm-dialog.tsx`）
 
-**Mantine の `Modal` を、組み立て式の部品（`Modal.Root`、`Modal.Content` など）で使う。** 確認の画面を開いているかどうかは、画面の Model が持つ。
+**Mantine の `Modal` を、組み立て式の部品（`Modal.Root`、`Modal.Content` など）で使う。** 確認の画面を開いているかどうかと、確認する対象は、画面の Model が持つ。
+**確認の画面を閉じても、Model は確認する対象を残す。** 次に確認の画面を開くときに、新しい対象に入れ替える。
 
 | 決めごと | 作り |
 | --- | --- |
@@ -215,6 +216,10 @@ Model を「状態 + 出来事 → 次の状態」の純関数にしてあるの
 | 最初のフォーカスは ［やめる］ | ［やめる］ に `data-autofocus` を付ける。付けないと、`Modal` は中の最初のボタンにフォーカスを当てる（Mantine の文書の「Modal」） |
 | Esc と、確認の画面の外を押したとき | `Modal` の既定のまま、確認の画面を閉じる（`closeOnEscape`、`closeOnClickOutside`）。確認の画面が閉じたときは、［やめる］ と同じ `onCancel` を呼ぶ |
 | 実行のボタンの色 | 取り返しのつかない操作なので赤（`red.9`）。白い文との差は、文の基準の 4.5:1 を満たす（「色と背景のコントラスト」） |
+
+**why: 閉じても、確認する対象を残す。** `Modal` は、閉じる動き（既定で 0.2 秒）の間も、渡された文を描く
+（Mantine 9.6.2 の `esm/components/Modal/ModalRoot.mjs` の既定値と、`esm/components/ModalBase/ModalBaseContent.mjs` で確認）。
+対象を消すと、確認の画面に渡す文が閉じる途中で空になり、確認の画面が縮みながら消える。
 
 **why: `Modal` を組み立て式で使う。** まとめた形の `Modal` は、渡した属性を外側の要素に付ける。`aria-label` は、`role="dialog"` の要素（`Modal.Content`）に付ける必要がある
 （Mantine 9.6.2 の `esm/components/ModalBase/ModalBaseContent.mjs` で確認。`role="dialog"` を付けた要素に、`Modal.Content` に渡した属性も渡す）。

@@ -75,8 +75,8 @@ function screenSettingsOf(stored: unknown): ScreenSettings {
   const parsed = screenSettingsSchema.partial().safeParse(stored);
   const settings = parsed.success ? parsed.data : {};
   return {
-    hideNonRunningContainers:
-      settings.hideNonRunningContainers ?? DEFAULT_SCREEN_SETTINGS.hideNonRunningContainers,
+    hideExitedContainers:
+      settings.hideExitedContainers ?? DEFAULT_SCREEN_SETTINGS.hideExitedContainers,
   };
 }
 

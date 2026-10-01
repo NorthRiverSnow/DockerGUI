@@ -3,12 +3,19 @@ import { Checkbox, Group, Stack, Text, TextInput } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import { useRef } from "react";
 import type { ContainerRow } from "../../../../shared/containers";
+import { ConfirmDialog } from "../../components/confirm-dialog";
 import { ContainerTable, type RowOperationProps } from "./container-table";
 import type { ContainersMessages } from "./messages";
-import { visibleRowsOf, type ContainersFilter } from "./model";
+import { visibleRowsOf, type ContainersFilter, type RemovalConfirmation } from "./model";
 import { ICON_SIZE } from "../../components/icon-size";
 
-/** 絞り込みの見出しと、絞り込んだ一覧。 */
+export type RemovalConfirmationProps = {
+  removalConfirmation: RemovalConfirmation | undefined;
+  onCancelRemoval: () => void;
+  onConfirmRemoval: (id: string) => void;
+};
+
+/** 絞り込みの見出しと、絞り込んだ一覧と、削除の確認の画面。 */
 export function LoadedList(
   props: {
     rows: ContainerRow[];
@@ -16,10 +23,11 @@ export function LoadedList(
     now: number;
     messages: ContainersMessages;
     onFilterTextChange: (text: string) => void;
-    onHideNonRunningChange: (hide: boolean) => void;
-  } & RowOperationProps,
+    onHideExitedChange: (hide: boolean) => void;
+  } & RowOperationProps &
+    RemovalConfirmationProps,
 ) {
-  const { messages } = props;
+  const { messages, removalConfirmation } = props;
   const filterInput = useRef<HTMLInputElement>(null);
   // why: Cmd/Ctrl + F で、絞り込みの入力に移る（docs/spec/common.md の「キーボードの操作」）。mod は、macOS では Cmd、ほかでは Ctrl。
   useHotkeys([["mod+F", () => filterInput.current?.focus()]]);
@@ -39,9 +47,9 @@ export function LoadedList(
         />
         <Checkbox
           size="xs"
-          label={messages.filter.hideNonRunning}
-          checked={props.filter.hideNonRunning}
-          onChange={(event) => props.onHideNonRunningChange(event.currentTarget.checked)}
+          label={messages.filter.hideExited}
+          checked={props.filter.hideExited}
+          onChange={(event) => props.onHideExitedChange(event.currentTarget.checked)}
         />
       </Group>
       {rows.length === 0 ? (
@@ -56,8 +64,25 @@ export function LoadedList(
           onOperate={props.onOperate}
           onDismissFailure={props.onDismissFailure}
           onToggleFailureExpansion={props.onToggleFailureExpansion}
+          onRequestRemoval={props.onRequestRemoval}
         />
       )}
+      <ConfirmDialog
+        opened={removalConfirmation?.opened ?? false}
+        label={messages.removalConfirmation.label}
+        lines={
+          removalConfirmation
+            ? messages.removalConfirmation.lines(
+                removalConfirmation.row.name,
+                removalConfirmation.row.state,
+              )
+            : []
+        }
+        cancelLabel={messages.removalConfirmation.cancel}
+        confirmLabel={messages.removalConfirmation.confirm}
+        onCancel={props.onCancelRemoval}
+        onConfirm={() => removalConfirmation && props.onConfirmRemoval(removalConfirmation.row.id)}
+      />
     </Stack>
   );
 }

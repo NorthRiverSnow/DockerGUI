@@ -5,7 +5,13 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vite-plus/test";
 import type { ContainerState } from "../../../../shared/containers";
 import { THEME } from "../../theme";
 import { CONTAINERS_MESSAGES } from "./messages";
-import type { ContainersFilter, ContainersList, OperationFailure, RunningOperation } from "./model";
+import type {
+  ContainersFilter,
+  ContainersList,
+  OperationFailure,
+  RemovalConfirmation,
+  RunningOperation,
+} from "./model";
 import { rowOf } from "./rows.test-helper";
 import { ContainersView } from "./view";
 
@@ -50,22 +56,27 @@ function failureOf(engineMessage: string, expanded: boolean): OperationFailure {
 /** filter を書かなければ、絞り込まない。operations を書かなければ、応答を待っている操作も失敗も無い。 */
 function renderView(
   list: ContainersList,
-  filter: ContainersFilter = { text: "", hideNonRunning: false },
+  filter: ContainersFilter = { text: "", hideExited: false },
   operations: {
     running?: Record<string, RunningOperation[]>;
     failures?: Record<string, OperationFailure>;
+    removalConfirmation?: RemovalConfirmation;
   } = {},
 ) {
   const handlers = {
     onReload: vi.fn(),
     onFilterTextChange: vi.fn(),
-    onHideNonRunningChange: vi.fn(),
+    onHideExitedChange: vi.fn(),
     onOperate: vi.fn(),
     onDismissFailure: vi.fn(),
     onToggleFailureExpansion: vi.fn(),
+    onRequestRemoval: vi.fn(),
+    onCancelRemoval: vi.fn(),
+    onConfirmRemoval: vi.fn(),
   };
   render(
-    <MantineProvider theme={THEME}>
+    // why: 確認の画面を描くので、env="test" を渡す（confirm-dialog.test.tsx の renderDialog の why）。
+    <MantineProvider theme={THEME} env="test">
       <ContainersView
         list={list}
         filter={filter}
@@ -73,6 +84,7 @@ function renderView(
         messages={CONTAINERS_MESSAGES.ja}
         running={operations.running ?? {}}
         failures={operations.failures ?? {}}
+        removalConfirmation={operations.removalConfirmation}
         {...handlers}
       />
     </MantineProvider>,
@@ -152,19 +164,46 @@ describe("ContainersView の絞り込み", () => {
   const names = () => cellTexts().map((cells) => cells[1]);
 
   it("入力した文字を名前かイメージの名前に含む行だけを、大文字と小文字を区別せずに出す", () => {
-    renderView({ kind: "loaded", rows }, { text: "POSTGRES", hideNonRunning: false });
+    renderView({ kind: "loaded", rows }, { text: "POSTGRES", hideExited: false });
 
     expect(names()).toEqual(["db-1"]);
   });
 
-  it("動作中でないコンテナを隠す切り替えが入っていれば、動作中のコンテナだけを出す", () => {
-    renderView({ kind: "loaded", rows }, { text: "", hideNonRunning: true });
+  it("終了したコンテナを隠す切り替えが入っていれば、終了のわけが分からない終了だけを隠す", () => {
+    const states: ContainerState[] = [
+      { kind: "running" },
+      { kind: "paused" },
+      { kind: "restarting" },
+      { kind: "created", exitCode: 0 },
+      { kind: "created", exitCode: 127, exitCause: "startFailed" },
+      { kind: "exited", exitCode: 0 },
+      { kind: "exited", exitCode: 143 },
+      { kind: "exited", exitCode: 128, exitCause: "startFailed" },
+      { kind: "exited", exitCode: 137, exitCause: "oomKilled" },
+      { kind: "removing" },
+      { kind: "dead" },
+    ];
+    const allRows = states.map((state, index) =>
+      rowOf(`c${String(index).padStart(2, "0")}`, state),
+    );
 
-    expect(names()).toEqual(["web-1"]);
+    renderView({ kind: "loaded", rows: allRows }, { text: "", hideExited: true });
+
+    expect(cellTexts().map((cells) => cells[0])).toEqual([
+      "動作中",
+      "一時停止中",
+      "再起動中",
+      "未起動",
+      "起動失敗（コード 127）",
+      "起動失敗（コード 128）",
+      "強制終了（メモリ不足）",
+      "削除中",
+      "削除失敗",
+    ]);
   });
 
   it("絞り込みに当てはまる行が無ければ、表の代わりに、当てはまらないことを出す", () => {
-    renderView({ kind: "loaded", rows }, { text: "mysql", hideNonRunning: false });
+    renderView({ kind: "loaded", rows }, { text: "mysql", hideExited: false });
 
     expect(screen.queryByRole("table")).toBeNull();
     expect(screen.getByText("絞り込みに当てはまるコンテナがありません")).toBeTruthy();
@@ -180,12 +219,12 @@ describe("ContainersView の絞り込み", () => {
     expect(handlers.onFilterTextChange).toHaveBeenCalledExactlyOnceWith("web");
   });
 
-  it("切り替えを押すと、入れたかどうかを onHideNonRunningChange に渡す", () => {
+  it("切り替えを押すと、入れたかどうかを onHideExitedChange に渡す", () => {
     const handlers = renderView({ kind: "loaded", rows });
 
-    fireEvent.click(screen.getByRole("checkbox", { name: "動作中でないコンテナを隠す" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "終了したコンテナを隠す" }));
 
-    expect(handlers.onHideNonRunningChange).toHaveBeenCalledExactlyOnceWith(true);
+    expect(handlers.onHideExitedChange).toHaveBeenCalledExactlyOnceWith(true);
   });
 
   it("Cmd/Ctrl + F で、絞り込みの入力に移る", () => {
@@ -207,15 +246,19 @@ describe("ContainersView の操作", () => {
       .map((button) => button.getAttribute("aria-label") ?? button.textContent);
 
   it.each<[string, ContainerState, string[]]>([
-    ["動作中", { kind: "running" }, ["一時停止", "停止", "再起動"]],
-    ["一時停止中", { kind: "paused" }, ["再開", "停止"]],
-    ["未起動", { kind: "created", exitCode: 0 }, ["起動"]],
-    ["正常終了", { kind: "exited", exitCode: 0 }, ["起動"]],
-    ["終了（コード 1）", { kind: "exited", exitCode: 1 }, ["起動"]],
-    ["起動失敗", { kind: "created", exitCode: 127, exitCause: "startFailed" }, ["起動"]],
-    ["強制終了（メモリ不足）", { kind: "exited", exitCode: 137, exitCause: "oomKilled" }, ["起動"]],
-    ["再起動中", { kind: "restarting" }, []],
-    ["削除中", { kind: "removing" }, []],
+    ["動作中", { kind: "running" }, ["一時停止", "停止", "再起動", "削除"]],
+    ["一時停止中", { kind: "paused" }, ["再開", "停止", "削除"]],
+    ["未起動", { kind: "created", exitCode: 0 }, ["起動", "削除"]],
+    ["正常終了", { kind: "exited", exitCode: 0 }, ["起動", "削除"]],
+    ["終了（コード 1）", { kind: "exited", exitCode: 1 }, ["起動", "削除"]],
+    ["起動失敗", { kind: "created", exitCode: 127, exitCause: "startFailed" }, ["起動", "削除"]],
+    [
+      "強制終了（メモリ不足）",
+      { kind: "exited", exitCode: 137, exitCause: "oomKilled" },
+      ["起動", "削除"],
+    ],
+    ["再起動中", { kind: "restarting" }, ["削除"]],
+    ["削除中", { kind: "removing" }, ["削除"]],
     ["削除失敗", { kind: "dead" }, []],
   ])("%s の行には、その状態で押せる操作のボタンだけを出す", (_label, state, expected) => {
     renderView({ kind: "loaded", rows: [rowOf("web-1", state)] });
@@ -260,6 +303,37 @@ describe("ContainersView の操作", () => {
     fireEvent.click(screen.getByRole("button", { name: "強制停止" }));
 
     expect(handlers.onOperate).toHaveBeenCalledExactlyOnceWith("kill", ["id-web-1"]);
+  });
+
+  it("［削除］を押すと、onOperate を呼ばずに、行のコンテナの ID を onRequestRemoval に渡す", () => {
+    const handlers = renderView({ kind: "loaded", rows: [rowOf("web-1", { kind: "running" })] });
+
+    fireEvent.click(screen.getByRole("button", { name: "削除" }));
+
+    expect(handlers.onRequestRemoval).toHaveBeenCalledExactlyOnceWith("id-web-1");
+    expect(handlers.onOperate).not.toHaveBeenCalled();
+  });
+
+  it.each<[string, ContainerState]>([
+    ["動作中", { kind: "running" }],
+    ["一時停止中", { kind: "paused" }],
+  ])("%s のコンテナの削除の応答を待っている間は、停止処理中の知らせを出す", (_label, state) => {
+    renderView({ kind: "loaded", rows: [rowOf("web-1", state)] }, undefined, {
+      running: { "id-web-1": [{ operation: "remove", startedAt: NOW - 4000 }] },
+    });
+
+    const [row, notice] = screen.getAllByRole("row").slice(1);
+    expect(row && within(row).queryAllByRole("button")).toEqual([]);
+    expect(notice?.textContent).toBe("web-1 を停止しています… 経過 00:04強制停止");
+  });
+
+  it("再起動中のコンテナの削除の応答を待っている間は、停止処理中にせず、［削除］を押せなくする", () => {
+    renderView({ kind: "loaded", rows: [rowOf("web-1", { kind: "restarting" })] }, undefined, {
+      running: { "id-web-1": [{ operation: "remove", startedAt: NOW }] },
+    });
+
+    expect(screen.getAllByRole("row").slice(1)).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "削除" }).hasAttribute("disabled")).toBe(true);
   });
 
   it("強制停止の応答を待っている間は、［強制停止］を押せない", () => {
@@ -343,5 +417,50 @@ describe("ContainersView の操作", () => {
     expect(screen.getByRole("alert").textContent).toBe(
       "コンテナ web-1 を停止できませんでした。 port is already allocated",
     );
+  });
+});
+
+describe("ContainersView の削除の確認", () => {
+  const WEB = rowOf("web-1", { kind: "running" });
+  const DB = rowOf("db-1", { kind: "exited", exitCode: 0 });
+
+  it("確認の画面を開いていれば、削除するコンテナの名前と状態から作った文を出す", () => {
+    renderView({ kind: "loaded", rows: [WEB, DB] }, undefined, {
+      removalConfirmation: { row: WEB, opened: true },
+    });
+
+    expect(screen.getByRole("dialog", { name: "コンテナの削除の確認" }).textContent).toContain(
+      "コンテナ web-1 を削除します。web-1 は動作中なので、停止してから削除します。元に戻せません。",
+    );
+  });
+
+  it("opened が false なら、確認の画面を出さない", () => {
+    renderView({ kind: "loaded", rows: [WEB, DB] }, undefined, {
+      removalConfirmation: { row: WEB, opened: false },
+    });
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("［削除する］を押すと、削除するコンテナの ID を onConfirmRemoval に渡す", () => {
+    const handlers = renderView({ kind: "loaded", rows: [WEB, DB] }, undefined, {
+      removalConfirmation: { row: WEB, opened: true },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "削除する" }));
+
+    expect(handlers.onConfirmRemoval).toHaveBeenCalledExactlyOnceWith("id-web-1");
+    expect(handlers.onCancelRemoval).not.toHaveBeenCalled();
+  });
+
+  it("［やめる］を押すと、onCancelRemoval を呼ぶ", () => {
+    const handlers = renderView({ kind: "loaded", rows: [WEB, DB] }, undefined, {
+      removalConfirmation: { row: WEB, opened: true },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "やめる" }));
+
+    expect(handlers.onCancelRemoval).toHaveBeenCalledOnce();
+    expect(handlers.onConfirmRemoval).not.toHaveBeenCalled();
   });
 });

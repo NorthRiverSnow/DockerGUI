@@ -19,10 +19,10 @@ function registerWithFakes() {
       },
     },
     screenSettings: {
-      current: () => ({ hideNonRunningContainers: false }),
+      current: () => ({ hideExitedContainers: false }),
       change: (change) => {
         calls.push(`change:${change.name}=${change.value}`);
-        return { hideNonRunningContainers: change.value };
+        return { hideExitedContainers: change.value };
       },
     },
     windowReveal: { rendererPainted: () => calls.push("rendererPainted") },
@@ -75,7 +75,7 @@ describe("registerAppChannels", () => {
 
     expect(await invokeChannel("app:getScreenSettings")).toEqual({
       ok: true,
-      value: { hideNonRunningContainers: false },
+      value: { hideExitedContainers: false },
     });
   });
 
@@ -84,10 +84,10 @@ describe("registerAppChannels", () => {
 
     expect(
       await invokeChannel("app:setScreenSetting", {
-        name: "hideNonRunningContainers",
+        name: "hideExitedContainers",
         value: true,
       }),
-    ).toEqual({ ok: true, value: { hideNonRunningContainers: true } });
-    expect(calls).toEqual(["change:hideNonRunningContainers=true"]);
+    ).toEqual({ ok: true, value: { hideExitedContainers: true } });
+    expect(calls).toEqual(["change:hideExitedContainers=true"]);
   });
 });

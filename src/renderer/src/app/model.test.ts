@@ -39,21 +39,21 @@ describe("nextAppState", () => {
   it("変えた画面ごとの設定を、main から届いたほかの設定と合わせて入れる", () => {
     const received = nextAppState(INITIAL_APP_STATE, {
       kind: "screenSettingsReceived",
-      screenSettings: { hideNonRunningContainers: false },
+      screenSettings: { hideExitedContainers: false },
     });
 
     const next = nextAppState(received, {
       kind: "screenSettingChanged",
-      change: { name: "hideNonRunningContainers", value: true },
+      change: { name: "hideExitedContainers", value: true },
     });
 
-    expect(next.screenSettings).toEqual({ hideNonRunningContainers: true });
+    expect(next.screenSettings).toEqual({ hideExitedContainers: true });
   });
 
   it("main から画面ごとの設定が届く前に変えられても、状態を変えない", () => {
     const next = nextAppState(INITIAL_APP_STATE, {
       kind: "screenSettingChanged",
-      change: { name: "hideNonRunningContainers", value: true },
+      change: { name: "hideExitedContainers", value: true },
     });
 
     expect(next).toEqual(INITIAL_APP_STATE);

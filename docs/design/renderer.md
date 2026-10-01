@@ -205,6 +205,20 @@ Model を「状態 + 出来事 → 次の状態」の純関数にしてあるの
 
 **部品も View と同じく、props を受け取って要素を返すだけにする。** 部品の状態（一覧で選んでいる行など）は、部品を使う画面の Model が持つ。
 
+### 確認の画面（`confirm-dialog.tsx`）
+
+**Mantine の `Modal` を、組み立て式の部品（`Modal.Root`、`Modal.Content` など）で使う。** 確認の画面を開いているかどうかは、画面の Model が持つ。
+
+| 決めごと | 作り |
+| --- | --- |
+| 見出しを付けない | `Modal.Title` を置かない。画面を読み上げる機能に渡す名前は、`Modal.Content` の `aria-label` で渡す |
+| 最初のフォーカスは ［やめる］ | ［やめる］ に `data-autofocus` を付ける。付けないと、`Modal` は中の最初のボタンにフォーカスを当てる（Mantine の文書の「Modal」） |
+| Esc と、確認の画面の外を押したとき | `Modal` の既定のまま、確認の画面を閉じる（`closeOnEscape`、`closeOnClickOutside`）。確認の画面が閉じたときは、［やめる］ と同じ `onCancel` を呼ぶ |
+| 実行のボタンの色 | 取り返しのつかない操作なので赤（`red.9`）。白い文との差は、文の基準の 4.5:1 を満たす（「色と背景のコントラスト」） |
+
+**why: `Modal` を組み立て式で使う。** まとめた形の `Modal` は、渡した属性を外側の要素に付ける。`aria-label` は、`role="dialog"` の要素（`Modal.Content`）に付ける必要がある
+（Mantine 9.6.2 の `esm/components/ModalBase/ModalBaseContent.mjs` で確認。`role="dialog"` を付けた要素に、`Modal.Content` に渡した属性も渡す）。
+
 ## 2 つ以上の画面で使う文（`src/renderer/src/messages`）
 
 **画面ごとの `messages.ts` は、共通の形の文を作るときに、`src/renderer/src/messages` の関数を呼ぶ。**
@@ -217,6 +231,7 @@ Model を「状態 + 出来事 → 次の状態」の純関数にしてあるの
 | 想定していない失敗の文 | `common.md` の「想定していない失敗」 |
 | 一覧の「未接続」の文 | `common.md` の「一覧の状態」 |
 | 時刻と大きさの表記（「3 分前」「6.9 GB」） | `common.md` の「表記」 |
+| 確認の画面の、どの操作でも同じ文（「やめる」） | `common.md` の「取り返しのつかない操作は、確認を挟む」 |
 
 **`components` と同じく、2 つ目の画面で使うことになった時点で移す**（`directories.md` の「renderer は、画面ごとに分ける」）。
 
@@ -335,6 +350,9 @@ Web の見やすさの基準（WCAG 2.1）が、計算の仕方と、満たす�
 | アイコンと、ボタンの形 | 3:1 以上 | 1.4.11「非テキストのコントラスト」 |
 
 **背景は、ページの背景と、マウスを重ねた行の背景の両方で満たす。** マウスを重ねた行の背景は、ページの背景より、ライトでは暗く、ダークでは明るい。
+
+**文の付いたボタンは、ボタンの形と背景の差を求めない。** 文とボタンの色の差が 4.5:1 を満たせば足りる。
+WCAG の解説（Understanding SC 1.4.11）が、文やアイコンのようにボタンがあると分かる中身があれば、ボタンの形の境目は要らないとしている。
 
 **状態と操作のアイコンの色は、`theme.ts` で、配色ごとに Mantine の色と濃さを選ぶ**（`CSS_VARIABLES_RESOLVER`）。部品は `components/icon-color.ts` の `iconColorOf` で受け取る。
 `theme.test.ts` が、どの色もどちらの配色でも 3:1 以上になることを確かめる。

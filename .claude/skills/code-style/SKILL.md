@@ -40,6 +40,18 @@ description: DockerGUI の src を書く・直す前に読む。決まってい�
 `why:` は、その理由で判断している場所に書く。定数や関数を定義した場所ではなく、それを使って分けている行の近くに置く。
 docs の節を参照するときは、節の名前で書く（「〜の後に書いてある」のような位置で書かない）。
 
+## ライブラリの中を推測しない
+
+**ライブラリの内部の動きに頼るテストや実装を書く前に、入れてある版のソースコードを読む。**
+例: Mantine の `Modal` が、確認の画面の外を押したことをどの要素で知るか。推測で書くと、テストが的外れなまま失敗するか、たまたま成功する。
+
+```bash
+.claude/skills/code-style/scripts/lib-source.sh @mantine/core closeOnClickOutside
+```
+
+`lib-source.sh` は、入れてある版とパッケージのフォルダの場所を書き出し、パッケージの中から文字列を探す。調べることが多いときは、エージェントの `source-researcher` に任せる。
+出典の書き方は、CLAUDE.md の「結論する前に確認する」に従う（例: Mantine <版> の `esm/components/ModalBase/ModalBaseOverlay.mjs`）。
+
 ## テスト
 
 振る舞いには書く。見た目には書かない。対象は、イベントの結線・状態の反映・データの変換

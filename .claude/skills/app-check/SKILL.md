@@ -41,6 +41,13 @@ node .claude/skills/app-check/scripts/screenshot.mjs <一時>/screen.png
 
 **必ず `dev-stop.sh` まで実行する。** 途中で失敗しても、止めてから報告する。
 
+### 設定を変えない
+
+**設定ファイルは、利用者が動かしている DockerGUI と共有している。** 自分のアプリで言語や配色を変えると、利用者のアプリの設定も変わる。
+
+- `eval.mjs` は、設定を変える口（`app:setLanguage` など）を呼ぶ式を実行しない。利用者のアプリが動いていないことを確かめたときだけ、`--change-settings` を付ける
+- 言語や配色の切り替えを確かめるときは、口を直接呼ばず、画面のボタンを押す。口を直接呼んでも、設定ファイルが変わるだけで、renderer が設定を受け取り直すまで、画面の言語と配色は切り替わらない
+
 ### 画面の変化を時刻付きで記録する
 
 画面の表示が、いつ・どう変わったかを調べるときは、画面の中に記録係を置く。
@@ -63,6 +70,9 @@ node .claude/skills/app-check/scripts/screenshot.mjs <一時>/screen.png
 })()
 ```
 
+**自分のアプリの窓が、ほかの窓の後ろにあって見えていない間（`document.visibilityState` が `hidden`）は、画面の中のタイマーが間引かれる。**
+記録係の時刻は、実際に表示が変わった時刻より数秒遅れることがある。時刻を確かめたいときは、操作の後に `eval.mjs` で直接読む。
+
 エンジンの側の記録と並べて読む。エンジンの出来事は、読むだけなので、いつ取ってもよい。
 
 ```bash
@@ -82,13 +92,23 @@ docker ps -a --filter label=dg-list-test=1 --format '{{.Names}}'   # 終わっ�
 
 ## Storybook で見た目を確かめる
 
-利用者の Storybook が動いていれば、ブラウザの画面（`mcp__Claude_Browser__*`）で開く。ストーリーだけを出す URL:
+利用者の Storybook（ポート 6006）が動いていれば、ブラウザの画面（`mcp__Claude_Browser__*`）で開く。
+動いていなければ、自分の Storybook を別のポートで起動する。終わったら必ず止める。
+
+```bash
+.claude/skills/app-check/scripts/sb-start.sh <一時>        # 既定のポートは 6116
+.claude/skills/app-check/scripts/sb-stop.sh <一時>
+```
+
+`vp exec storybook` で起動した Storybook のプロセスは、起動した親のプロセスから離れて動き続ける（親の PID が 1 になる）。親のプロセスを止めても残るので、手で起動せず、`sb-start.sh` と `sb-stop.sh` を使う。
+
+ストーリーだけを出す URL:
 
 ```
-http://localhost:6006/iframe.html?id=<ストーリーの ID>&viewMode=story&globals=colorScheme:dark;language:en
+http://localhost:<ポート>/iframe.html?id=<ストーリーの ID>&viewMode=story&globals=colorScheme:dark;language:en
 ```
 
-- ストーリーの ID の一覧は、`http://localhost:6006/index.json` の `entries` にある
+- ストーリーの ID の一覧は、`http://localhost:<ポート>/index.json` の `entries` にある
 - 配色は `colorScheme`（`light` / `dark`）、画面の言語は `language`（`ja` / `en`）で切り替える
 - ブラウザの画面が隠れていると、写真は撮れない。代わりに、`javascript_tool` で要素の文や、計算された色（`getComputedStyle`）を読む
 

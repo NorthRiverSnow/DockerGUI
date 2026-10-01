@@ -1,9 +1,18 @@
 // 開発用の DockerGUI の画面の中で、式を 1 つ実行し、結果を JSON で書き出す。
-// 使い方: node eval.mjs '<式>'
+// 使い方: node eval.mjs '<式>' [--change-settings]
 // 式が Promise を返すときは、解決するまで待つ。画面の中では window.api（main の口）を呼べる。
 const expression = process.argv[2];
 if (!expression) {
   console.error("実行する式を渡す");
+  process.exit(1);
+}
+// why: Skill の app-check の「設定を変えない」。設定を変える口（app:set で始まる口）を呼ぶ式は、式の後に --change-settings を渡したときだけ実行する。
+const changed = [...new Set(expression.match(/app:set[A-Za-z]+/g) ?? [])];
+if (changed.length > 0 && process.argv[3] !== "--change-settings") {
+  console.error(
+    `設定を変える口（${changed.join("、")}）を呼ぶ式は実行しない。開発用のアプリは、利用者のアプリと設定ファイルを共有している。` +
+      "利用者のアプリが動いていないことを確かめたうえで、式の後に --change-settings を付けて実行する",
+  );
   process.exit(1);
 }
 const targets = await (await fetch("http://127.0.0.1:9333/json")).json();

@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 import { fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it } from "vite-plus/test";
-import type { ContainerState } from "../../../../shared/containers";
-import { setUpViewTests } from "../../render.test-helper";
-import { rowOf } from "./rows.test-helper";
+import type { ContainerState } from "../../../../../shared/containers";
+import { setUpViewTests } from "../../../render.test-helper";
+import { rowOf } from "../rows.test-helper";
 import { NOW, cellTexts, renderView } from "./view.test-helper";
 
 setUpViewTests();

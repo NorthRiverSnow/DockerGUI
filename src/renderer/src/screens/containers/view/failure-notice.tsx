@@ -1,8 +1,8 @@
 import { WarningCircleIcon } from "@phosphor-icons/react";
 import { Button, CloseButton, Group, Text } from "@mantine/core";
 import { useLayoutEffect, useRef, useState, type RefObject } from "react";
-import { iconColorOf } from "../../components/icon-color";
-import { ICON_SIZE } from "../../components/icon-size";
+import { iconColorOf } from "../../../components/icon-color";
+import { ICON_SIZE } from "../../../components/icon-size";
 
 /**
  * 失敗した行の下に、利用者が閉じるまで残す失敗の知らせ（docs/spec/common.md の「結果の知らせ方」）。

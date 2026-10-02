@@ -227,7 +227,7 @@ renderer は、アプリ全体の Controller の `useEffect` で知らせる。`
 **renderer は、知らせで届いた行で一覧を入れ替え、「読み込み中」に戻さない**（`docs/spec/common.md` の「一覧の状態」）。
 読み込みの途中で知らせが届いたときは、知らせの行のほうが新しいので、遅れて届いた読み込みの応答を捨てる。
 
-**並び順（動作中を先に）は renderer が決める**（`src/renderer/src/screens/containers/model.ts` の `sortedRowsOf`）。main は Engine API が返した順のまま返す。
+**並び順（起動しているコンテナを先に）は renderer が決める**（`src/renderer/src/screens/containers/model/list-rows.ts` の `sortedRowsOf`）。main は Engine API が返した順のまま返す。
 
 
 ### コンテナの操作

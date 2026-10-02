@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
-import type { ConnectionState } from "../../../shared/connection";
-import type { Language } from "../../../shared/language";
+import type { ConnectionState } from "../../../../shared/connection";
+import type { Language } from "../../../../shared/language";
 import { APP_MESSAGES } from "./messages";
 
 const LANGUAGES: Language[] = ["ja", "en"];

@@ -1,9 +1,10 @@
 import { Button, Skeleton, Stack, Text } from "@mantine/core";
-import { NotConnectedNotice } from "../../components/not-connected-notice";
+import { NotConnectedNotice } from "../../../components/not-connected-notice";
 import type { RowOperationProps } from "./container-table";
 import { LoadedList, type RemovalConfirmationProps } from "./loaded-list";
-import type { ContainersMessages } from "./messages";
-import type { ContainersFilter, ContainersList } from "./model";
+import type { ContainersMessages } from "../model/messages";
+import type { ContainersFilter } from "../model/list-rows";
+import type { ContainersList } from "../model/model";
 
 /** 読み込み中に、一覧の行の形だけを並べる帯の数（docs/spec/common.md の「一覧の状態」のスケルトン）。 */
 const SKELETON_ROWS = 5;

@@ -1,14 +1,14 @@
 import { screen } from "@testing-library/react";
 import { vi } from "vite-plus/test";
-import { renderWithMantine } from "../../render.test-helper";
-import { CONTAINERS_MESSAGES } from "./messages";
+import { renderWithMantine } from "../../../render.test-helper";
+import { CONTAINERS_MESSAGES } from "../model/messages";
+import type { ContainersFilter } from "../model/list-rows";
 import type {
-  ContainersFilter,
   ContainersList,
   OperationFailure,
   RemovalConfirmation,
   RunningOperation,
-} from "./model";
+} from "../model/model";
 import { ContainersView } from "./view";
 
 export const NOW = Date.parse("2026-09-29T12:00:00Z");

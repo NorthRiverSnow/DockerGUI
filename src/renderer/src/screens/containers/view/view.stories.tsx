@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
-import type { ContainerRow } from "../../../../shared/containers";
-import type { Language } from "../../../../shared/language";
-import type { OperationFailure } from "./model";
-import { CONTAINERS_MESSAGES } from "./messages";
+import type { ContainerRow } from "../../../../../shared/containers";
+import type { Language } from "../../../../../shared/language";
+import type { OperationFailure } from "../model/model";
+import { CONTAINERS_MESSAGES } from "../model/messages";
 import { ContainersView } from "./view";
 
 const NOW = Date.parse("2026-09-29T12:00:00Z");

@@ -7,16 +7,12 @@ import {
   type Icon,
 } from "@phosphor-icons/react";
 import { ActionIcon, Group, Tooltip } from "@mantine/core";
-import type { ContainerOperation, ContainerRow } from "../../../../shared/containers";
-import { iconColorOf, type IconColor } from "../../components/icon-color";
-import type { ContainersMessages } from "./messages";
-import {
-  isOperationRunning,
-  MAX_ROW_OPERATIONS,
-  rowOperationsOf,
-  type RunningOperation,
-} from "./model";
-import { ICON_SIZE } from "../../components/icon-size";
+import type { ContainerOperation, ContainerRow } from "../../../../../shared/containers";
+import { iconColorOf, type IconColor } from "../../../components/icon-color";
+import type { ContainersMessages } from "../model/messages";
+import { isOperationRunning, MAX_ROW_OPERATIONS, rowOperationsOf } from "../model/operations";
+import type { RunningOperation } from "../model/model";
+import { ICON_SIZE } from "../../../components/icon-size";
 
 /** 操作のボタン 1 つの大きさ（Mantine の ActionIcon の md）と、ボタンの間の隙間。 */
 const BUTTON_SIZE = 28;

@@ -1,10 +1,10 @@
 import { AppShell, Divider, NavLink, Stack, Title } from "@mantine/core";
 import type { ReactNode } from "react";
-import type { ColorSchemeSetting } from "../../../shared/color-scheme";
-import type { ConnectionState } from "../../../shared/connection";
-import type { LanguageSetting, LanguageState } from "../../../shared/language";
-import type { AppMessages } from "./messages";
-import type { Target } from "./model";
+import type { ColorSchemeSetting } from "../../../../shared/color-scheme";
+import type { ConnectionState } from "../../../../shared/connection";
+import type { LanguageSetting, LanguageState } from "../../../../shared/language";
+import type { AppMessages } from "../model/messages";
+import type { Target } from "../model/model";
 import { STATUS_BAR_HEIGHT, StatusBar } from "./status-bar";
 
 // docs/spec/common.md の「画面の構成」の、左の一覧の並び

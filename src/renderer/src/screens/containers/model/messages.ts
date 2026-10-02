@@ -4,14 +4,14 @@ import type {
   ContainerState,
   ExitCause,
   PublishedPort,
-} from "../../../../shared/containers";
-import type { Language } from "../../../../shared/language";
-import type { Failure } from "../../../../shared/result";
-import { CONFIRM_MESSAGES } from "../../messages/confirm";
-import { FAILURE_CAUSES } from "../../messages/failure";
-import { NOT_CONNECTED_MESSAGES, type NotConnectedMessages } from "../../messages/not-connected";
-import { ELAPSED_TEXTS } from "../../messages/waiting";
-import { isStoppedBeforeRemoval, type StoppedBeforeRemovalState } from "./model";
+} from "../../../../../shared/containers";
+import type { Language } from "../../../../../shared/language";
+import type { Failure } from "../../../../../shared/result";
+import { CONFIRM_MESSAGES } from "../../../messages/confirm";
+import { FAILURE_CAUSES } from "../../../messages/failure";
+import { NOT_CONNECTED_MESSAGES, type NotConnectedMessages } from "../../../messages/not-connected";
+import { ELAPSED_TEXTS } from "../../../messages/waiting";
+import { isStoppedBeforeRemoval, type StoppedBeforeRemovalState } from "./operations";
 
 export type ContainersMessages = {
   columns: { state: string; name: string; image: string; ports: string; time: string };

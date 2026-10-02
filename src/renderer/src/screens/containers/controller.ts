@@ -2,7 +2,7 @@ import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import type { ConnectionState } from "../../../../shared/connection";
 import type { ContainerOperation } from "../../../../shared/containers";
 import type { ContainersApi } from "../../api/containers-api";
-import { INITIAL_CONTAINERS_STATE, nextContainersState, type ContainersState } from "./model";
+import { INITIAL_CONTAINERS_STATE, nextContainersState, type ContainersState } from "./model/model";
 
 /** 「3 分前」の表示を進める間隔。 */
 const CLOCK_REFRESH_MS = 30_000;

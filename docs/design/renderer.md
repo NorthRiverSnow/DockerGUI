@@ -5,19 +5,20 @@ renderer を Model・View・Controller に分けることは、`design-policy.md
 
 ## 画面 1 つの組み立て
 
-**画面は機能ごとに 1 つ作り、画面 1 つを次のファイルで作る**（`directories.md` の「renderer は、画面ごとに分ける」）。`view.module.css` だけは、要るときに置く。
+**画面は機能ごとに 1 つ作り、画面 1 つを次のファイルで作る**（`directories.md` の「renderer は、画面ごとに分ける」。`model/` と `view/` の置き場所も）。`view.module.css` だけは、要るときに置く。
 
 **main を呼ぶのは Controller だけ。** Model と View は main を呼ばない。
 
 | ファイル | 役 | 持つもの | main を呼ぶか | React を使うか |
 | --- | --- | --- | --- | --- |
-| `model.ts` | Model | 画面の状態の型。状態と出来事を受け取って次の状態を返す純関数 | 呼ばない | 使わない |
-| `messages.ts` | Model | 状態から、画面に出す文を作る純関数。言語ごとに持つ | 呼ばない | 使わない |
+| `model/model.ts` | Model | 画面の状態の型。状態と出来事を受け取って次の状態を返す純関数 | 呼ばない | 使わない |
+| `model/<観点>.ts`（`operations.ts`、`list-rows.ts` など） | Model | 状態から、画面に出す値を導く純関数。仕様の節ごとに分ける（`operations.ts` は「操作」の行のボタンと停止処理中、`list-rows.ts` は「並び順」「絞り込み」と時間の列）。`model.ts` が 1 ファイルの行数の上限（Skill の `code-style` の「ファイルと関数の大きさ」）を超えないように、観点ごとに分ける | 呼ばない | 使わない |
+| `model/messages.ts` | Model | 状態から、画面に出す文を作る純関数。言語ごとに持つ | 呼ばない | 使わない |
 | `controller.ts` | Controller | 利用者の操作と、main から届いた知らせを受けて、Model に出来事を渡す React の hook。要素は返さない | **呼ぶ**（main の窓口を通して） | 使う |
 | `screen.tsx` | Controller と View をつなぐ | props で受け取った main の窓口とアプリ全体の状態を Controller に渡して呼び、Controller が返した状態と関数を View に props で渡す | 呼ばない（Controller が呼ぶ） | 使う |
-| `view.tsx` | View | screen から状態と関数を props で受け取り、要素を返す関数コンポーネント。自分の状態は持たない | 呼ばない | 使う |
-| `view.module.css` | View の見た目 | Mantine の props で書けない見た目（「部品と見た目」） | 呼ばない | 使わない |
-| `view.stories.tsx` | View の確認 | 状態ごとの View の見本（Storybook を入れた後） | 呼ばない | 使う |
+| `view/view.tsx` | View | screen から状態と関数を props で受け取り、要素を返す関数コンポーネント。自分の状態は持たない | 呼ばない | 使う |
+| `view/view.module.css` | View の見た目 | Mantine の props で書けない見た目（「部品と見た目」） | 呼ばない | 使わない |
+| `view/view.stories.tsx` | View の確認 | 状態ごとの View の見本 | 呼ばない | 使う |
 
 **値の流れ**
 

@@ -12,9 +12,9 @@ import {
   type Icon,
 } from "@phosphor-icons/react";
 import { Group, Text } from "@mantine/core";
-import type { ContainerHealth, ContainerState } from "../../../../shared/containers";
-import { iconColorOf, type IconColor } from "../../components/icon-color";
-import { ICON_SIZE } from "../../components/icon-size";
+import type { ContainerHealth, ContainerState } from "../../../../../shared/containers";
+import { iconColorOf, type IconColor } from "../../../components/icon-color";
+import { ICON_SIZE } from "../../../components/icon-size";
 
 type StateLook = { color: IconColor; icon: Icon };
 

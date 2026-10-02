@@ -1,8 +1,8 @@
 import { Box } from "@mantine/core";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
-import type { Language } from "../../../shared/language";
-import { APP_MESSAGES } from "./messages";
+import type { Language } from "../../../../shared/language";
+import { APP_MESSAGES } from "../model/messages";
 import { STATUS_BAR_HEIGHT, StatusBar } from "./status-bar";
 
 const NOW = 1_700_000_000_000;

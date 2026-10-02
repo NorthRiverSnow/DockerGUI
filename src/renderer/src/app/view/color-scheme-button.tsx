@@ -1,8 +1,8 @@
 import { MoonIcon, SunIcon } from "@phosphor-icons/react";
 import { ActionIcon, useComputedColorScheme } from "@mantine/core";
-import type { ColorSchemeSetting } from "../../../shared/color-scheme";
-import type { AppMessages } from "./messages";
-import { ICON_SIZE } from "../components/icon-size";
+import type { ColorSchemeSetting } from "../../../../shared/color-scheme";
+import type { AppMessages } from "../model/messages";
+import { ICON_SIZE } from "../../components/icon-size";
 
 /**
  * 押すとライトとダークを切り替えるボタン（docs/spec/common.md の「配色を選ぶ」）。

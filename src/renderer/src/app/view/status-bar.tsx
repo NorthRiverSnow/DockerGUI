@@ -6,14 +6,14 @@ import {
   WarningIcon,
 } from "@phosphor-icons/react";
 import { Button, Group, Loader, Text } from "@mantine/core";
-import type { ColorSchemeSetting } from "../../../shared/color-scheme";
-import type { ConnectionState } from "../../../shared/connection";
-import type { LanguageSetting, LanguageState } from "../../../shared/language";
-import { iconColorOf, type IconColor } from "../components/icon-color";
+import type { ColorSchemeSetting } from "../../../../shared/color-scheme";
+import type { ConnectionState } from "../../../../shared/connection";
+import type { LanguageSetting, LanguageState } from "../../../../shared/language";
+import { iconColorOf, type IconColor } from "../../components/icon-color";
 import { ColorSchemeButton } from "./color-scheme-button";
 import { LanguageMenu } from "./language-menu";
-import type { AppMessages } from "./messages";
-import { ICON_SIZE } from "../components/icon-size";
+import type { AppMessages } from "../model/messages";
+import { ICON_SIZE } from "../../components/icon-size";
 
 /** 状態バーの高さ。View が AppShell の上の領域の高さに使う。 */
 export const STATUS_BAR_HEIGHT = 48;

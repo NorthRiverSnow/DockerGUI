@@ -79,28 +79,40 @@ renderer は `src/renderer/index.html`）。
 ## renderer は、画面ごとに分ける
 
 **`src/renderer/src/screens` の直下を、画面ごとのディレクトリにする。**
-1 つの画面の Model・View・Controller を、同じディレクトリに置く。
-
-```
-screens/containers
-├── model.ts           Model
-├── model.test.ts      Model のテスト
-├── messages.ts        画面に出す文を作る関数（renderer.md）
-├── messages.test.ts   画面に出す文のテスト
-├── controller.ts      Controller
-├── controller.test.ts Controller のテスト
-├── screen.tsx         Controller を呼び、View に props で渡す（renderer.md）
-├── view.tsx           View。画面の状態ごとに、出す部品を選ぶ
-├── <部品>.tsx         View の部品（state-label.tsx、row-actions.tsx など）
-├── view.*.test.tsx    View のテスト。観点ごとに分ける（view.list.test.tsx など。renderer.md の「View のテスト」）
-├── view.module.css    View の見た目のうち、Mantine の props で書けないもの
-├── <部品>.module.css  部品の見た目のうち、Mantine の props で書けないもの（container-table.module.css など）
-└── view.stories.tsx   View の Storybook（Storybook を入れた後）
-```
+1 つの画面の Model・View・Controller を、画面のディレクトリの下にまとめて置く。
 
 **why: 1 つの画面を直すとき、Model・View・Controller を一緒に直すことが多い。**
 main と違い、renderer には層を越える読み込みの向きの決まりが Model・View・Controller の 3 つしか無く
-（`design-policy.md` の原則 14）、ファイルの名前で分かる。
+（`design-policy.md` の原則 14）、読み込みのパスの `model/` と `view/` で分かる。
+
+画面のディレクトリの中では、Model の役のファイルを `model/` に、View の役のファイルを `view/` に置く。`screen.tsx` と Controller は、画面のディレクトリの直下に置く。
+テストと Storybook は、対象のファイルと同じディレクトリに置く（「テストのファイルは、テストする対象の隣に置く」）。
+
+**why: 1 つの画面のファイルは、部品と Model の観点を足すたびに増える。** 1 つのディレクトリに並べると、直すファイルを探すのに時間がかかる。
+Controller は `controller.ts` とテストの 2 つだけなので、ディレクトリを作らない。
+
+```
+screens/containers
+├── screen.tsx                  Controller を呼び、View に props で渡す（renderer.md）
+├── controller.ts               Controller
+├── controller.test.ts          Controller のテスト
+├── <名前>.test-helper.ts       model/ と view/ と controller.test.ts が使う準備（rows.test-helper.ts など）
+├── model/                      Model の役のファイル（renderer.md）
+│   ├── model.ts                状態の型と、出来事から次の状態を作る関数
+│   ├── model.test.ts           model.ts のテスト
+│   ├── <観点>.ts               状態から画面に出す値を導く関数。仕様の節ごとに分ける（operations.ts、list-rows.ts など）
+│   ├── <観点>.test.ts          <観点>.ts のテスト
+│   ├── messages.ts             画面に出す文を作る関数
+│   └── messages.test.ts        画面に出す文のテスト
+└── view/                       View の役のファイル
+    ├── view.tsx                画面の状態ごとに、出す部品を選ぶ
+    ├── <部品>.tsx              View の部品（state-label.tsx、row-actions.tsx など）
+    ├── view.*.test.tsx         View のテスト。観点ごとに分ける（view.list.test.tsx など。renderer.md の「View のテスト」）
+    ├── <名前>.test-helper.tsx  View のテストが使う準備（view.test-helper.tsx）
+    ├── view.module.css         View の見た目のうち、Mantine の props で書けないもの
+    ├── <部品>.module.css       部品の見た目のうち、Mantine の props で書けないもの（container-table.module.css など）
+    └── view.stories.tsx        View の Storybook
+```
 
 **View の部品は、部品ごとに 1 つのファイルに分ける。** ファイルの名前は、部品の名前の単語を小文字にして `-` でつないだもの（`RowActions` なら `row-actions.tsx`）にする。
 **外に出さない部品は、使う部品と同じファイルに置く**（`container-table.tsx` の `ContainerTableRows`）。

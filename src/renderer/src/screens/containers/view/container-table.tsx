@@ -4,16 +4,12 @@ import type {
   ContainerOperation,
   ContainerRow,
   ContainerState,
-} from "../../../../shared/containers";
-import type { ContainersMessages } from "./messages";
-import { portsTextOf } from "./messages";
-import {
-  isOperationRunning,
-  shownTimeOf,
-  stoppingOf,
-  type OperationFailure,
-  type RunningOperation,
-} from "./model";
+} from "../../../../../shared/containers";
+import type { ContainersMessages } from "../model/messages";
+import { portsTextOf } from "../model/messages";
+import { isOperationRunning, stoppingOf } from "../model/operations";
+import { shownTimeOf } from "../model/list-rows";
+import type { OperationFailure, RunningOperation } from "../model/model";
 import { ROW_ACTIONS_WIDTH, RowActions } from "./row-actions";
 import { FailureNotice } from "./failure-notice";
 import { MiddleTruncatedText } from "./middle-truncated-text";

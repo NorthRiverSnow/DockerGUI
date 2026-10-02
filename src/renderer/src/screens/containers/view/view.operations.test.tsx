@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 import { fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
-import type { ContainerState } from "../../../../shared/containers";
-import { setUpViewTests } from "../../render.test-helper";
-import type { OperationFailure } from "./model";
-import { rowOf } from "./rows.test-helper";
+import type { ContainerState } from "../../../../../shared/containers";
+import { setUpViewTests } from "../../../render.test-helper";
+import type { OperationFailure } from "../model/model";
+import { rowOf } from "../rows.test-helper";
 import { NOW, renderView } from "./view.test-helper";
 
 setUpViewTests();

@@ -2,9 +2,9 @@ import { CheckIcon, GlobeIcon } from "@phosphor-icons/react";
 import { ActionIcon, Group, Image, Menu } from "@mantine/core";
 import japanFlag from "circle-flags/flags/jp.svg";
 import unitedStatesFlag from "circle-flags/flags/us.svg";
-import type { Language, LanguageSetting, LanguageState } from "../../../shared/language";
-import type { AppMessages } from "./messages";
-import { ICON_SIZE } from "../components/icon-size";
+import type { Language, LanguageSetting, LanguageState } from "../../../../shared/language";
+import type { AppMessages } from "../model/messages";
+import { ICON_SIZE } from "../../components/icon-size";
 
 const FLAG_SIZE = 20;
 

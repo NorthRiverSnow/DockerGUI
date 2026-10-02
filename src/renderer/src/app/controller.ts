@@ -3,7 +3,7 @@ import type { ColorSchemeSetting } from "../../../shared/color-scheme";
 import type { LanguageSetting } from "../../../shared/language";
 import type { ScreenSettingChange } from "../../../shared/screen-settings";
 import type { MainApi } from "../api/main-api";
-import { INITIAL_APP_STATE, nextAppState, type AppState, type Target } from "./model";
+import { INITIAL_APP_STATE, nextAppState, type AppState, type Target } from "./model/model";
 
 const CLOCK_REFRESH_MS = 1000;
 

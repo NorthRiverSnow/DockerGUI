@@ -1,9 +1,9 @@
 import { useEffect } from "react";
 import type { MainApi } from "../api/main-api";
 import { useAppController } from "./controller";
-import { APP_MESSAGES } from "./messages";
+import { APP_MESSAGES } from "./model/messages";
 import { ContainersScreen } from "../screens/containers/screen";
-import { AppView } from "./view";
+import { AppView } from "./view/view";
 
 export function App(props: { api: MainApi }) {
   const controller = useAppController({ api: props.api });

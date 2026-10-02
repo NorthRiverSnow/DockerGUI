@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
-import type { ContainerHealth, ContainerState } from "../../../../shared/containers";
-import { NOT_CONNECTED_MESSAGES } from "../../messages/not-connected";
+import type { ContainerHealth, ContainerState } from "../../../../../shared/containers";
+import { NOT_CONNECTED_MESSAGES } from "../../../messages/not-connected";
 import { CONTAINERS_MESSAGES, portsTextOf } from "./messages";
 
 const NOW = Date.parse("2026-09-29T12:00:00Z");

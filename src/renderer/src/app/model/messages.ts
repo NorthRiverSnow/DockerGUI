@@ -1,9 +1,9 @@
-import type { ColorSchemeSetting } from "../../../shared/color-scheme";
-import type { ConnectionState } from "../../../shared/connection";
-import type { Language } from "../../../shared/language";
-import type { Failure } from "../../../shared/result";
-import { FAILURE_CAUSES } from "../messages/failure";
-import { ELAPSED_TEXTS } from "../messages/waiting";
+import type { ColorSchemeSetting } from "../../../../shared/color-scheme";
+import type { ConnectionState } from "../../../../shared/connection";
+import type { Language } from "../../../../shared/language";
+import type { Failure } from "../../../../shared/result";
+import { FAILURE_CAUSES } from "../../messages/failure";
+import { ELAPSED_TEXTS } from "../../messages/waiting";
 import type { Target } from "./model";
 
 export type AppMessages = {

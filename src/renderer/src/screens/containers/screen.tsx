@@ -2,9 +2,9 @@ import type { ConnectionState } from "../../../../shared/connection";
 import type { Language } from "../../../../shared/language";
 import type { ContainersApi } from "../../api/containers-api";
 import { useContainersController } from "./controller";
-import { CONTAINERS_MESSAGES } from "./messages";
-import type { ContainersFilter } from "./model";
-import { ContainersView } from "./view";
+import { CONTAINERS_MESSAGES } from "./model/messages";
+import type { ContainersFilter } from "./model/list-rows";
+import { ContainersView } from "./view/view";
 
 /**
  * コンテナの画面（docs/spec/containers.md）。

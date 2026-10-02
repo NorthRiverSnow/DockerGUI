@@ -2,12 +2,13 @@ import { MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { Checkbox, Group, Stack, Text, TextInput } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import { useRef } from "react";
-import type { ContainerRow } from "../../../../shared/containers";
-import { ConfirmDialog } from "../../components/confirm-dialog";
+import type { ContainerRow } from "../../../../../shared/containers";
+import { ConfirmDialog } from "../../../components/confirm-dialog";
 import { ContainerTable, type RowOperationProps } from "./container-table";
-import type { ContainersMessages } from "./messages";
-import { visibleRowsOf, type ContainersFilter, type RemovalConfirmation } from "./model";
-import { ICON_SIZE } from "../../components/icon-size";
+import type { ContainersMessages } from "../model/messages";
+import { visibleRowsOf, type ContainersFilter } from "../model/list-rows";
+import type { RemovalConfirmation } from "../model/model";
+import { ICON_SIZE } from "../../../components/icon-size";
 
 export type RemovalConfirmationProps = {
   removalConfirmation: RemovalConfirmation | undefined;

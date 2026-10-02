@@ -1,6 +1,6 @@
-import type { ConnectionState } from "../../../shared/connection";
-import type { LanguageState } from "../../../shared/language";
-import type { ScreenSettingChange, ScreenSettings } from "../../../shared/screen-settings";
+import type { ConnectionState } from "../../../../shared/connection";
+import type { LanguageState } from "../../../../shared/language";
+import type { ScreenSettingChange, ScreenSettings } from "../../../../shared/screen-settings";
 
 export type Target =
   | "containers"

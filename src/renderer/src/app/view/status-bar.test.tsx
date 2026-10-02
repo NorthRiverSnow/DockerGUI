@@ -3,11 +3,11 @@ import { cleanup, fireEvent, screen } from "@testing-library/react";
 import japanFlag from "circle-flags/flags/jp.svg";
 import unitedStatesFlag from "circle-flags/flags/us.svg";
 import { describe, expect, it, vi } from "vite-plus/test";
-import type { ConnectionState } from "../../../shared/connection";
-import type { LanguageState } from "../../../shared/language";
-import { APP_MESSAGES } from "./messages";
+import type { ConnectionState } from "../../../../shared/connection";
+import type { LanguageState } from "../../../../shared/language";
+import { APP_MESSAGES } from "../model/messages";
 import { StatusBar } from "./status-bar";
-import { renderWithMantine, setUpViewTests } from "../render.test-helper";
+import { renderWithMantine, setUpViewTests } from "../../render.test-helper";
 
 const NOW = 1_700_000_000_000;
 

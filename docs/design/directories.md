@@ -92,7 +92,7 @@ screens/containers
 ├── screen.tsx         Controller を呼び、View に props で渡す（renderer.md）
 ├── view.tsx           View。画面の状態ごとに、出す部品を選ぶ
 ├── <部品>.tsx         View の部品（state-label.tsx、row-actions.tsx など）
-├── view.test.tsx      View のテスト（renderer.md の「View のテスト」）
+├── view.*.test.tsx    View のテスト。観点ごとに分ける（view.list.test.tsx など。renderer.md の「View のテスト」）
 ├── view.module.css    View の見た目のうち、Mantine の props で書けないもの
 ├── <部品>.module.css  部品の見た目のうち、Mantine の props で書けないもの（container-table.module.css など）
 └── view.stories.tsx   View の Storybook（Storybook を入れた後）
@@ -150,3 +150,8 @@ Vitest は、既定で `.test.ts` で終わるファイルを探すので、設�
 
 **why: アプリのコードと区別できる名前にする。** 名前に `.test` が入るので、ファイルの一覧でテスト用だと分かる。
 名前の終わりが `.test.ts` ではないので、Vitest はテストのファイルとして実行しない（`vp test list` で確認）。
+
+**1 つの対象のテストが、1 ファイルの行数の上限（Skill の `code-style` の「ファイルと関数の大きさ」）を超えるときは、仕様の観点ごとに `<対象>.<観点>.test.ts` に分ける**（例: `connection.reconnect.test.ts`、`view.operations.test.tsx`）。
+分けたファイルが共通して使う準備は、テスト用の関数の置き場所の決まりのとおり `.test-helper.ts` に置き、名前を `<対象>.test-helper.ts` にする（例: `connection.test-helper.ts`）。
+
+**why: 名前の先頭を対象の名前にする。** 分けたテストのファイルは、ファイルの一覧で対象のファイルの隣に並ぶので、どの対象のテストかが分かる。

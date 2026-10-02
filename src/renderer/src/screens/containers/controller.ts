@@ -198,17 +198,19 @@ function useVisibleRowsNotification(
           .map((row) => row.id)
           .join("\n")
       : undefined;
-  // why: useEffect は、依存の値を参照で比べる。一覧の行の配列は読み直すたびに作り直されるので、配列を依存にすると、
-  // 一覧に出ている行が同じでも、一覧に出ている行が変わった出来事を送り直す。ID を並べた文字列を依存にする。
-  useEffect(() => {
-    if (visibleIdsKey === undefined) {
-      return;
+  // why: 外の仕組みとの同期ではないので、Effect を使わない。描くたびに、前に知らせたときの行と比べ、変わっていたら描く途中で知らせる
+  // （React の文書「You Might Not Need an Effect」の「Adjusting some state when a prop changes」）。
+  // 一覧の行の配列は読み直すたびに作り直されるので、配列ではなく、ID を並べた文字列で比べる。
+  const [notifiedKey, setNotifiedKey] = useState(visibleIdsKey);
+  if (visibleIdsKey !== notifiedKey) {
+    setNotifiedKey(visibleIdsKey);
+    if (visibleIdsKey !== undefined) {
+      dispatch({
+        kind: "visibleRowsChanged",
+        visibleIds: visibleIdsKey === "" ? [] : visibleIdsKey.split("\n"),
+      });
     }
-    dispatch({
-      kind: "visibleRowsChanged",
-      visibleIds: visibleIdsKey === "" ? [] : visibleIdsKey.split("\n"),
-    });
-  }, [visibleIdsKey, dispatch]);
+  }
 }
 
 function useSelectionActions(dispatch: Dispatch<ContainersEvent>) {

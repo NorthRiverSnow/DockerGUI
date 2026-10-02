@@ -18,7 +18,7 @@ const TARGETS_ABOVE_DIVIDER: Target[] = [
 ];
 const TARGETS_BELOW_DIVIDER: Target[] = ["diagnostics", "settings"];
 
-export function AppView(props: {
+type AppViewProps = {
   selectedTarget: Target;
   connection: ConnectionState | undefined;
   language: LanguageState | undefined;
@@ -35,16 +35,9 @@ export function AppView(props: {
   onGiveUpReconnecting: () => void;
   onSwitchColorScheme: (colorScheme: ColorSchemeSetting) => void;
   onSelectLanguage: (setting: LanguageSetting) => void;
-}) {
-  const targetLink = (target: Target) => (
-    <NavLink
-      key={target}
-      label={props.messages.targetNames[target]}
-      active={target === props.selectedTarget}
-      onClick={() => props.onSelectTarget(target)}
-    />
-  );
+};
 
+export function AppView(props: AppViewProps) {
   return (
     <AppShell
       header={{ height: STATUS_BAR_HEIGHT }}
@@ -68,9 +61,11 @@ export function AppView(props: {
         />
       </AppShell.Header>
       <AppShell.Navbar p="xs">
-        {TARGETS_ABOVE_DIVIDER.map(targetLink)}
-        <Divider my="xs" />
-        {TARGETS_BELOW_DIVIDER.map(targetLink)}
+        <TargetNavigation
+          selectedTarget={props.selectedTarget}
+          messages={props.messages}
+          onSelectTarget={props.onSelectTarget}
+        />
       </AppShell.Navbar>
       <AppShell.Main>
         <Stack gap="md">
@@ -79,5 +74,28 @@ export function AppView(props: {
         </Stack>
       </AppShell.Main>
     </AppShell>
+  );
+}
+
+/** 左の一覧（docs/spec/common.md の「画面の構成」）。 */
+function TargetNavigation(props: {
+  selectedTarget: Target;
+  messages: AppMessages;
+  onSelectTarget: (target: Target) => void;
+}) {
+  const targetLink = (target: Target) => (
+    <NavLink
+      key={target}
+      label={props.messages.targetNames[target]}
+      active={target === props.selectedTarget}
+      onClick={() => props.onSelectTarget(target)}
+    />
+  );
+  return (
+    <>
+      {TARGETS_ABOVE_DIVIDER.map(targetLink)}
+      <Divider my="xs" />
+      {TARGETS_BELOW_DIVIDER.map(targetLink)}
+    </>
   );
 }

@@ -24,28 +24,12 @@ export function FailureNotice(props: {
   const overflowing = useOverflowing(causeRef, props.cause, props.expanded);
   return (
     <Group gap="xs" wrap="nowrap" justify="space-between" ps="xl">
-      <Group gap="xs" wrap="nowrap" miw={0} flex={1} role="alert">
-        <WarningCircleIcon
-          size={ICON_SIZE}
-          weight="fill"
-          color={iconColorOf("red")}
-          style={{ flexShrink: 0 }}
-          aria-hidden
-        />
-        {props.expanded ? (
-          <Text size="sm">{`${props.summary} ${props.cause}`}</Text>
-        ) : (
-          <>
-            <Text size="sm" style={{ flexShrink: 0 }}>
-              {props.summary}
-            </Text>
-            <Text ref={causeRef} size="sm" truncate="start" miw={0}>
-              {/* why: truncate="start" は文の向きを右から左にして先頭を切る。文の端の記号（「.」や「)」）が反対の端へ動かないように、原因の文だけを左から右の向きに戻す。 */}
-              <bdi>{props.cause}</bdi>
-            </Text>
-          </>
-        )}
-      </Group>
+      <FailureMessage
+        summary={props.summary}
+        cause={props.cause}
+        expanded={props.expanded}
+        causeRef={causeRef}
+      />
       <Group gap="xs" wrap="nowrap">
         {(overflowing || props.expanded) && (
           <Button
@@ -59,6 +43,39 @@ export function FailureNotice(props: {
         )}
         <CloseButton size="sm" aria-label={props.closeLabel} onClick={props.onClose} />
       </Group>
+    </Group>
+  );
+}
+
+/** アイコンと、何ができなかったかと、原因の文。全文を開いていなければ、原因の文の先頭を切り詰める。causeRef は、切り詰める原因の文の要素を指す。 */
+function FailureMessage(props: {
+  summary: string;
+  cause: string;
+  expanded: boolean;
+  causeRef: RefObject<HTMLParagraphElement | null>;
+}) {
+  return (
+    <Group gap="xs" wrap="nowrap" miw={0} flex={1} role="alert">
+      <WarningCircleIcon
+        size={ICON_SIZE}
+        weight="fill"
+        color={iconColorOf("red")}
+        style={{ flexShrink: 0 }}
+        aria-hidden
+      />
+      {props.expanded ? (
+        <Text size="sm">{`${props.summary} ${props.cause}`}</Text>
+      ) : (
+        <>
+          <Text size="sm" style={{ flexShrink: 0 }}>
+            {props.summary}
+          </Text>
+          <Text ref={props.causeRef} size="sm" truncate="start" miw={0}>
+            {/* why: truncate="start" は文の向きを右から左にして先頭を切る。文の端の記号（「.」や「)」）が反対の端へ動かないように、原因の文だけを左から右の向きに戻す。 */}
+            <bdi>{props.cause}</bdi>
+          </Text>
+        </>
+      )}
     </Group>
   );
 }

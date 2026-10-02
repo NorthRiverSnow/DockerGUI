@@ -17,7 +17,7 @@ import { StoppingNotice } from "./stopping-notice";
 import { StateLabel } from "./state-label";
 import classes from "./container-table.module.css";
 
-/** 一覧の列の数。行の下の知らせを、全部の列にまたがらせるのに使う。 */
+/** 一覧の列の数。行の知らせを、全部の列にまたがらせるのに使う。 */
 const COLUMN_COUNT = 6;
 
 /** 状態の列の幅を決めるために描く状態。呼び方ごとに 1 つずつ並べる（docs/spec/containers.md の「列の幅」）。 */
@@ -76,39 +76,7 @@ export function ContainerTable(
   return (
     // why: 数字の幅がそろわないと、時間が経って数字が変わるたびに、文の幅が変わる。
     <Table tabularNums>
-      <Table.Thead>
-        <Table.Tr>
-          <Table.Th className={classes.fit}>
-            {messages.columns.state}
-            <WidthSamples>
-              {STATE_WIDTH_SAMPLES.map((state) => (
-                <StateLabel
-                  key={JSON.stringify(state)}
-                  state={state}
-                  name={messages.stateName(state)}
-                />
-              ))}
-            </WidthSamples>
-          </Table.Th>
-          <Table.Th w="25%">{messages.columns.name}</Table.Th>
-          <Table.Th w="35%">{messages.columns.image}</Table.Th>
-          <Table.Th w="20%">{messages.columns.ports}</Table.Th>
-          <Table.Th className={classes.fit}>
-            {messages.columns.time}
-            <WidthSamples>
-              {ELAPSED_WIDTH_SAMPLES_MS.map((elapsed) => (
-                <div key={elapsed}>{messages.elapsedSince(props.now - elapsed, props.now)}</div>
-              ))}
-            </WidthSamples>
-          </Table.Th>
-          <Table.Th className={classes.fit}>
-            {/* why: 表の列の幅は、いちばん幅の広い行で決まる。ボタンが並ぶ行が停止処理中になってボタンが消えると、列が狭まり、ほかの列が横に動く。見出しの幅を、ボタンを最大の数だけ並べた幅に固定する。 */}
-            <Box w={ROW_ACTIONS_WIDTH}>
-              <VisuallyHidden>{messages.operationsColumn}</VisuallyHidden>
-            </Box>
-          </Table.Th>
-        </Table.Tr>
-      </Table.Thead>
+      <ContainerTableHead now={props.now} messages={messages} />
       {props.rows.map((row) => (
         <ContainerTableRows
           key={row.id}
@@ -127,6 +95,46 @@ export function ContainerTable(
   );
 }
 
+/** 見出しの行。列の幅を決める文の見本も描く（docs/spec/containers.md の「列の幅」）。 */
+function ContainerTableHead(props: { now: number; messages: ContainersMessages }) {
+  const { messages } = props;
+  return (
+    <Table.Thead>
+      <Table.Tr>
+        <Table.Th className={classes.fit}>
+          {messages.columns.state}
+          <WidthSamples>
+            {STATE_WIDTH_SAMPLES.map((state) => (
+              <StateLabel
+                key={JSON.stringify(state)}
+                state={state}
+                name={messages.stateName(state)}
+              />
+            ))}
+          </WidthSamples>
+        </Table.Th>
+        <Table.Th w="25%">{messages.columns.name}</Table.Th>
+        <Table.Th w="35%">{messages.columns.image}</Table.Th>
+        <Table.Th w="20%">{messages.columns.ports}</Table.Th>
+        <Table.Th className={classes.fit}>
+          {messages.columns.time}
+          <WidthSamples>
+            {ELAPSED_WIDTH_SAMPLES_MS.map((elapsed) => (
+              <div key={elapsed}>{messages.elapsedSince(props.now - elapsed, props.now)}</div>
+            ))}
+          </WidthSamples>
+        </Table.Th>
+        <Table.Th className={classes.fit}>
+          {/* why: 表の列の幅は、いちばん幅の広い行で決まる。ボタンが並ぶ行が停止処理中になってボタンが消えると、列が狭まり、ほかの列が横に動く。見出しの幅を、ボタンを最大の数だけ並べた幅に固定する。 */}
+          <Box w={ROW_ACTIONS_WIDTH}>
+            <VisuallyHidden>{messages.operationsColumn}</VisuallyHidden>
+          </Box>
+        </Table.Th>
+      </Table.Tr>
+    </Table.Thead>
+  );
+}
+
 /**
  * 列の幅を決めるために、出しうる文を見えないように描く。
  * why: 表の列の幅は、列の中のいちばん幅の広い文で決まる。行の文が変わっても列の幅が変わらないように、出しうる文を見出しに先に描いておく。
@@ -139,8 +147,7 @@ function WidthSamples(props: { children: ReactNode }) {
   );
 }
 
-/** コンテナ 1 つの行と、行の知らせ（docs/spec/containers.md の「行の知らせ」）。 */
-function ContainerTableRows(props: {
+type ContainerTableRowsProps = {
   row: ContainerRow;
   running: RunningOperation[] | undefined;
   failure: OperationFailure | undefined;
@@ -150,78 +157,108 @@ function ContainerTableRows(props: {
   onDismissFailure: (id: string) => void;
   onToggleFailureExpansion: (id: string) => void;
   onRequestRemoval: (id: string) => void;
-}) {
+};
+
+/** コンテナ 1 つの行と、行の知らせ（docs/spec/containers.md の「行の知らせ」）。 */
+function ContainerTableRows(props: ContainerTableRowsProps) {
   const { row, running, failure, messages } = props;
-  const shownTime = shownTimeOf(row);
   const stopping = stoppingOf(running, row.state);
   return (
     <Table.Tbody className={classes.container}>
-      <Table.Tr>
-        <Table.Td>
-          <StateLabel state={row.state} name={messages.stateName(row.state)} />
-        </Table.Td>
-        <Table.Td>
-          <Box className={classes.fill}>
-            <MiddleTruncatedText text={row.name} />
-          </Box>
-        </Table.Td>
-        <Table.Td>
-          <Box className={classes.fill}>
-            <MiddleTruncatedText text={row.image} />
-          </Box>
-        </Table.Td>
-        <Table.Td>
-          <Text inherit truncate title={portsTextOf(row.ports)} className={classes.fill}>
-            {portsTextOf(row.ports)}
-          </Text>
-        </Table.Td>
-        <Table.Td>
-          {shownTime === undefined ? "" : messages.elapsedSince(shownTime, props.now)}
-        </Table.Td>
-        <Table.Td>
-          {!stopping && (
-            <RowActions
-              row={row}
-              running={running}
-              messages={messages}
-              onOperate={props.onOperate}
-              onRequestRemoval={props.onRequestRemoval}
-            />
-          )}
-        </Table.Td>
-      </Table.Tr>
+      <ContainerMainRow
+        row={row}
+        running={running}
+        stopping={stopping !== undefined}
+        now={props.now}
+        messages={messages}
+        onOperate={props.onOperate}
+        onRequestRemoval={props.onRequestRemoval}
+      />
       {stopping && (
-        <Table.Tr>
-          <Table.Td colSpan={COLUMN_COUNT}>
-            <Box className={classes.fill}>
-              <StoppingNotice
-                text={`${messages.stopping(row.name)} ${messages.elapsed(props.now - stopping.startedAt)}`}
-                killLabel={messages.operations.kill}
-                killing={isOperationRunning(running, "kill")}
-                onKill={() => props.onOperate("kill", [row.id])}
-              />
-            </Box>
-          </Table.Td>
-        </Table.Tr>
+        <NoticeRow>
+          <StoppingNotice
+            text={`${messages.stopping(row.name)} ${messages.elapsed(props.now - stopping.startedAt)}`}
+            killLabel={messages.operations.kill}
+            killing={isOperationRunning(running, "kill")}
+            onKill={() => props.onOperate("kill", [row.id])}
+          />
+        </NoticeRow>
       )}
       {failure && (
-        <Table.Tr>
-          <Table.Td colSpan={COLUMN_COUNT}>
-            <Box className={classes.fill}>
-              <FailureNotice
-                summary={messages.operationFailed(failure.operation, row.name)}
-                cause={messages.failureCause(failure.failure)}
-                showFullLabel={messages.showFullFailure}
-                collapseLabel={messages.collapseFailure}
-                closeLabel={messages.closeFailure}
-                expanded={failure.expanded}
-                onToggleExpansion={() => props.onToggleFailureExpansion(row.id)}
-                onClose={() => props.onDismissFailure(row.id)}
-              />
-            </Box>
-          </Table.Td>
-        </Table.Tr>
+        <NoticeRow>
+          <FailureNotice
+            summary={messages.operationFailed(failure.operation, row.name)}
+            cause={messages.failureCause(failure.failure)}
+            showFullLabel={messages.showFullFailure}
+            collapseLabel={messages.collapseFailure}
+            closeLabel={messages.closeFailure}
+            expanded={failure.expanded}
+            onToggleExpansion={() => props.onToggleFailureExpansion(row.id)}
+            onClose={() => props.onDismissFailure(row.id)}
+          />
+        </NoticeRow>
       )}
     </Table.Tbody>
+  );
+}
+
+/** コンテナ 1 つの行の 1 段目。停止処理中は、行の右端に操作のボタンを出さない（docs/spec/containers.md の「停止は待たされる」）。 */
+function ContainerMainRow(props: {
+  row: ContainerRow;
+  running: RunningOperation[] | undefined;
+  stopping: boolean;
+  now: number;
+  messages: ContainersMessages;
+  onOperate: (operation: ContainerOperation, ids: string[]) => void;
+  onRequestRemoval: (id: string) => void;
+}) {
+  const { row, messages } = props;
+  const shownTime = shownTimeOf(row);
+  return (
+    <Table.Tr>
+      <Table.Td>
+        <StateLabel state={row.state} name={messages.stateName(row.state)} />
+      </Table.Td>
+      <Table.Td>
+        <Box className={classes.fill}>
+          <MiddleTruncatedText text={row.name} />
+        </Box>
+      </Table.Td>
+      <Table.Td>
+        <Box className={classes.fill}>
+          <MiddleTruncatedText text={row.image} />
+        </Box>
+      </Table.Td>
+      <Table.Td>
+        <Text inherit truncate title={portsTextOf(row.ports)} className={classes.fill}>
+          {portsTextOf(row.ports)}
+        </Text>
+      </Table.Td>
+      <Table.Td>
+        {shownTime === undefined ? "" : messages.elapsedSince(shownTime, props.now)}
+      </Table.Td>
+      <Table.Td>
+        {!props.stopping && (
+          <RowActions
+            row={row}
+            running={props.running}
+            messages={messages}
+            onOperate={props.onOperate}
+            onRequestRemoval={props.onRequestRemoval}
+          />
+        )}
+      </Table.Td>
+    </Table.Tr>
+  );
+}
+
+/** 行の知らせを出す、行の 2 段目（docs/spec/containers.md の「行の知らせ」）。 */
+function NoticeRow(props: { children: ReactNode }) {
+  return (
+    <Table.Tr>
+      <Table.Td colSpan={COLUMN_COUNT}>
+        <Box className={classes.fill}>{props.children}</Box>
+      </Table.Td>
+    </Table.Tr>
   );
 }

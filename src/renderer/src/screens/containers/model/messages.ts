@@ -43,6 +43,13 @@ export type ContainersMessages = {
   collapseFailure: string;
   /** 失敗の知らせを閉じるボタンの名前。 */
   closeFailure: string;
+  /** 選択（docs/spec/containers.md の「まとめて操作する」）。 */
+  selection: {
+    /** 見出しのチェックボックスの名前。画面には出さず、読み上げに使う。 */
+    selectAll: string;
+    /** 行のチェックボックスの名前。画面には出さず、読み上げに使う。 */
+    selectRow: (name: string) => string;
+  };
   /** 削除の確認の画面（docs/spec/containers.md の「削除の確認」）。 */
   removalConfirmation: {
     /** 画面を読み上げる機能に渡す、確認の画面の名前。 */
@@ -154,6 +161,10 @@ export const CONTAINERS_MESSAGES: Record<Language, ContainersMessages> = {
     showFullFailure: "全文を表示",
     collapseFailure: "たたむ",
     closeFailure: "閉じる",
+    selection: {
+      selectAll: "すべて選択",
+      selectRow: (name) => `${name} を選択`,
+    },
     removalConfirmation: {
       label: "コンテナの削除の確認",
       cancel: CONFIRM_MESSAGES.ja.cancel,
@@ -213,6 +224,10 @@ export const CONTAINERS_MESSAGES: Record<Language, ContainersMessages> = {
     showFullFailure: "Show full message",
     collapseFailure: "Collapse",
     closeFailure: "Close",
+    selection: {
+      selectAll: "Select all",
+      selectRow: (name) => `Select ${name}`,
+    },
     removalConfirmation: {
       label: "Confirm removing the container",
       cancel: CONFIRM_MESSAGES.en.cancel,

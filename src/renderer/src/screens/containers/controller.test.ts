@@ -5,6 +5,7 @@ import type { ConnectionState } from "../../../../shared/connection";
 import type { ContainerOperation } from "../../../../shared/containers";
 import { fakeMainApi } from "../../api/fake-main-api.test-helper";
 import { useContainersController } from "./controller";
+import type { ContainersFilter } from "./model/list-rows";
 import { rowOf } from "./rows.test-helper";
 import { cleanUpAfterEachTest } from "../../render.test-helper";
 
@@ -13,12 +14,17 @@ cleanUpAfterEachTest();
 const CONNECTED: ConnectionState = { kind: "connected", engineName: "colima" };
 const STOPPED: ConnectionState = { kind: "stopped", engineName: "colima", startable: true };
 const ROWS = [rowOf("web-1", { kind: "running" })];
+const NO_FILTER: ContainersFilter = { text: "", hideExited: false };
 
 function controllerWith(initial: ConnectionState | undefined) {
   const fake = fakeMainApi();
   const hook = renderHook(
     (props: { connection: ConnectionState | undefined }) =>
-      useContainersController({ api: fake.api.containers, connection: props.connection }),
+      useContainersController({
+        api: fake.api.containers,
+        connection: props.connection,
+        filter: NO_FILTER,
+      }),
     { initialProps: { connection: initial } },
   );
   return { fake, hook };
@@ -219,5 +225,56 @@ describe("useContainersController の操作", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe("useContainersController の選択", () => {
+  const WEB = rowOf("web-1", { kind: "running" });
+  const DB = rowOf("db-1", { kind: "exited", exitCode: 0 });
+
+  function selectingController() {
+    const fake = fakeMainApi();
+    const hook = renderHook(
+      (props: { filter: ContainersFilter }) =>
+        useContainersController({
+          api: fake.api.containers,
+          connection: CONNECTED,
+          filter: props.filter,
+        }),
+      { initialProps: { filter: NO_FILTER } },
+    );
+    return { fake, hook };
+  }
+
+  it("toggleSelection と toggleAllSelection を呼ぶと、選択したコンテナを切り替える・すべて外す", async () => {
+    const { fake, hook } = selectingController();
+    await act(async () => fake.answerContainers({ ok: true, value: [WEB, DB] }));
+
+    act(() => hook.result.current.toggleSelection(WEB.id));
+    expect(hook.result.current.state.selectedIds).toEqual([WEB.id]);
+    act(() => hook.result.current.toggleAllSelection([WEB.id, DB.id]));
+    expect(hook.result.current.state.selectedIds).toEqual([]);
+  });
+
+  it("絞り込みで隠れたコンテナを選択から外し、絞り込みを戻しても選択し直さない", async () => {
+    const { fake, hook } = selectingController();
+    await act(async () => fake.answerContainers({ ok: true, value: [WEB, DB] }));
+    act(() => hook.result.current.toggleAllSelection([WEB.id, DB.id]));
+
+    hook.rerender({ filter: { text: "web", hideExited: false } });
+    expect(hook.result.current.state.selectedIds).toEqual([WEB.id]);
+    hook.rerender({ filter: NO_FILTER });
+    expect(hook.result.current.state.selectedIds).toEqual([WEB.id]);
+  });
+
+  it("一覧を読み直して読み込めなかったときは、選択を外さない", async () => {
+    const { fake, hook } = selectingController();
+    await act(async () => fake.answerContainers({ ok: true, value: [WEB, DB] }));
+    act(() => hook.result.current.toggleSelection(WEB.id));
+
+    act(() => hook.result.current.reload());
+    await act(async () => fake.answerContainers({ ok: false, failure: { kind: "unexpected" } }));
+
+    expect(hook.result.current.state.selectedIds).toEqual([WEB.id]);
   });
 });

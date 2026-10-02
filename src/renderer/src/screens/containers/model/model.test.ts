@@ -267,3 +267,22 @@ describe("nextContainersState の削除の確認", () => {
     expect(next.removalConfirmation).toBeUndefined();
   });
 });
+
+describe("nextContainersState の選択", () => {
+  const WEB = rowOf("web-1", { kind: "running" });
+  const DB = rowOf("db-1", { kind: "exited", exitCode: 0 });
+  const SELECTED = [WEB.id, DB.id].reduce(
+    (state, id) => nextContainersState(state, { kind: "selectionToggled", id }),
+    nextContainersState(INITIAL_CONTAINERS_STATE, { kind: "loaded", rows: [WEB, DB] }),
+  );
+
+  it("一覧から消えたコンテナを、選択から外す", () => {
+    const next = nextContainersState(SELECTED, { kind: "loaded", rows: [DB] });
+
+    expect(next.selectedIds).toEqual([DB.id]);
+  });
+
+  it("接続が切れたら、選択をすべて外す", () => {
+    expect(nextContainersState(SELECTED, { kind: "disconnected" }).selectedIds).toEqual([]);
+  });
+});

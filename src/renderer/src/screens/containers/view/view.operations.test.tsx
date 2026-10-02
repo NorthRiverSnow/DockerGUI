@@ -262,3 +262,49 @@ describe("ContainersView の削除の確認", () => {
     expect(handlers.onConfirmRemoval).not.toHaveBeenCalled();
   });
 });
+
+describe("ContainersView の選択", () => {
+  const WEB = rowOf("web-1", { kind: "running" });
+  const DB = rowOf("db-1", { kind: "exited", exitCode: 0 });
+  const checkboxOf = (name: string) => screen.getByRole<HTMLInputElement>("checkbox", { name });
+
+  it("行のチェックボックスを押すと、行のコンテナの ID を onToggleSelection に渡す", () => {
+    const handlers = renderView({ kind: "loaded", rows: [WEB, DB] });
+
+    fireEvent.click(checkboxOf("web-1 を選択"));
+
+    expect(handlers.onToggleSelection).toHaveBeenCalledExactlyOnceWith("id-web-1");
+  });
+
+  it("選択したコンテナの行だけ、チェックボックスをチェックした表示にする", () => {
+    renderView({ kind: "loaded", rows: [WEB, DB] }, undefined, { selectedIds: ["id-db-1"] });
+
+    expect(checkboxOf("db-1 を選択").checked).toBe(true);
+    expect(checkboxOf("web-1 を選択").checked).toBe(false);
+  });
+
+  it.each<[string, string[], { checked: boolean; indeterminate: boolean }]>([
+    ["1 つも選択していない", [], { checked: false, indeterminate: false }],
+    ["一部を選択している", ["id-web-1"], { checked: false, indeterminate: true }],
+    ["すべて選択している", ["id-web-1", "id-db-1"], { checked: true, indeterminate: false }],
+  ])(
+    "一覧に出ている行を%sときは、見出しのチェックボックスを、仕様で決めた表示にする",
+    (_label, selectedIds, mark) => {
+      renderView({ kind: "loaded", rows: [WEB, DB] }, undefined, { selectedIds });
+
+      const head = checkboxOf("すべて選択");
+      expect({ checked: head.checked, indeterminate: head.indeterminate }).toEqual(mark);
+    },
+  );
+
+  it("見出しのチェックボックスを押すと、一覧に出ている行のコンテナの ID だけを onToggleAllSelection に渡す", () => {
+    const handlers = renderView(
+      { kind: "loaded", rows: [WEB, DB] },
+      { text: "web", hideExited: false },
+    );
+
+    fireEvent.click(checkboxOf("すべて選択"));
+
+    expect(handlers.onToggleAllSelection).toHaveBeenCalledExactlyOnceWith(["id-web-1"]);
+  });
+});

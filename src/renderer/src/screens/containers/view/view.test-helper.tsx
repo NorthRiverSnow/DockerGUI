@@ -13,7 +13,7 @@ import { ContainersView } from "./view";
 
 export const NOW = Date.parse("2026-09-29T12:00:00Z");
 
-/** filter を書かなければ、絞り込まない。operations を書かなければ、応答を待っている操作も失敗も無い。 */
+/** filter を書かなければ、絞り込まない。operations を書かなければ、応答を待っている操作も失敗も、選択したコンテナも無い。 */
 export function renderView(
   list: ContainersList,
   filter: ContainersFilter = { text: "", hideExited: false },
@@ -21,6 +21,7 @@ export function renderView(
     running?: Record<string, RunningOperation[]>;
     failures?: Record<string, OperationFailure>;
     removalConfirmation?: RemovalConfirmation;
+    selectedIds?: string[];
   } = {},
 ) {
   const handlers = {
@@ -33,6 +34,8 @@ export function renderView(
     onRequestRemoval: vi.fn(),
     onCancelRemoval: vi.fn(),
     onConfirmRemoval: vi.fn(),
+    onToggleSelection: vi.fn(),
+    onToggleAllSelection: vi.fn(),
   };
   renderWithMantine(
     <ContainersView
@@ -43,15 +46,22 @@ export function renderView(
       running={operations.running ?? {}}
       failures={operations.failures ?? {}}
       removalConfirmation={operations.removalConfirmation}
+      selectedIds={operations.selectedIds ?? []}
       {...handlers}
     />,
   );
   return handlers;
 }
 
-/** 表の行ごとの、列の文。見出しの行は入れない。 */
+/**
+ * 表の行ごとの、列の文。見出しの行と、文を持たない選択の列（行の 1 段目の先頭のセル）は入れない。
+ * 行の知らせを出す 2 段目は、セルが 1 つだけなので、そのまま入れる。
+ */
 export const cellTexts = () =>
   screen
     .getAllByRole("row")
     .slice(1)
-    .map((row) => [...row.querySelectorAll("td")].map((cell) => cell.textContent));
+    .map((row) => {
+      const cells = [...row.querySelectorAll("td")];
+      return (cells.length > 1 ? cells.slice(1) : cells).map((cell) => cell.textContent);
+    });

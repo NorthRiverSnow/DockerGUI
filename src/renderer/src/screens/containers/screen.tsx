@@ -18,7 +18,11 @@ export function ContainersScreen(props: {
   onFilterTextChange: (text: string) => void;
   onHideExitedChange: (hide: boolean) => void;
 }) {
-  const controller = useContainersController({ api: props.api, connection: props.connection });
+  const controller = useContainersController({
+    api: props.api,
+    connection: props.connection,
+    filter: props.filter,
+  });
   return (
     <ContainersView
       list={controller.state.list}
@@ -35,6 +39,9 @@ export function ContainersScreen(props: {
       onRequestRemoval={controller.requestRemoval}
       onCancelRemoval={controller.cancelRemoval}
       onConfirmRemoval={controller.confirmRemoval}
+      selectedIds={controller.state.selectedIds}
+      onToggleSelection={controller.toggleSelection}
+      onToggleAllSelection={controller.toggleAllSelection}
       onFilterTextChange={props.onFilterTextChange}
       onHideExitedChange={props.onHideExitedChange}
     />

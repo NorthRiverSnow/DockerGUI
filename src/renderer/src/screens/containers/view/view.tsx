@@ -1,6 +1,6 @@
 import { Button, Skeleton, Stack, Text } from "@mantine/core";
 import { NotConnectedNotice } from "../../../components/not-connected-notice";
-import type { RowOperationProps } from "./container-table";
+import type { RowOperationProps, SelectionProps } from "./container-table";
 import { LoadedList, type RemovalConfirmationProps } from "./loaded-list";
 import type { ContainersMessages } from "../model/messages";
 import type { ContainersFilter } from "../model/list-rows";
@@ -20,7 +20,8 @@ export function ContainersView(
     onFilterTextChange: (text: string) => void;
     onHideExitedChange: (hide: boolean) => void;
   } & RowOperationProps &
-    RemovalConfirmationProps,
+    RemovalConfirmationProps &
+    SelectionProps,
 ) {
   const { list, messages } = props;
   switch (list.kind) {

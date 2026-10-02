@@ -2,10 +2,12 @@ import { useCallback, useEffect, useReducer, useRef, useState, type Dispatch } f
 import type { ConnectionState } from "../../../../shared/connection";
 import type { ContainerOperation } from "../../../../shared/containers";
 import type { ContainersApi } from "../../api/containers-api";
+import { visibleRowsOf, type ContainersFilter } from "./model/list-rows";
 import {
   INITIAL_CONTAINERS_STATE,
   nextContainersState,
   type ContainersEvent,
+  type ContainersList,
   type ContainersState,
 } from "./model/model";
 
@@ -29,10 +31,7 @@ const OPERATION_REQUESTS: Record<
   remove: (api, ids) => api.remove(ids),
 };
 
-export function useContainersController(deps: {
-  api: ContainersApi;
-  connection: ConnectionState | undefined;
-}): {
+type ContainersController = {
   state: ContainersState;
   /** 「時間」の列と経過した時間を出すための、いまの時刻。30 秒ごとに、操作の応答を待っている間は 1 秒ごとに進む。 */
   now: number;
@@ -47,12 +46,22 @@ export function useContainersController(deps: {
   cancelRemoval: () => void;
   /** 削除の確認の画面を閉じて、id のコンテナを削除する。 */
   confirmRemoval: (id: string) => void;
-} {
+  toggleSelection: (id: string) => void;
+  /** 見出しのチェックボックスを押したときに呼ぶ（docs/spec/containers.md の「まとめて操作する」）。 */
+  toggleAllSelection: (visibleIds: string[]) => void;
+};
+
+export function useContainersController(deps: {
+  api: ContainersApi;
+  connection: ConnectionState | undefined;
+  filter: ContainersFilter;
+}): ContainersController {
   const [state, dispatch] = useReducer(nextContainersState, INITIAL_CONTAINERS_STATE);
   const connected = deps.connection?.kind === "connected";
   const reload = useListLoading(deps.api, connected, dispatch);
   const operationRunning = Object.keys(state.running).length > 0;
   const now = useClockFasterWhileOperating(operationRunning);
+  useVisibleRowsNotification(state.list, deps.filter, dispatch);
 
   const operate = useCallback(
     (operation: ContainerOperation, ids: string[]) => {
@@ -71,6 +80,7 @@ export function useContainersController(deps: {
     operate,
     ...useFailureActions(dispatch),
     ...useRemovalActions(operate, dispatch),
+    ...useSelectionActions(dispatch),
   };
 }
 
@@ -173,4 +183,42 @@ function useRemovalActions(
     [dispatch, operate],
   );
   return { requestRemoval, cancelRemoval, confirmRemoval };
+}
+
+/** 一覧に出ている行が変わったら、Model に知らせる。Model は、絞り込みで隠れたコンテナを選択から外す（docs/spec/containers.md の「まとめて操作する」）。 */
+function useVisibleRowsNotification(
+  list: ContainersList,
+  filter: ContainersFilter,
+  dispatch: Dispatch<ContainersEvent>,
+): void {
+  // why: 一覧が読み込み済みでない間（取得失敗など）は、一覧に出ている行が分からないので、出来事を送らない。
+  const visibleIdsKey =
+    list.kind === "loaded"
+      ? visibleRowsOf(list.rows, filter)
+          .map((row) => row.id)
+          .join("\n")
+      : undefined;
+  // why: useEffect は、依存の値を参照で比べる。一覧の行の配列は読み直すたびに作り直されるので、配列を依存にすると、
+  // 一覧に出ている行が同じでも、一覧に出ている行が変わった出来事を送り直す。ID を並べた文字列を依存にする。
+  useEffect(() => {
+    if (visibleIdsKey === undefined) {
+      return;
+    }
+    dispatch({
+      kind: "visibleRowsChanged",
+      visibleIds: visibleIdsKey === "" ? [] : visibleIdsKey.split("\n"),
+    });
+  }, [visibleIdsKey, dispatch]);
+}
+
+function useSelectionActions(dispatch: Dispatch<ContainersEvent>) {
+  const toggleSelection = useCallback(
+    (id: string) => dispatch({ kind: "selectionToggled", id }),
+    [dispatch],
+  );
+  const toggleAllSelection = useCallback(
+    (visibleIds: string[]) => dispatch({ kind: "allSelectionToggled", visibleIds }),
+    [dispatch],
+  );
+  return { toggleSelection, toggleAllSelection };
 }

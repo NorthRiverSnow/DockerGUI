@@ -4,7 +4,7 @@ import { useHotkeys } from "@mantine/hooks";
 import { useRef } from "react";
 import type { ContainerRow } from "../../../../../shared/containers";
 import { ConfirmDialog } from "../../../components/confirm-dialog";
-import { ContainerTable, type RowOperationProps } from "./container-table";
+import { ContainerTable, type RowOperationProps, type SelectionProps } from "./container-table";
 import type { ContainersMessages } from "../model/messages";
 import { visibleRowsOf, type ContainersFilter } from "../model/list-rows";
 import type { RemovalConfirmation } from "../model/model";
@@ -16,18 +16,19 @@ export type RemovalConfirmationProps = {
   onConfirmRemoval: (id: string) => void;
 };
 
+type LoadedListProps = {
+  rows: ContainerRow[];
+  filter: ContainersFilter;
+  now: number;
+  messages: ContainersMessages;
+  onFilterTextChange: (text: string) => void;
+  onHideExitedChange: (hide: boolean) => void;
+} & RowOperationProps &
+  RemovalConfirmationProps &
+  SelectionProps;
+
 /** 絞り込みの入力と切り替えと、絞り込んだ一覧と、削除の確認の画面。 */
-export function LoadedList(
-  props: {
-    rows: ContainerRow[];
-    filter: ContainersFilter;
-    now: number;
-    messages: ContainersMessages;
-    onFilterTextChange: (text: string) => void;
-    onHideExitedChange: (hide: boolean) => void;
-  } & RowOperationProps &
-    RemovalConfirmationProps,
-) {
+export function LoadedList(props: LoadedListProps) {
   const { messages } = props;
   const rows = visibleRowsOf(props.rows, props.filter);
   return (
@@ -51,6 +52,9 @@ export function LoadedList(
           onDismissFailure={props.onDismissFailure}
           onToggleFailureExpansion={props.onToggleFailureExpansion}
           onRequestRemoval={props.onRequestRemoval}
+          selectedIds={props.selectedIds}
+          onToggleSelection={props.onToggleSelection}
+          onToggleAllSelection={props.onToggleAllSelection}
         />
       )}
       <RemovalConfirmDialog

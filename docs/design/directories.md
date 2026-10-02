@@ -93,25 +93,26 @@ Controller は `controller.ts` とテストの 2 つだけなので、ディレ�
 
 ```
 screens/containers
-├── screen.tsx                  Controller を呼び、View に props で渡す（renderer.md）
-├── controller.ts               Controller
-├── controller.test.ts          Controller のテスト
-├── <名前>.test-helper.ts       model/ と view/ と controller.test.ts が使う準備（rows.test-helper.ts など）
-├── model/                      Model の役のファイル（renderer.md）
-│   ├── model.ts                状態の型と、出来事から次の状態を作る関数
-│   ├── model.test.ts           model.ts のテスト
-│   ├── <観点>.ts               状態から画面に出す値を導く関数。仕様の節ごとに分ける（operations.ts、list-rows.ts など）
-│   ├── <観点>.test.ts          <観点>.ts のテスト
-│   ├── messages.ts             画面に出す文を作る関数
-│   └── messages.test.ts        画面に出す文のテスト
-└── view/                       View の役のファイル
-    ├── view.tsx                画面の状態ごとに、出す部品を選ぶ
-    ├── <部品>.tsx              View の部品（state-label.tsx、row-actions.tsx など）
-    ├── view.*.test.tsx         View のテスト。観点ごとに分ける（view.list.test.tsx など。renderer.md の「View のテスト」）
-    ├── <名前>.test-helper.tsx  View のテストが使う準備（view.test-helper.tsx）
-    ├── view.module.css         View の見た目のうち、Mantine の props で書けないもの
-    ├── <部品>.module.css       部品の見た目のうち、Mantine の props で書けないもの（container-table.module.css など）
-    └── view.stories.tsx        View の Storybook
+├── screen.tsx                    Controller を呼び、View に props で渡す（renderer.md）
+├── controller.ts                 Controller
+├── controller.test.ts            Controller のテスト
+├── <名前>.test-helper.ts         model/ と view/ と controller.test.ts が使う準備（rows.test-helper.ts など）
+├── model/                        Model の役のファイル（renderer.md）
+│   ├── model.ts                  状態の型と、出来事から次の状態を作る関数
+│   ├── model.test.ts             model.ts のテスト
+│   ├── <観点>.ts                 状態から画面に出す値を導く関数。仕様の節ごとに分ける（operations.ts、list-rows.ts など）
+│   ├── <観点>.test.ts            <観点>.ts のテスト
+│   ├── messages.ts               画面に出す文を作る関数
+│   └── messages.test.ts          画面に出す文のテスト
+└── view/                         View の役のファイル
+    ├── view.tsx                  画面の状態ごとに、出す部品を選ぶ
+    ├── <部品>.tsx                View の部品（state-label.tsx、row-actions.tsx など）
+    ├── view.*.test.tsx           View のテスト。観点ごとに分ける（view.list.test.tsx など。renderer.md の「View のテスト」）
+    ├── <名前>.test-helper.tsx    View のテストが使う準備（view.test-helper.tsx）
+    ├── view.module.css           View の見た目のうち、Mantine の props で書けないもの
+    ├── <部品>.module.css         部品の見た目のうち、Mantine の props で書けないもの（container-table.module.css など）
+    ├── view.stories.tsx          View の Storybook
+    └── <名前>.stories-helper.ts  Storybook が使う見本のデータ（view.stories-helper.ts）
 ```
 
 **View の部品は、部品ごとに 1 つのファイルに分ける。** ファイルの名前は、部品の名前の単語を小文字にして `-` でつないだもの（`RowActions` なら `row-actions.tsx`）にする。
@@ -165,5 +166,7 @@ Vitest は、既定で `.test.ts` で終わるファイルを探すので、設�
 
 **1 つの対象のテストが、1 ファイルの行数の上限（Skill の `code-style` の「ファイルと関数の大きさ」）を超えるときは、仕様の観点ごとに `<対象>.<観点>.test.ts` に分ける**（例: `connection.reconnect.test.ts`、`view.operations.test.tsx`）。
 分けたファイルが共通して使う準備は、テスト用の関数の置き場所の決まりのとおり `.test-helper.ts` に置き、名前を `<対象>.test-helper.ts` にする（例: `connection.test-helper.ts`）。
+
+**Storybook のファイル（`*.stories.tsx`）が 1 ファイルの行数の上限を超えるときは、見本のデータを `<名前>.stories-helper.ts` に移す**（例: `view.stories-helper.ts`）。Storybook は `*.stories.tsx` だけを読むので、`.stories-helper.ts` はストーリーとして読まれない。
 
 **why: 名前の先頭を対象の名前にする。** 分けたテストのファイルは、ファイルの一覧で対象のファイルの隣に並ぶので、どの対象のテストかが分かる。

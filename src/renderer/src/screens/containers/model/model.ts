@@ -1,5 +1,6 @@
 import type { ContainerOperation, ContainerRow } from "../../../../../shared/containers";
 import type { BatchResult, Failure, Result } from "../../../../../shared/result";
+import { nextSelectedIds, selectedIdsOfRows, type SelectionEvent } from "./selection";
 
 /** 一覧の場所の状態（docs/spec/common.md の「一覧の状態」）。 */
 export type ContainersList =
@@ -31,13 +32,20 @@ export type ContainersState = {
   /** コンテナの ID ごとの、閉じるまで残す操作の失敗。 */
   failures: Record<string, OperationFailure>;
   removalConfirmation: RemovalConfirmation | undefined;
+  /** 選択したコンテナの ID（docs/spec/containers.md の「まとめて操作する」）。 */
+  selectedIds: string[];
 };
 
-export type ContainersEvent =
+/** 一覧を読み込む出来事。 */
+type ListEvent =
   | { kind: "loadStarted" }
   | { kind: "loaded"; rows: ContainerRow[] }
   | { kind: "loadFailed"; failure: Failure }
-  | { kind: "disconnected" }
+  | { kind: "disconnected" };
+
+export type ContainersEvent =
+  | ListEvent
+  | SelectionEvent
   | { kind: "operationStarted"; operation: ContainerOperation; ids: string[]; startedAt: number }
   | {
       kind: "operationFinished";
@@ -55,12 +63,39 @@ export const INITIAL_CONTAINERS_STATE: ContainersState = {
   running: {},
   failures: {},
   removalConfirmation: undefined,
+  selectedIds: [],
 };
 
 export function nextContainersState(
   state: ContainersState,
   event: ContainersEvent,
 ): ContainersState {
+  switch (event.kind) {
+    case "loadStarted":
+    case "loaded":
+    case "loadFailed":
+    case "disconnected":
+      return nextListState(state, event);
+    case "selectionToggled":
+    case "allSelectionToggled":
+    case "visibleRowsChanged":
+      return { ...state, selectedIds: nextSelectedIds(state.selectedIds, event) };
+    case "operationStarted":
+      return startedState(state, event.operation, event.ids, event.startedAt);
+    case "operationFinished":
+      return finishedState(state, event.operation, event.ids, event.result);
+    case "failureDismissed":
+      return { ...state, failures: withoutKeys(state.failures, [event.id]) };
+    case "failureExpansionToggled":
+      return { ...state, failures: toggledExpansionOf(state.failures, event.id) };
+    case "removalRequested":
+      return { ...state, removalConfirmation: requestedConfirmationOf(state, event.id) };
+    case "removalConfirmationClosed":
+      return { ...state, removalConfirmation: closedConfirmationOf(state.removalConfirmation) };
+  }
+}
+
+function nextListState(state: ContainersState, event: ListEvent): ContainersState {
   switch (event.kind) {
     case "loadStarted":
       // why: 読み込み済みの一覧を取り直すときは、一覧を出したまま入れ替える（docs/spec/common.md の「一覧の状態」）。
@@ -71,6 +106,7 @@ export function nextContainersState(
         list: { kind: "loaded", rows: event.rows },
         failures: failuresOfRows(state.failures, event.rows),
         removalConfirmation: removalConfirmationOfRows(state.removalConfirmation, event.rows),
+        selectedIds: selectedIdsOfRows(state.selectedIds, event.rows),
       };
     case "loadFailed":
       return {
@@ -85,19 +121,8 @@ export function nextContainersState(
         list: { kind: "notConnected" },
         failures: {},
         removalConfirmation: undefined,
+        selectedIds: [],
       };
-    case "operationStarted":
-      return startedState(state, event.operation, event.ids, event.startedAt);
-    case "operationFinished":
-      return finishedState(state, event.operation, event.ids, event.result);
-    case "failureDismissed":
-      return { ...state, failures: withoutKeys(state.failures, [event.id]) };
-    case "failureExpansionToggled":
-      return { ...state, failures: toggledExpansionOf(state.failures, event.id) };
-    case "removalRequested":
-      return { ...state, removalConfirmation: requestedConfirmationOf(state, event.id) };
-    case "removalConfirmationClosed":
-      return { ...state, removalConfirmation: closedConfirmationOf(state.removalConfirmation) };
   }
 }
 

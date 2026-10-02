@@ -18,13 +18,13 @@ function controllerWith(initial: ConnectionState | undefined) {
   const fake = fakeMainApi();
   const hook = renderHook(
     (props: { connection: ConnectionState | undefined }) =>
-      useContainersController({ api: fake.api, connection: props.connection }),
+      useContainersController({ api: fake.api.containers, connection: props.connection }),
     { initialProps: { connection: initial } },
   );
   return { fake, hook };
 }
 
-const listCalls = (calls: string[]) => calls.filter((call) => call === "listContainers").length;
+const listCalls = (calls: string[]) => calls.filter((call) => call === "containers.list").length;
 
 describe("useContainersController", () => {
   it("接続していなければ読み込まず、未接続にする", async () => {
@@ -110,13 +110,13 @@ describe("useContainersController", () => {
 
 describe("useContainersController の操作", () => {
   it.each<[ContainerOperation, string]>([
-    ["start", "startContainers"],
-    ["pause", "pauseContainers"],
-    ["unpause", "unpauseContainers"],
-    ["stop", "stopContainers"],
-    ["kill", "killContainers"],
-    ["restart", "restartContainers"],
-    ["remove", "removeContainers"],
+    ["start", "containers.start"],
+    ["pause", "containers.pause"],
+    ["unpause", "containers.unpause"],
+    ["stop", "containers.stop"],
+    ["kill", "containers.kill"],
+    ["restart", "containers.restart"],
+    ["remove", "containers.remove"],
   ])("%s を頼むと、main の窓口の %s に ID を送る", (operation, apiName) => {
     const { fake, hook } = controllerWith(CONNECTED);
 
@@ -176,7 +176,7 @@ describe("useContainersController の操作", () => {
     act(() => hook.result.current.requestRemoval("id-web-1"));
 
     expect(hook.result.current.state.removalConfirmation).toEqual({ row: ROWS[0], opened: true });
-    expect(fake.calls.filter((call) => call.startsWith("removeContainers"))).toEqual([]);
+    expect(fake.calls.filter((call) => call.startsWith("containers.remove"))).toEqual([]);
   });
 
   it("削除をやめると、確認の画面を閉じ、main の窓口には何も送らない", async () => {
@@ -187,7 +187,7 @@ describe("useContainersController の操作", () => {
     act(() => hook.result.current.cancelRemoval());
 
     expect(hook.result.current.state.removalConfirmation?.opened).toBe(false);
-    expect(fake.calls.filter((call) => call.startsWith("removeContainers"))).toEqual([]);
+    expect(fake.calls.filter((call) => call.startsWith("containers.remove"))).toEqual([]);
   });
 
   it("削除を確定すると、確認の画面を閉じ、main の窓口にコンテナの ID を送る", async () => {
@@ -201,7 +201,7 @@ describe("useContainersController の操作", () => {
     expect(hook.result.current.state.running["id-web-1"]?.map((item) => item.operation)).toEqual([
       "remove",
     ]);
-    expect(fake.calls).toContain("removeContainers:id-web-1");
+    expect(fake.calls).toContain("containers.remove:id-web-1");
   });
 
   it("応答を待っている間は、経過した時間を出すために、いまの時刻を 1 秒ごとに進める", () => {

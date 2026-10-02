@@ -112,9 +112,9 @@ type BatchResult = { target: string; result: Result<void> }[];
 
 **どの口が状態を変える操作かは、`src/shared` の口の定義に書く。** IPC 層は定義を読んで、開始と終了を書くかを決める。
 
-**main から返す応答は、renderer で検査しない。**
+**main から返す応答と知らせは、renderer で検査しない。**
 
-**why: main は、renderer から見て信用できる側。** 応答は main が作ったもので、型検査を通っている。
+**why: main は、renderer から見て信用できる側。** 応答と知らせは main が作ったもので、型検査を通っている。
 検査が要るのは、形が保証されない値が入ってくる境目だけ（原則 12）。
 
 ## ストリーム

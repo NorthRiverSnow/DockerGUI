@@ -1,6 +1,6 @@
 import type { ConnectionState } from "../../../../shared/connection";
 import type { Language } from "../../../../shared/language";
-import type { MainApi } from "../../api/main-api";
+import type { ContainersApi } from "../../api/containers-api";
 import { useContainersController } from "./controller";
 import { CONTAINERS_MESSAGES } from "./messages";
 import type { ContainersFilter } from "./model";
@@ -11,7 +11,7 @@ import { ContainersView } from "./view";
  * 絞り込みの入力と切り替えは、対象を切り替えても残すので、アプリ全体の状態から受け取る（docs/design/renderer.md の「アプリ全体の状態」）。
  */
 export function ContainersScreen(props: {
-  api: MainApi;
+  api: ContainersApi;
   connection: ConnectionState | undefined;
   language: Language;
   filter: ContainersFilter;

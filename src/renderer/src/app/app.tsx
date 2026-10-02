@@ -24,7 +24,7 @@ export function App(props: { api: MainApi }) {
       content={
         controller.state.selectedTarget === "containers" ? (
           <ContainersScreen
-            api={props.api}
+            api={props.api.containers}
             connection={controller.state.connection}
             language={language}
             filter={{

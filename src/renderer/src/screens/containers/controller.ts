@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import type { ConnectionState } from "../../../../shared/connection";
 import type { ContainerOperation } from "../../../../shared/containers";
-import type { MainApi } from "../../api/main-api";
+import type { ContainersApi } from "../../api/containers-api";
 import { INITIAL_CONTAINERS_STATE, nextContainersState, type ContainersState } from "./model";
 
 /** 「3 分前」の表示を進める間隔。 */
@@ -13,19 +13,19 @@ const RUNNING_CLOCK_REFRESH_MS = 1000;
 /** 操作ごとに、main の窓口のどの関数を呼ぶか。 */
 const OPERATION_REQUESTS: Record<
   ContainerOperation,
-  (api: MainApi, ids: string[]) => ReturnType<MainApi["startContainers"]>
+  (api: ContainersApi, ids: string[]) => ReturnType<ContainersApi["start"]>
 > = {
-  start: (api, ids) => api.startContainers(ids),
-  pause: (api, ids) => api.pauseContainers(ids),
-  unpause: (api, ids) => api.unpauseContainers(ids),
-  stop: (api, ids) => api.stopContainers(ids),
-  kill: (api, ids) => api.killContainers(ids),
-  restart: (api, ids) => api.restartContainers(ids),
-  remove: (api, ids) => api.removeContainers(ids),
+  start: (api, ids) => api.start(ids),
+  pause: (api, ids) => api.pause(ids),
+  unpause: (api, ids) => api.unpause(ids),
+  stop: (api, ids) => api.stop(ids),
+  kill: (api, ids) => api.kill(ids),
+  restart: (api, ids) => api.restart(ids),
+  remove: (api, ids) => api.remove(ids),
 };
 
 export function useContainersController(deps: {
-  api: MainApi;
+  api: ContainersApi;
   connection: ConnectionState | undefined;
 }): {
   state: ContainersState;
@@ -62,7 +62,7 @@ export function useContainersController(deps: {
     let current = true;
     const changedCountAtStart = changedCount.current;
     dispatch({ kind: "loadStarted" });
-    void deps.api.listContainers().then((result) => {
+    void deps.api.list().then((result) => {
       if (!current || changedCount.current !== changedCountAtStart) {
         return;
       }
@@ -82,7 +82,7 @@ export function useContainersController(deps: {
     if (!connected) {
       return;
     }
-    return deps.api.onContainersChanged((rows) => {
+    return deps.api.onChanged((rows) => {
       changedCount.current += 1;
       dispatch({ kind: "loaded", rows });
     });

@@ -77,12 +77,11 @@ screen は、App から受け取った画面の言語で `LOGS_MESSAGES` から 
 
 ```ts
 function useContainersController(deps: {
-  api: MainApi;                 // main の窓口
+  api: ContainersApi;           // main の窓口のうち、コンテナの口
   connection: ConnectionState;  // アプリ全体の状態のうち、コンテナの画面が使うもの
-  filter: string;
 }): {
   state: ContainersState;
-  startContainers: (ids: string[]) => void;
+  operate: (operation: ContainerOperation, ids: string[]) => void;
   // …
 };
 ```
@@ -129,16 +128,35 @@ main のテストは Node のまま実行する。
 
 ## main の窓口（`src/renderer/src/api`）
 
-**`window.api` を呼ぶ処理を、1 つのモジュールに集める**（`design-policy.md` の「Storybook を使う条件」）。
+**`window.api` を呼ぶ処理を、`src/renderer/src/api` に集める**（`design-policy.md` の「Storybook を使う条件」）。
+
+**口のまとまり（`design-policy.md` の原則 17。`ipc.md` の「口の一覧」の見出しの `connection`、`containers` など）ごとに、窓口のファイルを分ける**（`connection-api.ts`、`containers-api.ts` など）。
+`main-api.ts` の `MainApi` は、まとまりごとの窓口をまとめるだけにする（`api.containers.start(ids)` の形で呼ぶ）。
 
 | 持つもの | 中身 |
 | --- | --- |
-| 口ごとの関数 | `ipc.md` の「口の一覧」の口ごとに 1 つ。要求と応答の型は `src/shared` から読み込む |
+| 口ごとの関数 | `ipc.md` の「口の一覧」の要求の口ごとに 1 つ。要求と応答の型は `src/shared` から読み込む |
 | 知らせの受け取り | 知らせの口ごとに、受け取る関数を登録して、登録を外す関数を返す |
 | ストリームの受け取り | ストリームの識別子ごとに、受け取る関数を登録する。受け取ったら確認を返す（「ストリームの確認を返す時点」） |
 
+| 窓口の関数の名前 | 付け方 | 例 |
+| --- | --- | --- |
+| 要求の口 | 口の名前から、まとまりの言葉を除く。残りが動詞で始まらないときは、動詞を補う | `containers:startContainers` → `containers.start`、`connection:startEngine` → `connection.startEngine`、`app:rendererPainted` → `app.notifyRendererPainted` |
+| 知らせの口 | `on` に、口の名前からまとまりの言葉を除いたものを続ける | `containers:containersChanged` → `containers.onChanged` |
+
 **本物の窓口と、見せかけの窓口の 2 つを作る。** 本物は `window.api` を呼び、見せかけはテストと Storybook で使う。
 どちらも同じ型に従う。
+
+**画面の Controller には、画面が使うまとまりの窓口だけを渡す**（コンテナの画面には `ContainersApi`）。アプリ全体の Controller は、2 つ以上のまとまりを使うので `MainApi` を受け取る。
+
+**why: 口は、画面を作るたびに増える。** 1 つの型と 1 つの関数に並べると、口の数だけ長くなる。まとまりごとに分けると、直す場所が次の表のように限られる。
+
+| 足すもの | 直す場所 |
+| --- | --- |
+| 今あるまとまりの口 | そのまとまりの窓口のファイルと、見せかけの窓口（`fake-main-api.test-helper.ts`） |
+| 新しいまとまり | 新しいまとまりの窓口のファイル、`main-api.ts` の `MainApi` と `realMainApiOf`、見せかけの窓口 |
+
+**why: 画面に渡す窓口を絞る。** どの画面がどの口を使うかが、型で分かる。
 
 ### ストリームの確認を返す時点
 

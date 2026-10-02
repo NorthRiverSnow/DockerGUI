@@ -29,10 +29,10 @@ export function useAppController(deps: { api: MainApi }): {
   useEffect(() => {
     // why: 状態を取りにいく前に、知らせの受け取りを始める。逆の順にすると、
     // 取りにいってから受け取りを始めるまでの間に変わった状態を取りこぼす。
-    const stopReceiving = deps.api.onConnectionStateChanged((connection) => {
+    const stopReceiving = deps.api.connection.onStateChanged((connection) => {
       dispatch({ kind: "connectionStateReceived", connection });
     });
-    void deps.api.getConnectionState().then((result) => {
+    void deps.api.connection.getState().then((result) => {
       if (result.ok) {
         dispatch({ kind: "connectionStateReceived", connection: result.value });
       }
@@ -41,7 +41,7 @@ export function useAppController(deps: { api: MainApi }): {
   }, [deps.api]);
 
   useEffect(() => {
-    void deps.api.getLanguage().then((result) => {
+    void deps.api.app.getLanguage().then((result) => {
       if (result.ok) {
         dispatch({ kind: "languageReceived", language: result.value });
       }
@@ -49,7 +49,7 @@ export function useAppController(deps: { api: MainApi }): {
   }, [deps.api]);
 
   useEffect(() => {
-    void deps.api.getScreenSettings().then((result) => {
+    void deps.api.app.getScreenSettings().then((result) => {
       if (result.ok) {
         dispatch({ kind: "screenSettingsReceived", screenSettings: result.value });
       }
@@ -62,7 +62,7 @@ export function useAppController(deps: { api: MainApi }): {
   const settingsReceived = state.language !== undefined && state.screenSettings !== undefined;
   useEffect(() => {
     if (settingsReceived) {
-      void deps.api.notifyRendererPainted();
+      void deps.api.app.notifyRendererPainted();
     }
   }, [deps.api, settingsReceived]);
 
@@ -82,17 +82,23 @@ export function useAppController(deps: { api: MainApi }): {
     dispatch({ kind: "targetSelected", target });
   }, []);
   // why: ボタンの操作の結果は、接続の状態の知らせで届く。口の応答は、受け付けたことしか表さないので読まない。
-  const startEngine = useCallback(() => void deps.api.startEngine(), [deps.api]);
-  const connectEngine = useCallback(() => void deps.api.connectEngine(), [deps.api]);
-  const retryConnecting = useCallback(() => void deps.api.retryConnecting(), [deps.api]);
-  const cancelConnecting = useCallback(() => void deps.api.cancelConnecting(), [deps.api]);
-  const reconnectNow = useCallback(() => void deps.api.reconnectNow(), [deps.api]);
-  const giveUpReconnecting = useCallback(() => void deps.api.giveUpReconnecting(), [deps.api]);
+  const startEngine = useCallback(() => void deps.api.connection.startEngine(), [deps.api]);
+  const connectEngine = useCallback(() => void deps.api.connection.connectEngine(), [deps.api]);
+  const retryConnecting = useCallback(() => void deps.api.connection.retryConnecting(), [deps.api]);
+  const cancelConnecting = useCallback(
+    () => void deps.api.connection.cancelConnecting(),
+    [deps.api],
+  );
+  const reconnectNow = useCallback(() => void deps.api.connection.reconnectNow(), [deps.api]);
+  const giveUpReconnecting = useCallback(
+    () => void deps.api.connection.giveUpReconnecting(),
+    [deps.api],
+  );
   // why: 画面の配色は、main が Electron の配色を変えた時点で変わる。renderer は配色を持たないので、送るだけにする。
   // why: 「自動」を選んだときの画面の言語は、main が OS の言語から決める。main の応答を待ってから、状態に入れる。
   const selectLanguage = useCallback(
     (setting: LanguageSetting) =>
-      void deps.api.setLanguage(setting).then((result) => {
+      void deps.api.app.setLanguage(setting).then((result) => {
         if (result.ok) {
           dispatch({ kind: "languageReceived", language: result.value });
         }
@@ -106,12 +112,12 @@ export function useAppController(deps: { api: MainApi }): {
   const changeScreenSetting = useCallback(
     (change: ScreenSettingChange) => {
       dispatch({ kind: "screenSettingChanged", change });
-      void deps.api.setScreenSetting(change);
+      void deps.api.app.setScreenSetting(change);
     },
     [deps.api],
   );
   const switchColorScheme = useCallback(
-    (colorScheme: ColorSchemeSetting) => void deps.api.setColorScheme(colorScheme),
+    (colorScheme: ColorSchemeSetting) => void deps.api.app.setColorScheme(colorScheme),
     [deps.api],
   );
 

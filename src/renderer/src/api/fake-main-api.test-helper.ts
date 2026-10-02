@@ -1,3 +1,4 @@
+import type { ConnectionState } from "../../../shared/connection";
 import type { ContainerRow } from "../../../shared/containers";
 import type { LanguageState } from "../../../shared/language";
 import { DEFAULT_SCREEN_SETTINGS } from "../../../shared/screen-settings";
@@ -19,13 +20,20 @@ export type FakeMainApi = {
   answerScreenSettings: () => void;
   /** app.getLanguage の応答を返す。呼ぶまで app.getLanguage は終わらない。 */
   answerLanguage: (state: LanguageState) => void;
+  /** いちばん古い、まだ応答していない connection.getState に、state を返す。 */
+  answerConnectionState: (state: ConnectionState) => void;
+  /** connection:connectionStateChanged の知らせを届ける。 */
+  notifyConnectionState: (state: ConnectionState) => void;
+  /** 接続の状態の知らせを受け取っている関数の数。 */
+  connectionStateListenerCount: () => number;
 };
 
 const OK: Result<undefined> = { ok: true, value: undefined };
 
 /**
  * テストで使う。main の窓口の代わり。呼ばれた窓口の名前を calls に残す。
- * app.getLanguage は answerLanguage を呼ぶまで、connection.getState はいつまでも終わらない。
+ * app.getLanguage は answerLanguage を呼ぶまで、connection.getState は answerConnectionState を呼ぶまで終わらない。
+ * containers.onChanged は、calls に残さない。
  * app.setLanguage は、選んだ設定と、「自動」なら日本語、それ以外は選んだ言語を返す。
  * containers.list は、answerContainers を呼ぶまで終わらない。
  * コンテナの操作は、呼ばれた窓口の名前と ID を `containers.stop:id-1,id-2` の形で calls に残し、answerOperation を呼ぶまで終わらない。
@@ -36,6 +44,8 @@ export function fakeMainApi(options: { holdScreenSettings?: boolean } = {}): Fak
   let answer: (state: LanguageState) => void = () => {};
   let answerSettings: () => void = () => {};
   const containersListeners: ((rows: ContainerRow[]) => void)[] = [];
+  const connectionStateListeners: ((state: ConnectionState) => void)[] = [];
+  const connectionStateAnswers: ((state: ConnectionState) => void)[] = [];
   const containerAnswers: ((result: Awaited<ReturnType<MainApi["containers"]["list"]>>) => void)[] =
     [];
   const operationAnswers: ((result: Result<BatchResult>) => void)[] = [];
@@ -51,7 +61,9 @@ export function fakeMainApi(options: { holdScreenSettings?: boolean } = {}): Fak
     connection: {
       getState: () => {
         calls.push("connection.getState");
-        return new Promise(() => {});
+        return new Promise((resolve) =>
+          connectionStateAnswers.push((state) => resolve({ ok: true, value: state })),
+        );
       },
       startEngine: () => called("connection.startEngine", OK),
       connectEngine: () => called("connection.connectEngine", OK),
@@ -59,7 +71,13 @@ export function fakeMainApi(options: { holdScreenSettings?: boolean } = {}): Fak
       cancelConnecting: () => called("connection.cancelConnecting", OK),
       reconnectNow: () => called("connection.reconnectNow", OK),
       giveUpReconnecting: () => called("connection.giveUpReconnecting", OK),
-      onStateChanged: () => () => {},
+      onStateChanged: (listener) => {
+        calls.push("connection.onStateChanged");
+        connectionStateListeners.push(listener);
+        return () => {
+          connectionStateListeners.splice(connectionStateListeners.indexOf(listener), 1);
+        };
+      },
     },
     app: {
       setColorScheme: (colorScheme) => called(`app.setColorScheme:${colorScheme}`, OK),
@@ -114,6 +132,11 @@ export function fakeMainApi(options: { holdScreenSettings?: boolean } = {}): Fak
     api,
     calls,
     answerLanguage: (state) => answer(state),
+    answerConnectionState: (state) => connectionStateAnswers.shift()?.(state),
+    notifyConnectionState: (state) => {
+      for (const listener of connectionStateListeners) listener(state);
+    },
+    connectionStateListenerCount: () => connectionStateListeners.length,
     notifyContainersChanged: (rows) => {
       for (const listener of containersListeners) listener(rows);
     },

@@ -1,8 +1,13 @@
-import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState, type Dispatch } from "react";
 import type { ConnectionState } from "../../../../shared/connection";
 import type { ContainerOperation } from "../../../../shared/containers";
 import type { ContainersApi } from "../../api/containers-api";
-import { INITIAL_CONTAINERS_STATE, nextContainersState, type ContainersState } from "./model/model";
+import {
+  INITIAL_CONTAINERS_STATE,
+  nextContainersState,
+  type ContainersEvent,
+  type ContainersState,
+} from "./model/model";
 
 /** 「3 分前」の表示を進める間隔。 */
 const CLOCK_REFRESH_MS = 30_000;
@@ -44,9 +49,41 @@ export function useContainersController(deps: {
   confirmRemoval: (id: string) => void;
 } {
   const [state, dispatch] = useReducer(nextContainersState, INITIAL_CONTAINERS_STATE);
-  const [now, setNow] = useState(Date.now);
-  const [loadCount, setLoadCount] = useState(0);
   const connected = deps.connection?.kind === "connected";
+  const reload = useListLoading(deps.api, connected, dispatch);
+  const operationRunning = Object.keys(state.running).length > 0;
+  const now = useClockFasterWhileOperating(operationRunning);
+
+  const operate = useCallback(
+    (operation: ContainerOperation, ids: string[]) => {
+      dispatch({ kind: "operationStarted", operation, ids, startedAt: Date.now() });
+      void OPERATION_REQUESTS[operation](deps.api, ids).then((result) =>
+        dispatch({ kind: "operationFinished", operation, ids, result }),
+      );
+    },
+    [deps.api],
+  );
+
+  return {
+    state,
+    now,
+    reload,
+    operate,
+    ...useFailureActions(dispatch),
+    ...useRemovalActions(operate, dispatch),
+  };
+}
+
+/**
+ * 接続している間、一覧を読み、一覧が変わった知らせを受け取って、Model に渡す。
+ * 返す関数を呼ぶと、一覧を読み直す。
+ */
+function useListLoading(
+  api: ContainersApi,
+  connected: boolean,
+  dispatch: Dispatch<ContainersEvent>,
+): () => void {
+  const [loadCount, setLoadCount] = useState(0);
 
   /** containers:containersChanged の知らせが届いた回数。読み込みの応答より新しい知らせが届いたかを見分ける。 */
   const changedCount = useRef(0);
@@ -62,7 +99,7 @@ export function useContainersController(deps: {
     let current = true;
     const changedCountAtStart = changedCount.current;
     dispatch({ kind: "loadStarted" });
-    void deps.api.list().then((result) => {
+    void api.list().then((result) => {
       if (!current || changedCount.current !== changedCountAtStart) {
         return;
       }
@@ -75,20 +112,25 @@ export function useContainersController(deps: {
     return () => {
       current = false;
     };
-  }, [deps.api, connected, loadCount]);
+  }, [api, connected, loadCount, dispatch]);
 
   // why: 一覧が変わった知らせは、接続している間にしか届かない。接続が切れた後に遅れて届いた知らせで、「未接続」を上書きしない。
   useEffect(() => {
     if (!connected) {
       return;
     }
-    return deps.api.onChanged((rows) => {
+    return api.onChanged((rows) => {
       changedCount.current += 1;
       dispatch({ kind: "loaded", rows });
     });
-  }, [deps.api, connected]);
+  }, [api, connected, dispatch]);
 
-  const operationRunning = Object.keys(state.running).length > 0;
+  return useCallback(() => setLoadCount((count) => count + 1), []);
+}
+
+/** いまの時刻。30 秒ごとに、operationRunning の間は 1 秒ごとに進む。 */
+function useClockFasterWhileOperating(operationRunning: boolean): number {
+  const [now, setNow] = useState(Date.now);
   useEffect(() => {
     const timer = setInterval(
       () => setNow(Date.now()),
@@ -96,53 +138,39 @@ export function useContainersController(deps: {
     );
     return () => clearInterval(timer);
   }, [operationRunning]);
+  return now;
+}
 
-  const reload = useCallback(() => setLoadCount((count) => count + 1), []);
-
-  const operate = useCallback(
-    (operation: ContainerOperation, ids: string[]) => {
-      dispatch({ kind: "operationStarted", operation, ids, startedAt: Date.now() });
-      void OPERATION_REQUESTS[operation](deps.api, ids).then((result) =>
-        dispatch({ kind: "operationFinished", operation, ids, result }),
-      );
-    },
-    [deps.api],
-  );
-
+function useFailureActions(dispatch: Dispatch<ContainersEvent>) {
   const dismissFailure = useCallback(
     (id: string) => dispatch({ kind: "failureDismissed", id }),
-    [],
+    [dispatch],
   );
-
   const toggleFailureExpansion = useCallback(
     (id: string) => dispatch({ kind: "failureExpansionToggled", id }),
-    [],
+    [dispatch],
   );
+  return { dismissFailure, toggleFailureExpansion };
+}
 
+function useRemovalActions(
+  operate: (operation: ContainerOperation, ids: string[]) => void,
+  dispatch: Dispatch<ContainersEvent>,
+) {
   const requestRemoval = useCallback(
     (id: string) => dispatch({ kind: "removalRequested", id }),
-    [],
+    [dispatch],
   );
-
-  const cancelRemoval = useCallback(() => dispatch({ kind: "removalConfirmationClosed" }), []);
-
+  const cancelRemoval = useCallback(
+    () => dispatch({ kind: "removalConfirmationClosed" }),
+    [dispatch],
+  );
   const confirmRemoval = useCallback(
     (id: string) => {
       dispatch({ kind: "removalConfirmationClosed" });
       operate("remove", [id]);
     },
-    [operate],
+    [dispatch, operate],
   );
-
-  return {
-    state,
-    now,
-    reload,
-    operate,
-    dismissFailure,
-    toggleFailureExpansion,
-    requestRemoval,
-    cancelRemoval,
-    confirmRemoval,
-  };
+  return { requestRemoval, cancelRemoval, confirmRemoval };
 }

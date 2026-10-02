@@ -45,6 +45,8 @@ export type ContainersMessages = {
   closeFailure: string;
   /** 選択（docs/spec/containers.md の「まとめて操作する」）。 */
   selection: {
+    /** 選択の帯の名前。画面には出さず、読み上げに使う。 */
+    toolbar: string;
     /** 見出しのチェックボックスの名前。画面には出さず、読み上げに使う。 */
     selectAll: string;
     /** 行のチェックボックスの名前。画面には出さず、読み上げに使う。 */
@@ -162,6 +164,7 @@ export const CONTAINERS_MESSAGES: Record<Language, ContainersMessages> = {
     collapseFailure: "たたむ",
     closeFailure: "閉じる",
     selection: {
+      toolbar: "選択したコンテナの操作",
       selectAll: "すべて選択",
       selectRow: (name) => `${name} を選択`,
     },
@@ -225,6 +228,7 @@ export const CONTAINERS_MESSAGES: Record<Language, ContainersMessages> = {
     collapseFailure: "Collapse",
     closeFailure: "Close",
     selection: {
+      toolbar: "Actions for selected containers",
       selectAll: "Select all",
       selectRow: (name) => `Select ${name}`,
     },

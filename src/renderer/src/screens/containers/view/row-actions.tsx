@@ -1,14 +1,7 @@
-import {
-  ArrowClockwiseIcon,
-  PauseIcon,
-  PlayIcon,
-  StopIcon,
-  TrashIcon,
-  type Icon,
-} from "@phosphor-icons/react";
 import { ActionIcon, Group, Tooltip } from "@mantine/core";
 import type { ContainerOperation, ContainerRow } from "../../../../../shared/containers";
-import { iconColorOf, type IconColor } from "../../../components/icon-color";
+import { iconColorOf } from "../../../components/icon-color";
+import { OPERATION_LOOKS } from "./operation-looks";
 import type { ContainersMessages } from "../model/messages";
 import { isOperationRunning, MAX_ROW_OPERATIONS, rowOperationsOf } from "../model/operations";
 import type { RunningOperation } from "../model/model";
@@ -21,21 +14,6 @@ const BUTTON_GAP = 4;
 /** 操作のボタンを最大の数だけ並べたときの幅。 */
 export const ROW_ACTIONS_WIDTH =
   MAX_ROW_OPERATIONS * BUTTON_SIZE + (MAX_ROW_OPERATIONS - 1) * BUTTON_GAP;
-
-type OperationLook = { icon: Icon; color: IconColor };
-
-/**
- * 行の操作のボタンのアイコンと色（docs/spec/containers.md の「操作」）。
- * 強制停止は、停止処理中の知らせの文のボタンにするので持たない。
- */
-const OPERATION_LOOKS: Partial<Record<ContainerOperation, OperationLook>> = {
-  start: { icon: PlayIcon, color: "green" },
-  pause: { icon: PauseIcon, color: "yellow" },
-  unpause: { icon: PlayIcon, color: "green" },
-  stop: { icon: StopIcon, color: "red" },
-  restart: { icon: ArrowClockwiseIcon, color: "blue" },
-  remove: { icon: TrashIcon, color: "red" },
-};
 
 /** 行の右端の操作のボタン。その状態で押せる操作だけを出す（docs/spec/common.md の「その状態で使えないボタンは、出さない」）。 */
 export function RowActions(props: {

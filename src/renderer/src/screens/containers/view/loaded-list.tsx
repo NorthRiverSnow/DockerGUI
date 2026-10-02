@@ -5,6 +5,7 @@ import { useRef } from "react";
 import type { ContainerRow } from "../../../../../shared/containers";
 import { ConfirmDialog } from "../../../components/confirm-dialog";
 import { ContainerTable, type RowOperationProps, type SelectionProps } from "./container-table";
+import { SelectionBar } from "./selection-bar";
 import type { ContainersMessages } from "../model/messages";
 import { visibleRowsOf, type ContainersFilter } from "../model/list-rows";
 import type { RemovalConfirmation } from "../model/model";
@@ -27,10 +28,11 @@ type LoadedListProps = {
   RemovalConfirmationProps &
   SelectionProps;
 
-/** 絞り込みの入力と切り替えと、絞り込んだ一覧と、削除の確認の画面。 */
+/** 絞り込みの入力と切り替えと、選択の帯と、絞り込んだ一覧と、削除の確認の画面。 */
 export function LoadedList(props: LoadedListProps) {
   const { messages } = props;
   const rows = visibleRowsOf(props.rows, props.filter);
+  const selectedRows = rows.filter((row) => props.selectedIds.includes(row.id));
   return (
     <Stack gap="md">
       <FilterBar
@@ -39,6 +41,14 @@ export function LoadedList(props: LoadedListProps) {
         onFilterTextChange={props.onFilterTextChange}
         onHideExitedChange={props.onHideExitedChange}
       />
+      {selectedRows.length > 0 && (
+        <SelectionBar
+          selectedRows={selectedRows}
+          running={props.running}
+          messages={messages}
+          onOperate={props.onOperate}
+        />
+      )}
       {rows.length === 0 ? (
         <Text c="dimmed">{messages.filter.noMatch}</Text>
       ) : (

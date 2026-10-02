@@ -1,4 +1,8 @@
-import type { ContainerOperation, ContainerState } from "../../../../../shared/containers";
+import type {
+  ContainerOperation,
+  ContainerRow,
+  ContainerState,
+} from "../../../../../shared/containers";
 import type { RunningOperation } from "./model";
 
 /** 1 つの行に並ぶ操作のボタンの、最大の数（動作中の行の、一時停止・停止・再起動・削除）。 */
@@ -23,6 +27,22 @@ export function rowOperationsOf(state: ContainerState): ContainerOperation[] {
     case "dead":
       return [];
   }
+}
+
+/**
+ * 選択の帯に出す操作を、出す順に並べたもの（docs/spec/containers.md の「まとめて操作する」）。
+ * TODO: まとめて削除を作るステップ 6d-3 で、remove を加える。
+ */
+const BULK_OPERATIONS: ContainerOperation[] = ["start", "pause", "unpause", "stop", "restart"];
+
+/** rows のうち、operation を実行できる状態の行の、コンテナの ID。 */
+export function operableIdsOf(rows: ContainerRow[], operation: ContainerOperation): string[] {
+  return rows.filter((row) => rowOperationsOf(row.state).includes(operation)).map((row) => row.id);
+}
+
+/** 選択の帯に出す操作。rows のうち 1 件でも操作できる状態の行がある操作だけを、出す順に返す。 */
+export function bulkOperationsOf(rows: ContainerRow[]): ContainerOperation[] {
+  return BULK_OPERATIONS.filter((operation) => operableIdsOf(rows, operation).length > 0);
 }
 
 /** 削除の前に、停止する状態（docs/design/main.md の「コンテナの操作」）。 */

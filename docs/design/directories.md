@@ -107,6 +107,7 @@ screens/containers
 └── view/                         View の役のファイル
     ├── view.tsx                  画面の状態ごとに、出す部品を選ぶ
     ├── <部品>.tsx                View の部品（state-label.tsx、row-actions.tsx など）
+    ├── <名前>.ts                 画面の 2 つ以上の部品が使う値（operation-looks.ts。アイコンと色の表）
     ├── view.*.test.tsx           View のテスト。観点ごとに分ける（view.list.test.tsx など。renderer.md の「View のテスト」）
     ├── <名前>.test-helper.tsx    View のテストが使う準備（view.test-helper.tsx）
     ├── view.module.css           View の見た目のうち、Mantine の props で書けないもの
@@ -129,6 +130,7 @@ screens/containers
 
 **2 つ以上の画面で使う部品は `components` に、2 つ以上の画面で使う文の関数は `messages` に置く**（一覧、確認の画面、状態バー、待たせるときの文など）。
 2 つ以上の画面の部品が使う値（アイコンの色の `icon-color.ts`、アイコンの大きさの `icon-size.ts`）も `components` に置く。
+1 つの画面の 2 つ以上の部品が使う値は、その画面の `view/` に `<名前>.ts` で置く（コンテナの画面の、操作のボタンのアイコンと色の `operation-looks.ts`）。
 1 つの画面でしか使わない部品は、その画面のディレクトリに置く。
 **2 つ目の画面で使うことになった時点で、`components` に移す。**
 

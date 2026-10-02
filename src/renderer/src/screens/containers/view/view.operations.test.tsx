@@ -308,3 +308,68 @@ describe("ContainersView の選択", () => {
     expect(handlers.onToggleAllSelection).toHaveBeenCalledExactlyOnceWith(["id-web-1"]);
   });
 });
+
+describe("ContainersView の選択の帯", () => {
+  const WEB = rowOf("web-1", { kind: "running" });
+  const DB = rowOf("db-1", { kind: "exited", exitCode: 0 });
+  const BROKEN = rowOf("broken-1", { kind: "dead" });
+  const toolbarButtonNames = () =>
+    within(screen.getByRole("group", { name: "選択したコンテナの操作" }))
+      .getAllByRole("button")
+      .map((button) => button.textContent);
+
+  it("1 件も選択していなければ、選択の帯を出さない", () => {
+    renderView({ kind: "loaded", rows: [WEB, DB] });
+
+    expect(screen.queryByRole("group", { name: "選択したコンテナの操作" })).toBeNull();
+  });
+
+  it("選択したコンテナのうち 1 件でも操作できる操作のボタンだけを、名前を付けて出す", () => {
+    renderView({ kind: "loaded", rows: [WEB, DB] }, undefined, {
+      selectedIds: ["id-web-1", "id-db-1"],
+    });
+
+    expect(toolbarButtonNames()).toEqual(["起動", "一時停止", "停止", "再起動"]);
+  });
+
+  it("操作できるコンテナを選択していなければ、選択の帯を出さない", () => {
+    renderView({ kind: "loaded", rows: [BROKEN] }, undefined, { selectedIds: ["id-broken-1"] });
+
+    expect(screen.queryByRole("group", { name: "選択したコンテナの操作" })).toBeNull();
+  });
+
+  it("選択の帯のボタンを押すと、選択したコンテナのうち、操作できる状態のものの ID だけを onOperate に渡す", () => {
+    const handlers = renderView({ kind: "loaded", rows: [WEB, DB] }, undefined, {
+      selectedIds: ["id-web-1", "id-db-1"],
+    });
+
+    fireEvent.click(
+      within(screen.getByRole("group", { name: "選択したコンテナの操作" })).getByRole("button", {
+        name: "停止",
+      }),
+    );
+
+    expect(handlers.onOperate).toHaveBeenCalledExactlyOnceWith("stop", ["id-web-1"]);
+  });
+
+  it("選択したコンテナのうち 1 件でも、その操作の応答を待っていれば、選択の帯のそのボタンを押せない", () => {
+    renderView({ kind: "loaded", rows: [WEB, DB] }, undefined, {
+      selectedIds: ["id-web-1", "id-db-1"],
+      running: { "id-db-1": [{ operation: "start", startedAt: NOW }] },
+    });
+
+    const toolbar = within(screen.getByRole("group", { name: "選択したコンテナの操作" }));
+    expect(toolbar.getByRole("button", { name: "起動" }).hasAttribute("disabled")).toBe(true);
+    expect(toolbar.getByRole("button", { name: "停止" }).hasAttribute("disabled")).toBe(false);
+  });
+
+  it("停止を待つ間に一覧の状態が先に終了になったコンテナも、選択していれば、選択の帯の ［停止］ を押せない", () => {
+    renderView({ kind: "loaded", rows: [WEB, DB] }, undefined, {
+      selectedIds: ["id-web-1", "id-db-1"],
+      running: { "id-db-1": [{ operation: "stop", startedAt: NOW }] },
+    });
+
+    const group = within(screen.getByRole("group", { name: "選択したコンテナの操作" }));
+    expect(group.getByRole("button", { name: "停止" }).hasAttribute("disabled")).toBe(true);
+  });
+});

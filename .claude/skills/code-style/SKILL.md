@@ -40,6 +40,25 @@ description: DockerGUI の src を書く・直す前に読む。決まってい�
 `why:` は、その理由で判断している場所に書く。定数や関数を定義した場所ではなく、それを使って分けている行の近くに置く。
 docs の節を参照するときは、節の名前で書く（「〜の後に書いてある」のような位置で書かない）。
 
+## 似た関数は、変わる理由が同じときだけ 1 つにする
+
+**書く前に、同じ働きの関数がすでにあるかを探す。** あれば、新しく書かずに使う。
+
+**1 つにしてよいかは、見た目ではなく、変わる理由で決める。** 同じ仕様から来ていて、いつも一緒に変わるものだけを 1 つにする。
+仕様の上で別のものが、たまたま同じ形になっているときは、1 つにしない。仕様が変わると、片方だけが変わる。
+
+| 場面 | すること | 例 |
+| --- | --- | --- |
+| 同じ理由で、どこでも同じに書いている | 1 つにまとめる | テストの matchMedia の代わりの関数（jsdom に無く、Mantine が使う） |
+| 仕様の上で別のもので、今は同じ形 | 別の名前で、別に定義する | 一覧の並び順の「起動しているコンテナ」と、削除の前に停止する状態 |
+| 仕様の上で別のもので、当面は中身を共有してよい | 名前だけ分けて、`const B_SCHEMA = A_SCHEMA;` のように置く | A の取得と B の取得の要求のスキーマ |
+
+## ファイルと関数の大きさ
+
+**1 ファイルは 300 行、1 関数は 50 行までにする**（oxlint の `max-lines` と `max-lines-per-function` の既定の値）。
+テストのファイル（`*.test.ts(x)` と `*.test-helper.ts(x)`）は、1 ファイル 400 行までにし、関数の行数は測らない。テストの `describe` の中身が、1 つの関数として数えられるため。
+`vp check` が測る（`vite.config.ts` の `lint`）。超えたら、仕様の節や役目の区切りで分ける。分けると読みにくくなるときは、分けずに利用者に相談する。
+
 ## ライブラリの中を推測しない
 
 **ライブラリの内部の動きに頼るテストや実装を書く前に、入れてある版のソースコードを読む。**
@@ -64,7 +83,7 @@ export すると、ほかのファイルからも使えるようになり、中�
 | 対象 | 書き方 |
 | --- | --- |
 | main | Node のまま実行する。エンジンは `src/main/engine-api/fake-engine.test-helper.ts` のサーバで代える。Electron は `src/main/ipc/electron.test-helper.ts` で代える |
-| renderer の View と Controller | 1 行目に `// @vitest-environment jsdom`。要素は役割と名前で探す（`getByRole`）。main の窓口は `src/renderer/src/api/fake-main-api.test-helper.ts` で代える |
+| renderer の View と Controller | 1 行目に `// @vitest-environment jsdom`。準備は `src/renderer/src/render.test-helper.tsx` の関数を呼ぶ（View は `setUpViewTests` と `renderWithMantine`、Controller は `cleanUpAfterEachTest`）。要素は役割と名前で探す（`getByRole`）。main の窓口は `src/renderer/src/api/fake-main-api.test-helper.ts` で代える |
 | renderer の Model と文 | 純関数として呼ぶ。文は日本語と英語の両方で確かめる |
 
 テスト名は、何をすると何が起きるかを日本語の文で書く（Skill の `writing-ja`）。

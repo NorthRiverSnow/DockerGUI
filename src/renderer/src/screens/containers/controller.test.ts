@@ -1,14 +1,14 @@
 // @vitest-environment jsdom
-import { act, cleanup, renderHook } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vite-plus/test";
+import { act, renderHook } from "@testing-library/react";
+import { describe, expect, it, vi } from "vite-plus/test";
 import type { ConnectionState } from "../../../../shared/connection";
 import type { ContainerOperation } from "../../../../shared/containers";
 import { fakeMainApi } from "../../api/fake-main-api.test-helper";
 import { useContainersController } from "./controller";
 import { rowOf } from "./rows.test-helper";
+import { cleanUpAfterEachTest } from "../../render.test-helper";
 
-// why: Testing Library は、テストの関数が全体に置かれていないと、描いた要素を自動では片付けない。
-afterEach(cleanup);
+cleanUpAfterEachTest();
 
 const CONNECTED: ConnectionState = { kind: "connected", engineName: "colima" };
 const STOPPED: ConnectionState = { kind: "stopped", engineName: "colima", startable: true };

@@ -11,7 +11,7 @@ import { CONFIRM_MESSAGES } from "../../messages/confirm";
 import { FAILURE_CAUSES } from "../../messages/failure";
 import { NOT_CONNECTED_MESSAGES, type NotConnectedMessages } from "../../messages/not-connected";
 import { ELAPSED_TEXTS } from "../../messages/waiting";
-import { isStarted, type StartedState } from "./model";
+import { isStoppedBeforeRemoval, type StoppedBeforeRemovalState } from "./model";
 
 export type ContainersMessages = {
   columns: { state: string; name: string; image: string; ports: string; time: string };
@@ -120,8 +120,8 @@ function jaStateNameOf(state: ContainerState): string {
   }
 }
 
-/** 起動しているコンテナの状態の、英語の文の中での呼び方。 */
-const EN_STARTED_STATE_WORDS: Record<StartedState["kind"], string> = {
+/** 削除の前に停止する状態の、英語の文の中での呼び方。 */
+const EN_STOPPED_BEFORE_REMOVAL_WORDS: Record<StoppedBeforeRemovalState["kind"], string> = {
   running: "running",
   paused: "paused",
   restarting: "restarting",
@@ -160,7 +160,7 @@ export const CONTAINERS_MESSAGES: Record<Language, ContainersMessages> = {
       confirm: "削除する",
       lines: (name, state) => [
         `コンテナ ${name} を削除します。`,
-        ...(isStarted(state)
+        ...(isStoppedBeforeRemoval(state)
           ? [`${name} は${jaStateNameOf(state)}なので、停止してから削除します。`]
           : []),
         "元に戻せません。",
@@ -219,9 +219,9 @@ export const CONTAINERS_MESSAGES: Record<Language, ContainersMessages> = {
       confirm: "Remove",
       lines: (name, state) => [
         `Container ${name} will be removed.`,
-        ...(isStarted(state)
+        ...(isStoppedBeforeRemoval(state)
           ? [
-              `${name} is ${EN_STARTED_STATE_WORDS[state.kind]}, so it will be stopped and then removed.`,
+              `${name} is ${EN_STOPPED_BEFORE_REMOVAL_WORDS[state.kind]}, so it will be stopped and then removed.`,
             ]
           : []),
         "This can't be undone.",

@@ -1,9 +1,7 @@
 // @vitest-environment jsdom
-import { MantineProvider } from "@mantine/core";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vite-plus/test";
+import { fireEvent, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import type { ContainerState } from "../../../../shared/containers";
-import { THEME } from "../../theme";
 import { CONTAINERS_MESSAGES } from "./messages";
 import type {
   ContainersFilter,
@@ -14,33 +12,13 @@ import type {
 } from "./model";
 import { rowOf } from "./rows.test-helper";
 import { ContainersView } from "./view";
+import { renderWithMantine, setUpViewTests } from "../../render.test-helper";
 
 const NOW = Date.parse("2026-09-29T12:00:00Z");
 
-beforeAll(() => {
-  // why: Mantine は OS の配色を window.matchMedia で読む。jsdom には window.matchMedia が無いので、
-  // どの条件にも当てはまらないと答える関数を置く。
-  window.matchMedia = (query) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: () => {},
-    removeListener: () => {},
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    dispatchEvent: () => false,
-  });
-  // why: 失敗の知らせは、文が幅に収まるかを ResizeObserver で見張る。jsdom には ResizeObserver が無いので、何もしないものを置く。
-  window.ResizeObserver = class {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  };
-});
+setUpViewTests();
 
 afterEach(() => {
-  // why: Testing Library は、テストの関数が全体に置かれていないと、描いた要素を自動では片付けない。
-  cleanup();
   vi.restoreAllMocks();
 });
 
@@ -74,20 +52,17 @@ function renderView(
     onCancelRemoval: vi.fn(),
     onConfirmRemoval: vi.fn(),
   };
-  render(
-    // why: 確認の画面を描くので、env="test" を渡す（confirm-dialog.test.tsx の renderDialog の why）。
-    <MantineProvider theme={THEME} env="test">
-      <ContainersView
-        list={list}
-        filter={filter}
-        now={NOW}
-        messages={CONTAINERS_MESSAGES.ja}
-        running={operations.running ?? {}}
-        failures={operations.failures ?? {}}
-        removalConfirmation={operations.removalConfirmation}
-        {...handlers}
-      />
-    </MantineProvider>,
+  renderWithMantine(
+    <ContainersView
+      list={list}
+      filter={filter}
+      now={NOW}
+      messages={CONTAINERS_MESSAGES.ja}
+      running={operations.running ?? {}}
+      failures={operations.failures ?? {}}
+      removalConfirmation={operations.removalConfirmation}
+      {...handlers}
+    />,
   );
   return handlers;
 }

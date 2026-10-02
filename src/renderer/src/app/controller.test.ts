@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
-import { act, cleanup, renderHook } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vite-plus/test";
+import { act, renderHook } from "@testing-library/react";
+import { describe, expect, it } from "vite-plus/test";
 import { fakeMainApi } from "../api/fake-main-api.test-helper";
 import { useAppController } from "./controller";
+import { cleanUpAfterEachTest } from "../render.test-helper";
 
-// why: Testing Library は、テストの関数が全体に置かれていないと、描いた要素を自動では片付けない。
-afterEach(cleanup);
+cleanUpAfterEachTest();
 
 const paintedCount = (calls: string[]) =>
   calls.filter((call) => call === "notifyRendererPainted").length;

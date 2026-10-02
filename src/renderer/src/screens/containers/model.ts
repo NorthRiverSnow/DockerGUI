@@ -254,13 +254,13 @@ export function rowOperationsOf(state: ContainerState): ContainerOperation[] {
   }
 }
 
-/**
- * 起動しているコンテナの状態（docs/spec/containers.md の「並び順」）。
- * 起動しているコンテナは、削除の前に停止する（docs/design/main.md の「コンテナの操作」）。
- */
-export type StartedState = Extract<ContainerState, { kind: "running" | "paused" | "restarting" }>;
+/** 削除の前に、停止する状態（docs/design/main.md の「コンテナの操作」）。 */
+export type StoppedBeforeRemovalState = Extract<
+  ContainerState,
+  { kind: "running" | "paused" | "restarting" }
+>;
 
-export function isStarted(state: ContainerState): state is StartedState {
+export function isStoppedBeforeRemoval(state: ContainerState): state is StoppedBeforeRemovalState {
   return state.kind === "running" || state.kind === "paused" || state.kind === "restarting";
 }
 
@@ -313,6 +313,11 @@ export function visibleRowsOf(rows: ContainerRow[], filter: ContainersFilter): C
 /** 終了したコンテナを隠す切り替えで隠す状態。終了のわけが分からない終了だけ（docs/spec/containers.md の「絞り込み」）。 */
 function isHideableExited(state: ContainerState): boolean {
   return state.kind === "exited" && state.exitCause === undefined;
+}
+
+/** 起動しているコンテナ（docs/spec/containers.md の「並び順」）。 */
+function isStarted(state: ContainerState): boolean {
+  return state.kind === "running" || state.kind === "paused" || state.kind === "restarting";
 }
 
 /** 起動しているコンテナを先に、それぞれの中では名前の順に並べる（docs/spec/containers.md の「並び順」）。 */

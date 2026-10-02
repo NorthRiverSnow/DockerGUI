@@ -1,42 +1,22 @@
 // @vitest-environment jsdom
-import { MantineProvider } from "@mantine/core";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vite-plus/test";
-import { THEME } from "../theme";
+import { fireEvent, screen, within } from "@testing-library/react";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { ConfirmDialog } from "./confirm-dialog";
+import { renderWithMantine, setUpViewTests } from "../render.test-helper";
 
-beforeAll(() => {
-  // why: Mantine は OS の配色を window.matchMedia で読む。jsdom には window.matchMedia が無いので、
-  // どの条件にも当てはまらないと答える関数を置く。
-  window.matchMedia = (query) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: () => {},
-    removeListener: () => {},
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    dispatchEvent: () => false,
-  });
-});
-
-// why: Testing Library は、テストの関数が全体に置かれていないと、描いた要素を自動では片付けない。
-afterEach(cleanup);
+setUpViewTests();
 
 function renderDialog(opened = true) {
   const handlers = { onCancel: vi.fn(), onConfirm: vi.fn() };
-  render(
-    // why: env="test" にすると、Mantine は開くときの動きを止め、画面の外に描かずに、その場に描く。
-    <MantineProvider theme={THEME} env="test">
-      <ConfirmDialog
-        opened={opened}
-        label="コンテナの削除の確認"
-        lines={["コンテナ web-1 を削除します。", "元に戻せません。"]}
-        cancelLabel="やめる"
-        confirmLabel="削除する"
-        {...handlers}
-      />
-    </MantineProvider>,
+  renderWithMantine(
+    <ConfirmDialog
+      opened={opened}
+      label="コンテナの削除の確認"
+      lines={["コンテナ web-1 を削除します。", "元に戻せません。"]}
+      cancelLabel="やめる"
+      confirmLabel="削除する"
+      {...handlers}
+    />,
   );
   return handlers;
 }

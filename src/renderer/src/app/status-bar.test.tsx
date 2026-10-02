@@ -1,38 +1,22 @@
 // @vitest-environment jsdom
-import { MantineProvider } from "@mantine/core";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
 import japanFlag from "circle-flags/flags/jp.svg";
 import unitedStatesFlag from "circle-flags/flags/us.svg";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vite-plus/test";
+import { describe, expect, it, vi } from "vite-plus/test";
 import type { ConnectionState } from "../../../shared/connection";
 import type { LanguageState } from "../../../shared/language";
-import { THEME } from "../theme";
 import { APP_MESSAGES } from "./messages";
 import { StatusBar } from "./status-bar";
+import { renderWithMantine, setUpViewTests } from "../render.test-helper";
 
 const NOW = 1_700_000_000_000;
 
 /** OS の配色がダークかどうか。テストごとに、renderStatusBar が決める。 */
 let osPrefersDark = false;
 
-beforeAll(() => {
-  // why: Mantine は OS の配色を window.matchMedia で読む。jsdom には window.matchMedia が無いので、
-  // OS の配色がダークかを問う条件にだけ osPrefersDark で答え、ほかの条件には当てはまらないと答える関数を置く。
-  window.matchMedia = (query) => ({
-    matches: query === "(prefers-color-scheme: dark)" && osPrefersDark,
-    media: query,
-    onchange: null,
-    addListener: () => {},
-    removeListener: () => {},
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    dispatchEvent: () => false,
-  });
+setUpViewTests({
+  mediaMatches: (query) => query === "(prefers-color-scheme: dark)" && osPrefersDark,
 });
-
-// why: Testing Library は、テストの関数が全体に置かれていないと、描いた要素を自動では片付けない。
-// vp test はテストの関数を全体に置かないので、テストごとに片付ける。
-afterEach(cleanup);
 
 /**
  * アプリと同じく、Mantine の配色を OS の配色に合わせて描く。options.osPrefersDark を書かなければ、OS はライト。
@@ -53,16 +37,15 @@ function renderStatusBar(
     onReconnectNow: vi.fn(),
     onGiveUp: vi.fn(),
   };
-  render(
-    <MantineProvider theme={THEME} defaultColorScheme="auto">
-      <StatusBar
-        connection={connection}
-        now={NOW}
-        messages={APP_MESSAGES.ja}
-        language={options.language ?? { setting: "auto", language: "ja" }}
-        {...handlers}
-      />
-    </MantineProvider>,
+  renderWithMantine(
+    <StatusBar
+      connection={connection}
+      now={NOW}
+      messages={APP_MESSAGES.ja}
+      language={options.language ?? { setting: "auto", language: "ja" }}
+      {...handlers}
+    />,
+    { defaultColorScheme: "auto" },
   );
   return handlers;
 }

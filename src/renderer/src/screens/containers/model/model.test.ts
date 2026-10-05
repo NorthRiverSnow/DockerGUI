@@ -203,27 +203,44 @@ describe("nextContainersState の削除の確認", () => {
   const WEB = rowOf("web-1", { kind: "running" });
   const DB = rowOf("db-1", { kind: "exited", exitCode: 0 });
   const LOADED = nextContainersState(INITIAL_CONTAINERS_STATE, { kind: "loaded", rows: [WEB, DB] });
-  const REQUESTED = nextContainersState(LOADED, { kind: "removalRequested", id: WEB.id });
+  const REQUESTED = nextContainersState(LOADED, { kind: "removalRequested", ids: [WEB.id] });
   const CLOSED = nextContainersState(REQUESTED, { kind: "removalConfirmationClosed" });
 
   it("削除を頼まれたコンテナの行で、確認の画面を開く", () => {
-    expect(REQUESTED.removalConfirmation).toEqual({ row: WEB, opened: true });
+    expect(REQUESTED.removalConfirmation).toEqual({ rows: [WEB], opened: true });
+  });
+
+  it("2 つ以上のコンテナの削除を頼まれたら、頼まれた順の行で、確認の画面を開く。一覧に無いコンテナは飛ばす", () => {
+    const next = nextContainersState(LOADED, {
+      kind: "removalRequested",
+      ids: [DB.id, "id-gone-1", WEB.id],
+    });
+
+    expect(next.removalConfirmation).toEqual({ rows: [DB, WEB], opened: true });
+  });
+
+  it("削除するコンテナの一部が一覧から消えたら、残ったコンテナの行で、確認の画面を開いたままにする", () => {
+    const both = nextContainersState(LOADED, { kind: "removalRequested", ids: [WEB.id, DB.id] });
+
+    const next = nextContainersState(both, { kind: "loaded", rows: [DB] });
+
+    expect(next.removalConfirmation).toEqual({ rows: [DB], opened: true });
   });
 
   it("一覧に無いコンテナの削除を頼まれても、確認の画面を開かない", () => {
-    const next = nextContainersState(LOADED, { kind: "removalRequested", id: "id-gone-1" });
+    const next = nextContainersState(LOADED, { kind: "removalRequested", ids: ["id-gone-1"] });
 
     expect(next.removalConfirmation).toBeUndefined();
   });
 
   it("閉じた確認の画面がある状態で、一覧に無いコンテナの削除を頼まれても、閉じた確認の画面の行を残す", () => {
-    const next = nextContainersState(CLOSED, { kind: "removalRequested", id: "id-gone-1" });
+    const next = nextContainersState(CLOSED, { kind: "removalRequested", ids: ["id-gone-1"] });
 
-    expect(next.removalConfirmation).toEqual({ row: WEB, opened: false });
+    expect(next.removalConfirmation).toEqual({ rows: [WEB], opened: false });
   });
 
   it("確認の画面を閉じても、閉じる間に文を出すために、削除するコンテナの行を残す", () => {
-    expect(CLOSED.removalConfirmation).toEqual({ row: WEB, opened: false });
+    expect(CLOSED.removalConfirmation).toEqual({ rows: [WEB], opened: false });
   });
 
   it("確認の画面を一度も開いていなければ、閉じる出来事が届いても、removalConfirmation は undefined のまま", () => {
@@ -237,19 +254,19 @@ describe("nextContainersState の削除の確認", () => {
 
     const next = nextContainersState(REQUESTED, { kind: "loaded", rows: [paused, DB] });
 
-    expect(next.removalConfirmation).toEqual({ row: paused, opened: true });
+    expect(next.removalConfirmation).toEqual({ rows: [paused], opened: true });
   });
 
   it("削除するコンテナが一覧から消えたら、消える前の行を残して、確認の画面を閉じる", () => {
     const next = nextContainersState(REQUESTED, { kind: "loaded", rows: [DB] });
 
-    expect(next.removalConfirmation).toEqual({ row: WEB, opened: false });
+    expect(next.removalConfirmation).toEqual({ rows: [WEB], opened: false });
   });
 
   it("閉じた確認の画面は、削除するコンテナが一覧に残っていても、一覧が変わったときに開き直さない", () => {
     const next = nextContainersState(CLOSED, { kind: "loaded", rows: [WEB, DB] });
 
-    expect(next.removalConfirmation).toEqual({ row: WEB, opened: false });
+    expect(next.removalConfirmation).toEqual({ rows: [WEB], opened: false });
   });
 
   it("一覧を読み込めなかったら、確認の画面を閉じる", () => {
@@ -258,7 +275,7 @@ describe("nextContainersState の削除の確認", () => {
       failure: { kind: "expected", code: "engineUnreachable" },
     });
 
-    expect(next.removalConfirmation).toEqual({ row: WEB, opened: false });
+    expect(next.removalConfirmation).toEqual({ rows: [WEB], opened: false });
   });
 
   it("接続が切れたら、removalConfirmation を undefined にする", () => {

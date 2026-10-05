@@ -103,6 +103,7 @@ screens/containers
 │   ├── <観点>.ts                 状態から画面に出す値を導く関数。仕様の節ごとに分ける（operations.ts、list-rows.ts など）
 │   ├── <観点>.test.ts            <観点>.ts のテスト
 │   ├── messages.ts               画面に出す文を作る関数
+│   ├── <節>-messages.ts          仕様の節ごとに分けた、画面に出す文（removal-messages.ts など。renderer.md）
 │   └── messages.test.ts          画面に出す文のテスト
 └── view/                         View の役のファイル
     ├── view.tsx                  画面の状態ごとに、出す部品を選ぶ

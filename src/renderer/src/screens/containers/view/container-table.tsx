@@ -27,7 +27,7 @@ export type RowOperationProps = {
   onOperate: (operation: ContainerOperation, ids: string[]) => void;
   onDismissFailure: (id: string) => void;
   onToggleFailureExpansion: (id: string) => void;
-  onRequestRemoval: (id: string) => void;
+  onRequestRemoval: (ids: string[]) => void;
 };
 
 /** 選択に使う値と関数（docs/spec/containers.md の「まとめて操作する」）。 */
@@ -90,7 +90,7 @@ type ContainerTableRowsProps = {
   onOperate: (operation: ContainerOperation, ids: string[]) => void;
   onDismissFailure: (id: string) => void;
   onToggleFailureExpansion: (id: string) => void;
-  onRequestRemoval: (id: string) => void;
+  onRequestRemoval: (ids: string[]) => void;
 };
 
 /** コンテナ 1 つの行と、行の知らせ（docs/spec/containers.md の「行の知らせ」）。 */
@@ -147,7 +147,7 @@ type ContainerMainRowProps = {
   now: number;
   messages: ContainersMessages;
   onOperate: (operation: ContainerOperation, ids: string[]) => void;
-  onRequestRemoval: (id: string) => void;
+  onRequestRemoval: (ids: string[]) => void;
 };
 
 /** コンテナ 1 つの行の 1 段目。停止処理中は、行の右端に操作のボタンを出さない（docs/spec/containers.md の「停止は待たされる」）。 */

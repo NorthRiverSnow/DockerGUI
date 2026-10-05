@@ -70,6 +70,9 @@ const LOGS_MESSAGES: Record<Language, LogsMessages> = {
 
 screen は、App から受け取った画面の言語で `LOGS_MESSAGES` から 1 つを選び、View に props で渡す（「画面の言語」）。
 
+**`messages.ts` が 1 ファイルの行数の上限（Skill の `code-style` の「ファイルと関数の大きさ」）を超えるときは、仕様の節ごとに `model/<節>-messages.ts` に分け、`messages.ts` の文の組に組み込む**（コンテナの画面の、削除の確認の画面の文の `removal-messages.ts`）。
+2 つ以上の文のファイルが使う値も、別のファイルに分ける（状態の呼び方の `state-names.ts`）。
+
 **why: 画面に出す文は、仕様で 1 文ずつ決めてある。** 文に対象の名前が入っているか
 （`docs/spec/common.md` の「失敗の見せ方」と各仕様の表示の例）を、
 画面を描かずにテストで確かめられる。View に文を組み立てる処理を置くと、Storybook で目で見るしかなくなる。

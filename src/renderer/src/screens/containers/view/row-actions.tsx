@@ -22,7 +22,7 @@ export function RowActions(props: {
   messages: ContainersMessages;
   onOperate: (operation: ContainerOperation, ids: string[]) => void;
   /** ［削除］ を押したときに呼ぶ。削除は、確認の画面を挟む（docs/spec/containers.md の「操作」）。 */
-  onRequestRemoval: (id: string) => void;
+  onRequestRemoval: (ids: string[]) => void;
 }) {
   const { row, running, messages } = props;
   return (
@@ -39,7 +39,7 @@ export function RowActions(props: {
               loading={isOperationRunning(running, operation)}
               onClick={() =>
                 operation === "remove"
-                  ? props.onRequestRemoval(row.id)
+                  ? props.onRequestRemoval([row.id])
                   : props.onOperate(operation, [row.id])
               }
             >

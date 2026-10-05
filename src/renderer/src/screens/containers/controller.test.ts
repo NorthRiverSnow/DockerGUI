@@ -179,16 +179,19 @@ describe("useContainersController の操作", () => {
     const { fake, hook } = controllerWith(CONNECTED);
     await act(async () => fake.answerContainers({ ok: true, value: ROWS }));
 
-    act(() => hook.result.current.requestRemoval("id-web-1"));
+    act(() => hook.result.current.requestRemoval(["id-web-1"]));
 
-    expect(hook.result.current.state.removalConfirmation).toEqual({ row: ROWS[0], opened: true });
+    expect(hook.result.current.state.removalConfirmation).toEqual({
+      rows: [ROWS[0]],
+      opened: true,
+    });
     expect(fake.calls.filter((call) => call.startsWith("containers.remove"))).toEqual([]);
   });
 
   it("削除をやめると、確認の画面を閉じ、main の窓口には何も送らない", async () => {
     const { fake, hook } = controllerWith(CONNECTED);
     await act(async () => fake.answerContainers({ ok: true, value: ROWS }));
-    act(() => hook.result.current.requestRemoval("id-web-1"));
+    act(() => hook.result.current.requestRemoval(["id-web-1"]));
 
     act(() => hook.result.current.cancelRemoval());
 
@@ -199,9 +202,9 @@ describe("useContainersController の操作", () => {
   it("削除を確定すると、確認の画面を閉じ、main の窓口にコンテナの ID を送る", async () => {
     const { fake, hook } = controllerWith(CONNECTED);
     await act(async () => fake.answerContainers({ ok: true, value: ROWS }));
-    act(() => hook.result.current.requestRemoval("id-web-1"));
+    act(() => hook.result.current.requestRemoval(["id-web-1"]));
 
-    act(() => hook.result.current.confirmRemoval("id-web-1"));
+    act(() => hook.result.current.confirmRemoval(["id-web-1"]));
 
     expect(hook.result.current.state.removalConfirmation?.opened).toBe(false);
     expect(hook.result.current.state.running["id-web-1"]?.map((item) => item.operation)).toEqual([

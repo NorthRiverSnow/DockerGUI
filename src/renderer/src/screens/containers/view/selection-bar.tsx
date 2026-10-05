@@ -13,6 +13,8 @@ export function SelectionBar(props: {
   running: Record<string, RunningOperation[]>;
   messages: ContainersMessages;
   onOperate: (operation: ContainerOperation, ids: string[]) => void;
+  /** 選択の帯の ［削除］ を押したときに呼ぶ（docs/spec/containers.md の「削除の確認」）。 */
+  onRequestRemoval: (ids: string[]) => void;
 }) {
   const { messages } = props;
   const operations = bulkOperationsOf(props.selectedRows);
@@ -42,7 +44,9 @@ export function SelectionBar(props: {
             loading={props.selectedRows.some((row) =>
               isOperationRunning(props.running[row.id], operation),
             )}
-            onClick={() => props.onOperate(operation, ids)}
+            onClick={() =>
+              operation === "remove" ? props.onRequestRemoval(ids) : props.onOperate(operation, ids)
+            }
           >
             {messages.operations[operation]}
           </Button>

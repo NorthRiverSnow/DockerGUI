@@ -40,12 +40,12 @@ type ContainersController = {
   operate: (operation: ContainerOperation, ids: string[]) => void;
   dismissFailure: (id: string) => void;
   toggleFailureExpansion: (id: string) => void;
-  /** id のコンテナの、削除の確認の画面を開く。 */
-  requestRemoval: (id: string) => void;
+  /** ids のコンテナの、削除の確認の画面を開く。 */
+  requestRemoval: (ids: string[]) => void;
   /** 削除の確認の画面を閉じる。削除しない。 */
   cancelRemoval: () => void;
-  /** 削除の確認の画面を閉じて、id のコンテナを削除する。 */
-  confirmRemoval: (id: string) => void;
+  /** 削除の確認の画面を閉じて、ids のコンテナを削除する。 */
+  confirmRemoval: (ids: string[]) => void;
   toggleSelection: (id: string) => void;
   /** 見出しのチェックボックスを押したときに呼ぶ（docs/spec/containers.md の「まとめて操作する」）。 */
   toggleAllSelection: (visibleIds: string[]) => void;
@@ -168,7 +168,7 @@ function useRemovalActions(
   dispatch: Dispatch<ContainersEvent>,
 ) {
   const requestRemoval = useCallback(
-    (id: string) => dispatch({ kind: "removalRequested", id }),
+    (ids: string[]) => dispatch({ kind: "removalRequested", ids }),
     [dispatch],
   );
   const cancelRemoval = useCallback(
@@ -176,9 +176,9 @@ function useRemovalActions(
     [dispatch],
   );
   const confirmRemoval = useCallback(
-    (id: string) => {
+    (ids: string[]) => {
       dispatch({ kind: "removalConfirmationClosed" });
-      operate("remove", [id]);
+      operate("remove", ids);
     },
     [dispatch, operate],
   );

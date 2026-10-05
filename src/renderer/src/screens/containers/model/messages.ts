@@ -1,17 +1,18 @@
 import type {
-  ContainerHealth,
   ContainerOperation,
   ContainerState,
-  ExitCause,
   PublishedPort,
 } from "../../../../../shared/containers";
 import type { Language } from "../../../../../shared/language";
 import type { Failure } from "../../../../../shared/result";
-import { CONFIRM_MESSAGES } from "../../../messages/confirm";
 import { FAILURE_CAUSES } from "../../../messages/failure";
 import { NOT_CONNECTED_MESSAGES, type NotConnectedMessages } from "../../../messages/not-connected";
 import { ELAPSED_TEXTS } from "../../../messages/waiting";
-import { isStoppedBeforeRemoval, type StoppedBeforeRemovalState } from "./operations";
+import {
+  REMOVAL_CONFIRMATION_MESSAGES,
+  type RemovalConfirmationMessages,
+} from "./removal-messages";
+import { STATE_NAMES } from "./state-names";
 
 export type ContainersMessages = {
   columns: { state: string; name: string; image: string; ports: string; time: string };
@@ -52,15 +53,7 @@ export type ContainersMessages = {
     /** 行のチェックボックスの名前。画面には出さず、読み上げに使う。 */
     selectRow: (name: string) => string;
   };
-  /** 削除の確認の画面（docs/spec/containers.md の「削除の確認」）。 */
-  removalConfirmation: {
-    /** 画面を読み上げる機能に渡す、確認の画面の名前。 */
-    label: string;
-    cancel: string;
-    confirm: string;
-    /** 確認する文（docs/spec/containers.md の「削除の確認」）。 */
-    lines: (name: string, state: ContainerState) => string[];
-  };
+  removalConfirmation: RemovalConfirmationMessages;
 };
 
 /** 公開しているポートの対応。どの言語でも同じ形で出す（例: 8080 → 80）。 */
@@ -88,58 +81,10 @@ const EN_OPERATION_NAMES: Record<ContainerOperation, string> = {
   remove: "Remove",
 };
 
-/** docs/spec/containers.md の「終了のわけは、確実に分かるときだけ出す」。 */
-function jaExitedNameOf(exitCode: number, exitCause: ExitCause | undefined): string {
-  switch (exitCause) {
-    case "startFailed":
-      return `起動失敗（コード ${exitCode}）`;
-    case "oomKilled":
-      return "強制終了（メモリ不足）";
-    case undefined:
-      return exitCode === 0 ? "正常終了" : `終了（コード ${exitCode}）`;
-  }
-}
-
-const RUNNING_NAMES: Record<Language, Record<ContainerHealth, string>> = {
-  ja: { starting: "起動中", healthy: "動作中", unhealthy: "動作中（異常）" },
-  en: { starting: "Starting", healthy: "Running", unhealthy: "Running (unhealthy)" },
-};
-
-function runningNameOf(language: Language, health: ContainerHealth | undefined): string {
-  // why: ヘルスチェックの無いコンテナは、healthy と同じに呼ぶ（docs/spec/containers.md の「動作中のコンテナは、健康状態で呼び分ける」）。
-  return RUNNING_NAMES[language][health ?? "healthy"];
-}
-
-function jaStateNameOf(state: ContainerState): string {
-  switch (state.kind) {
-    case "running":
-      return runningNameOf("ja", state.health);
-    case "paused":
-      return "一時停止中";
-    case "restarting":
-      return "再起動中";
-    case "created":
-      return state.exitCause === "startFailed" ? `起動失敗（コード ${state.exitCode}）` : "未起動";
-    case "exited":
-      return jaExitedNameOf(state.exitCode, state.exitCause);
-    case "removing":
-      return "削除中";
-    case "dead":
-      return "削除失敗";
-  }
-}
-
-/** 削除の前に停止する状態の、英語の文の中での呼び方。 */
-const EN_STOPPED_BEFORE_REMOVAL_WORDS: Record<StoppedBeforeRemovalState["kind"], string> = {
-  running: "running",
-  paused: "paused",
-  restarting: "restarting",
-};
-
 export const CONTAINERS_MESSAGES: Record<Language, ContainersMessages> = {
   ja: {
     columns: { state: "状態", name: "名前", image: "イメージ", ports: "ポート", time: "時間" },
-    stateName: jaStateNameOf,
+    stateName: STATE_NAMES.ja,
     elapsedSince: (time, now) => relativeTimeOf("ja", time, now),
     empty: {
       title: "コンテナが 1 件もありません",
@@ -168,42 +113,11 @@ export const CONTAINERS_MESSAGES: Record<Language, ContainersMessages> = {
       selectAll: "すべて選択",
       selectRow: (name) => `${name} を選択`,
     },
-    removalConfirmation: {
-      label: "コンテナの削除の確認",
-      cancel: CONFIRM_MESSAGES.ja.cancel,
-      confirm: "削除する",
-      lines: (name, state) => [
-        `コンテナ ${name} を削除します。`,
-        ...(isStoppedBeforeRemoval(state)
-          ? [`${name} は${jaStateNameOf(state)}なので、停止してから削除します。`]
-          : []),
-        "元に戻せません。",
-      ],
-    },
+    removalConfirmation: REMOVAL_CONFIRMATION_MESSAGES.ja,
   },
   en: {
     columns: { state: "State", name: "Name", image: "Image", ports: "Ports", time: "Time" },
-    // why: 英語では、Docker の言葉の先頭を大文字にして出す（docs/spec/common.md の「Docker の英語の言葉」）。
-    stateName: (state) => {
-      switch (state.kind) {
-        case "running":
-          return runningNameOf("en", state.health);
-        case "paused":
-          return "Paused";
-        case "restarting":
-          return "Restarting";
-        case "created":
-          return state.exitCause === "startFailed" ? `Created (${state.exitCode})` : "Created";
-        case "exited":
-          return state.exitCause === "oomKilled"
-            ? `OOMKilled (${state.exitCode})`
-            : `Exited (${state.exitCode})`;
-        case "removing":
-          return "Removing";
-        case "dead":
-          return "Dead";
-      }
-    },
+    stateName: STATE_NAMES.en,
     elapsedSince: (time, now) => relativeTimeOf("en", time, now),
     empty: {
       title: "There are no containers",
@@ -232,20 +146,7 @@ export const CONTAINERS_MESSAGES: Record<Language, ContainersMessages> = {
       selectAll: "Select all",
       selectRow: (name) => `Select ${name}`,
     },
-    removalConfirmation: {
-      label: "Confirm removing the container",
-      cancel: CONFIRM_MESSAGES.en.cancel,
-      confirm: "Remove",
-      lines: (name, state) => [
-        `Container ${name} will be removed.`,
-        ...(isStoppedBeforeRemoval(state)
-          ? [
-              `${name} is ${EN_STOPPED_BEFORE_REMOVAL_WORDS[state.kind]}, so it will be stopped and then removed.`,
-            ]
-          : []),
-        "This can't be undone.",
-      ],
-    },
+    removalConfirmation: REMOVAL_CONFIRMATION_MESSAGES.en,
   },
 };
 

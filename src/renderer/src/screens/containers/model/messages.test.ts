@@ -151,6 +151,31 @@ describe("failureCause", () => {
   });
 });
 
+describe("removalConfirmation の、2 つ以上のコンテナ", () => {
+  const rows = [
+    { name: "web-1", state: { kind: "running" } },
+    { name: "db-1", state: { kind: "paused" } },
+    { name: "job-1", state: { kind: "exited", exitCode: 0 } },
+  ] satisfies { name: string; state: ContainerState }[];
+
+  it("件数と、名前を 1 行に 1 つずつ並べ、停止してから削除するコンテナには、行の状態の列と同じ呼び方で理由を添える", () => {
+    expect(CONTAINERS_MESSAGES.ja.removalConfirmation.lines(rows)).toEqual([
+      "コンテナ 3 件を削除します。",
+      "web-1（動作中なので、停止してから削除します）",
+      "db-1（一時停止中なので、停止してから削除します）",
+      "job-1",
+      "元に戻せません。",
+    ]);
+    expect(CONTAINERS_MESSAGES.en.removalConfirmation.lines(rows)).toEqual([
+      "3 containers will be removed.",
+      "web-1 (running, so it will be stopped and then removed)",
+      "db-1 (paused, so it will be stopped and then removed)",
+      "job-1",
+      "This can't be undone.",
+    ]);
+  });
+});
+
 describe("removalConfirmation", () => {
   it("確認の画面の名前とボタンの名前は、言語ごとの文にする", () => {
     const { lines: _ja, ...ja } = CONTAINERS_MESSAGES.ja.removalConfirmation;
@@ -158,7 +183,7 @@ describe("removalConfirmation", () => {
 
     expect(ja).toEqual({ label: "コンテナの削除の確認", cancel: "やめる", confirm: "削除する" });
     expect(en).toEqual({
-      label: "Confirm removing the container",
+      label: "Confirm removal",
       cancel: "Cancel",
       confirm: "Remove",
     });
@@ -167,14 +192,12 @@ describe("removalConfirmation", () => {
   it("削除の前に停止しない状態なら、削除することと、元に戻せないことを並べる", () => {
     const state: ContainerState = { kind: "exited", exitCode: 0 };
 
-    expect(CONTAINERS_MESSAGES.ja.removalConfirmation.lines("web-1", state)).toEqual([
-      "コンテナ web-1 を削除します。",
-      "元に戻せません。",
-    ]);
-    expect(CONTAINERS_MESSAGES.en.removalConfirmation.lines("web-1", state)).toEqual([
-      "Container web-1 will be removed.",
-      "This can't be undone.",
-    ]);
+    expect(
+      CONTAINERS_MESSAGES.ja.removalConfirmation.lines([{ name: "web-1", state: state }]),
+    ).toEqual(["コンテナ web-1 を削除します。", "元に戻せません。"]);
+    expect(
+      CONTAINERS_MESSAGES.en.removalConfirmation.lines([{ name: "web-1", state: state }]),
+    ).toEqual(["Container web-1 will be removed.", "This can't be undone."]);
   });
 
   const stoppedCases: { state: ContainerState; ja: string; en: string }[] = [
@@ -187,12 +210,16 @@ describe("removalConfirmation", () => {
   it.each(stoppedCases)(
     "$ja のコンテナなら、行の状態の呼び方で、停止してから削除することも入れる",
     ({ state, ja, en }) => {
-      expect(CONTAINERS_MESSAGES.ja.removalConfirmation.lines("web-1", state)).toEqual([
+      expect(
+        CONTAINERS_MESSAGES.ja.removalConfirmation.lines([{ name: "web-1", state: state }]),
+      ).toEqual([
         "コンテナ web-1 を削除します。",
         `web-1 は${ja}なので、停止してから削除します。`,
         "元に戻せません。",
       ]);
-      expect(CONTAINERS_MESSAGES.en.removalConfirmation.lines("web-1", state)).toEqual([
+      expect(
+        CONTAINERS_MESSAGES.en.removalConfirmation.lines([{ name: "web-1", state: state }]),
+      ).toEqual([
         "Container web-1 will be removed.",
         `web-1 is ${en}, so it will be stopped and then removed.`,
         "This can't be undone.",

@@ -22,8 +22,8 @@ export type OperationFailure = {
   expanded: boolean;
 };
 
-/** 削除の確認の画面（docs/spec/containers.md の「削除の確認」、docs/design/renderer.md の「確認の画面」）。row は、削除するコンテナの行。 */
-export type RemovalConfirmation = { row: ContainerRow; opened: boolean };
+/** 削除の確認の画面（docs/spec/containers.md の「削除の確認」、docs/design/renderer.md の「確認の画面」）。rows は、削除するコンテナの行。 */
+export type RemovalConfirmation = { rows: ContainerRow[]; opened: boolean };
 
 export type ContainersState = {
   list: ContainersList;
@@ -55,7 +55,7 @@ export type ContainersEvent =
     }
   | { kind: "failureDismissed"; id: string }
   | { kind: "failureExpansionToggled"; id: string }
-  | { kind: "removalRequested"; id: string }
+  | { kind: "removalRequested"; ids: string[] }
   | { kind: "removalConfirmationClosed" };
 
 export const INITIAL_CONTAINERS_STATE: ContainersState = {
@@ -89,7 +89,7 @@ export function nextContainersState(
     case "failureExpansionToggled":
       return { ...state, failures: toggledExpansionOf(state.failures, event.id) };
     case "removalRequested":
-      return { ...state, removalConfirmation: requestedConfirmationOf(state, event.id) };
+      return { ...state, removalConfirmation: requestedConfirmationOf(state, event.ids) };
     case "removalConfirmationClosed":
       return { ...state, removalConfirmation: closedConfirmationOf(state.removalConfirmation) };
   }
@@ -195,13 +195,13 @@ function failuresOfRows(
   return Object.fromEntries(Object.entries(failures).filter(([id]) => ids.has(id)));
 }
 
-/** id のコンテナの確認の画面を開く。一覧に id のコンテナが無ければ、確認の画面を変えない。 */
+/** ids のコンテナの確認の画面を開く。一覧に ids のコンテナが 1 つも無ければ、確認の画面を変えない。 */
 function requestedConfirmationOf(
   state: ContainersState,
-  id: string,
+  ids: string[],
 ): RemovalConfirmation | undefined {
-  const row = state.list.kind === "loaded" ? rowOfId(state.list.rows, id) : undefined;
-  return row ? { row, opened: true } : state.removalConfirmation;
+  const rows = state.list.kind === "loaded" ? rowsOfIds(state.list.rows, ids) : [];
+  return rows.length > 0 ? { rows, opened: true } : state.removalConfirmation;
 }
 
 function closedConfirmationOf(
@@ -210,7 +210,10 @@ function closedConfirmationOf(
   return confirmation && { ...confirmation, opened: false };
 }
 
-/** 開いている確認の画面の行を、新しい一覧の行に入れ替える（docs/spec/containers.md の「削除の確認」）。閉じている確認の画面は、変えない。 */
+/**
+ * 開いている確認の画面の行を、新しい一覧の行に入れ替える。一覧から消えたコンテナの行は外し、1 つも残らなければ閉じる（docs/spec/containers.md の「削除の確認」）。
+ * 閉じている確認の画面は、変えない。
+ */
 function removalConfirmationOfRows(
   confirmation: RemovalConfirmation | undefined,
   rows: ContainerRow[],
@@ -218,12 +221,18 @@ function removalConfirmationOfRows(
   if (!confirmation?.opened) {
     return confirmation;
   }
-  const row = rowOfId(rows, confirmation.row.id);
-  return row ? { row, opened: true } : closedConfirmationOf(confirmation);
+  const remainingRows = rowsOfIds(
+    rows,
+    confirmation.rows.map((row) => row.id),
+  );
+  return remainingRows.length > 0
+    ? { rows: remainingRows, opened: true }
+    : closedConfirmationOf(confirmation);
 }
 
-function rowOfId(rows: ContainerRow[], id: string): ContainerRow | undefined {
-  return rows.find((row) => row.id === id);
+/** rows のうち、ids のコンテナの行を、ids の順に返す。rows に無い ID は飛ばす。 */
+function rowsOfIds(rows: ContainerRow[], ids: string[]): ContainerRow[] {
+  return ids.flatMap((id) => rows.filter((row) => row.id === id));
 }
 
 function toggledExpansionOf(

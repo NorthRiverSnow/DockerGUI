@@ -27,15 +27,16 @@ describe("bulkOperationsOf と operableIdsOf", () => {
   const EXITED = rowOf("job-1", { kind: "exited", exitCode: 0 });
   const DEAD = rowOf("broken-1", { kind: "dead" });
 
-  it("選択したコンテナのうち 1 件でも操作できる操作だけを、起動・一時停止・再開・停止・再起動の順に返す", () => {
+  it("選択したコンテナのうち 1 件でも操作できる操作だけを、起動・一時停止・再開・停止・再起動・削除の順に返す", () => {
     expect(bulkOperationsOf([PAUSED, EXITED, RUNNING])).toEqual([
       "start",
       "pause",
       "unpause",
       "stop",
       "restart",
+      "remove",
     ]);
-    expect(bulkOperationsOf([EXITED])).toEqual(["start"]);
+    expect(bulkOperationsOf([EXITED])).toEqual(["start", "remove"]);
   });
 
   it("操作できるコンテナが 1 件も無ければ、何も返さない", () => {

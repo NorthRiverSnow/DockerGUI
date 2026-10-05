@@ -115,12 +115,23 @@ export const Selected: Story = {
 
 export const RemovalConfirmation: Story = {
   name: "削除の確認",
-  args: { removalConfirmation: { row: storyRowOf("e5"), opened: true } },
+  args: { removalConfirmation: { rows: [storyRowOf("e5")], opened: true } },
+};
+
+export const RemovalConfirmationOfSelected: Story = {
+  name: "まとめて削除の確認",
+  args: {
+    selectedIds: ["a1", "b2", "e5"],
+    removalConfirmation: {
+      rows: [storyRowOf("a1"), storyRowOf("b2"), storyRowOf("e5")],
+      opened: true,
+    },
+  },
 };
 
 export const RemovalConfirmationOfRunning: Story = {
   name: "動作中のコンテナの削除の確認",
-  args: { removalConfirmation: { row: storyRowOf("a1"), opened: true } },
+  args: { removalConfirmation: { rows: [storyRowOf("a1")], opened: true } },
 };
 
 /** 起動の失敗のうち、エンジンが返す文が 1 行に収まらないもの（docs/spec/containers.md の「行の知らせ」）。 */

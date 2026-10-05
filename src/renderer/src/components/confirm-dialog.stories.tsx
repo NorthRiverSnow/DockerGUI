@@ -20,7 +20,7 @@ const SAMPLE_TEXTS: Record<
     ],
   },
   en: {
-    label: "Confirm removing the container",
+    label: "Confirm removal",
     confirm: "Remove",
     lines: ["Container web-1 will be removed.", "This can't be undone."],
     runningLines: [

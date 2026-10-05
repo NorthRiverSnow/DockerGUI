@@ -14,7 +14,7 @@ import { ICON_SIZE } from "../../../components/icon-size";
 export type RemovalConfirmationProps = {
   removalConfirmation: RemovalConfirmation | undefined;
   onCancelRemoval: () => void;
-  onConfirmRemoval: (id: string) => void;
+  onConfirmRemoval: (ids: string[]) => void;
 };
 
 type LoadedListProps = {
@@ -47,6 +47,7 @@ export function LoadedList(props: LoadedListProps) {
           running={props.running}
           messages={messages}
           onOperate={props.onOperate}
+          onRequestRemoval={props.onRequestRemoval}
         />
       )}
       {rows.length === 0 ? (
@@ -118,17 +119,14 @@ function RemovalConfirmDialog(props: { messages: ContainersMessages } & RemovalC
       opened={removalConfirmation?.opened ?? false}
       label={messages.removalConfirmation.label}
       lines={
-        removalConfirmation
-          ? messages.removalConfirmation.lines(
-              removalConfirmation.row.name,
-              removalConfirmation.row.state,
-            )
-          : []
+        removalConfirmation ? messages.removalConfirmation.lines(removalConfirmation.rows) : []
       }
       cancelLabel={messages.removalConfirmation.cancel}
       confirmLabel={messages.removalConfirmation.confirm}
       onCancel={props.onCancelRemoval}
-      onConfirm={() => removalConfirmation && props.onConfirmRemoval(removalConfirmation.row.id)}
+      onConfirm={() =>
+        removalConfirmation && props.onConfirmRemoval(removalConfirmation.rows.map((row) => row.id))
+      }
     />
   );
 }

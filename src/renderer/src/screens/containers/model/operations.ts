@@ -29,11 +29,15 @@ export function rowOperationsOf(state: ContainerState): ContainerOperation[] {
   }
 }
 
-/**
- * 選択の帯に出す操作を、出す順に並べたもの（docs/spec/containers.md の「まとめて操作する」）。
- * TODO: まとめて削除を作るステップ 6d-3 で、remove を加える。
- */
-const BULK_OPERATIONS: ContainerOperation[] = ["start", "pause", "unpause", "stop", "restart"];
+/** 選択の帯に出す操作を、出す順に並べたもの（docs/spec/containers.md の「まとめて操作する」）。 */
+const BULK_OPERATIONS: ContainerOperation[] = [
+  "start",
+  "pause",
+  "unpause",
+  "stop",
+  "restart",
+  "remove",
+];
 
 /** rows のうち、operation を実行できる状態の行の、コンテナの ID。 */
 export function operableIdsOf(rows: ContainerRow[], operation: ContainerOperation): string[] {

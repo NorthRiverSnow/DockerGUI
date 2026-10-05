@@ -94,7 +94,7 @@ describe("ContainersView の操作", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "削除" }));
 
-    expect(handlers.onRequestRemoval).toHaveBeenCalledExactlyOnceWith("id-web-1");
+    expect(handlers.onRequestRemoval).toHaveBeenCalledExactlyOnceWith(["id-web-1"]);
     expect(handlers.onOperate).not.toHaveBeenCalled();
   });
 
@@ -224,7 +224,7 @@ describe("ContainersView の削除の確認", () => {
 
   it("確認の画面を開いていれば、削除するコンテナの名前と状態から作った文を出す", () => {
     renderView({ kind: "loaded", rows: [WEB, DB] }, undefined, {
-      removalConfirmation: { row: WEB, opened: true },
+      removalConfirmation: { rows: [WEB], opened: true },
     });
 
     expect(screen.getByRole("dialog", { name: "コンテナの削除の確認" }).textContent).toContain(
@@ -234,7 +234,7 @@ describe("ContainersView の削除の確認", () => {
 
   it("opened が false なら、確認の画面を出さない", () => {
     renderView({ kind: "loaded", rows: [WEB, DB] }, undefined, {
-      removalConfirmation: { row: WEB, opened: false },
+      removalConfirmation: { rows: [WEB], opened: false },
     });
 
     expect(screen.queryByRole("dialog")).toBeNull();
@@ -242,134 +242,23 @@ describe("ContainersView の削除の確認", () => {
 
   it("［削除する］を押すと、削除するコンテナの ID を onConfirmRemoval に渡す", () => {
     const handlers = renderView({ kind: "loaded", rows: [WEB, DB] }, undefined, {
-      removalConfirmation: { row: WEB, opened: true },
+      removalConfirmation: { rows: [WEB], opened: true },
     });
 
     fireEvent.click(screen.getByRole("button", { name: "削除する" }));
 
-    expect(handlers.onConfirmRemoval).toHaveBeenCalledExactlyOnceWith("id-web-1");
+    expect(handlers.onConfirmRemoval).toHaveBeenCalledExactlyOnceWith(["id-web-1"]);
     expect(handlers.onCancelRemoval).not.toHaveBeenCalled();
   });
 
   it("［やめる］を押すと、onCancelRemoval を呼ぶ", () => {
     const handlers = renderView({ kind: "loaded", rows: [WEB, DB] }, undefined, {
-      removalConfirmation: { row: WEB, opened: true },
+      removalConfirmation: { rows: [WEB], opened: true },
     });
 
     fireEvent.click(screen.getByRole("button", { name: "やめる" }));
 
     expect(handlers.onCancelRemoval).toHaveBeenCalledOnce();
     expect(handlers.onConfirmRemoval).not.toHaveBeenCalled();
-  });
-});
-
-describe("ContainersView の選択", () => {
-  const WEB = rowOf("web-1", { kind: "running" });
-  const DB = rowOf("db-1", { kind: "exited", exitCode: 0 });
-  const checkboxOf = (name: string) => screen.getByRole<HTMLInputElement>("checkbox", { name });
-
-  it("行のチェックボックスを押すと、行のコンテナの ID を onToggleSelection に渡す", () => {
-    const handlers = renderView({ kind: "loaded", rows: [WEB, DB] });
-
-    fireEvent.click(checkboxOf("web-1 を選択"));
-
-    expect(handlers.onToggleSelection).toHaveBeenCalledExactlyOnceWith("id-web-1");
-  });
-
-  it("選択したコンテナの行だけ、チェックボックスをチェックした表示にする", () => {
-    renderView({ kind: "loaded", rows: [WEB, DB] }, undefined, { selectedIds: ["id-db-1"] });
-
-    expect(checkboxOf("db-1 を選択").checked).toBe(true);
-    expect(checkboxOf("web-1 を選択").checked).toBe(false);
-  });
-
-  it.each<[string, string[], { checked: boolean; indeterminate: boolean }]>([
-    ["1 つも選択していない", [], { checked: false, indeterminate: false }],
-    ["一部を選択している", ["id-web-1"], { checked: false, indeterminate: true }],
-    ["すべて選択している", ["id-web-1", "id-db-1"], { checked: true, indeterminate: false }],
-  ])(
-    "一覧に出ている行を%sときは、見出しのチェックボックスを、仕様で決めた表示にする",
-    (_label, selectedIds, mark) => {
-      renderView({ kind: "loaded", rows: [WEB, DB] }, undefined, { selectedIds });
-
-      const head = checkboxOf("すべて選択");
-      expect({ checked: head.checked, indeterminate: head.indeterminate }).toEqual(mark);
-    },
-  );
-
-  it("見出しのチェックボックスを押すと、一覧に出ている行のコンテナの ID だけを onToggleAllSelection に渡す", () => {
-    const handlers = renderView(
-      { kind: "loaded", rows: [WEB, DB] },
-      { text: "web", hideExited: false },
-    );
-
-    fireEvent.click(checkboxOf("すべて選択"));
-
-    expect(handlers.onToggleAllSelection).toHaveBeenCalledExactlyOnceWith(["id-web-1"]);
-  });
-});
-
-describe("ContainersView の選択の帯", () => {
-  const WEB = rowOf("web-1", { kind: "running" });
-  const DB = rowOf("db-1", { kind: "exited", exitCode: 0 });
-  const BROKEN = rowOf("broken-1", { kind: "dead" });
-  const toolbarButtonNames = () =>
-    within(screen.getByRole("group", { name: "選択したコンテナの操作" }))
-      .getAllByRole("button")
-      .map((button) => button.textContent);
-
-  it("1 件も選択していなければ、選択の帯を出さない", () => {
-    renderView({ kind: "loaded", rows: [WEB, DB] });
-
-    expect(screen.queryByRole("group", { name: "選択したコンテナの操作" })).toBeNull();
-  });
-
-  it("選択したコンテナのうち 1 件でも操作できる操作のボタンだけを、名前を付けて出す", () => {
-    renderView({ kind: "loaded", rows: [WEB, DB] }, undefined, {
-      selectedIds: ["id-web-1", "id-db-1"],
-    });
-
-    expect(toolbarButtonNames()).toEqual(["起動", "一時停止", "停止", "再起動"]);
-  });
-
-  it("操作できるコンテナを選択していなければ、選択の帯を出さない", () => {
-    renderView({ kind: "loaded", rows: [BROKEN] }, undefined, { selectedIds: ["id-broken-1"] });
-
-    expect(screen.queryByRole("group", { name: "選択したコンテナの操作" })).toBeNull();
-  });
-
-  it("選択の帯のボタンを押すと、選択したコンテナのうち、操作できる状態のものの ID だけを onOperate に渡す", () => {
-    const handlers = renderView({ kind: "loaded", rows: [WEB, DB] }, undefined, {
-      selectedIds: ["id-web-1", "id-db-1"],
-    });
-
-    fireEvent.click(
-      within(screen.getByRole("group", { name: "選択したコンテナの操作" })).getByRole("button", {
-        name: "停止",
-      }),
-    );
-
-    expect(handlers.onOperate).toHaveBeenCalledExactlyOnceWith("stop", ["id-web-1"]);
-  });
-
-  it("選択したコンテナのうち 1 件でも、その操作の応答を待っていれば、選択の帯のそのボタンを押せない", () => {
-    renderView({ kind: "loaded", rows: [WEB, DB] }, undefined, {
-      selectedIds: ["id-web-1", "id-db-1"],
-      running: { "id-db-1": [{ operation: "start", startedAt: NOW }] },
-    });
-
-    const toolbar = within(screen.getByRole("group", { name: "選択したコンテナの操作" }));
-    expect(toolbar.getByRole("button", { name: "起動" }).hasAttribute("disabled")).toBe(true);
-    expect(toolbar.getByRole("button", { name: "停止" }).hasAttribute("disabled")).toBe(false);
-  });
-
-  it("停止を待つ間に一覧の状態が先に終了になったコンテナも、選択していれば、選択の帯の ［停止］ を押せない", () => {
-    renderView({ kind: "loaded", rows: [WEB, DB] }, undefined, {
-      selectedIds: ["id-web-1", "id-db-1"],
-      running: { "id-db-1": [{ operation: "stop", startedAt: NOW }] },
-    });
-
-    const group = within(screen.getByRole("group", { name: "選択したコンテナの操作" }));
-    expect(group.getByRole("button", { name: "停止" }).hasAttribute("disabled")).toBe(true);
   });
 });

@@ -9,11 +9,12 @@ import type {
   RemovalConfirmation,
   RunningOperation,
 } from "../model/model";
+import type { DetailState } from "../model/detail";
 import { ContainersView } from "./view";
 
 export const NOW = Date.parse("2026-09-29T12:00:00Z");
 
-/** filter を書かなければ、絞り込まない。operations を書かなければ、応答を待っている操作も失敗も、選択したコンテナも無い。 */
+/** filter を書かなければ、絞り込まない。operations を書かなければ、応答を待っている操作も失敗も、選択したコンテナも無く、詳細は開いていない。 */
 export function renderView(
   list: ContainersList,
   filter: ContainersFilter = { text: "", hideExited: false },
@@ -22,6 +23,7 @@ export function renderView(
     failures?: Record<string, OperationFailure>;
     removalConfirmation?: RemovalConfirmation;
     selectedIds?: string[];
+    detail?: DetailState;
   } = {},
 ) {
   const handlers = {
@@ -36,6 +38,11 @@ export function renderView(
     onConfirmRemoval: vi.fn(),
     onToggleSelection: vi.fn(),
     onToggleAllSelection: vi.fn(),
+    onOpenDetail: vi.fn(),
+    onCloseDetail: vi.fn(),
+    onExpandDetail: vi.fn(),
+    onShrinkDetail: vi.fn(),
+    onToggleEnvValue: vi.fn(),
   };
   renderWithMantine(
     <ContainersView
@@ -47,6 +54,7 @@ export function renderView(
       failures={operations.failures ?? {}}
       removalConfirmation={operations.removalConfirmation}
       selectedIds={operations.selectedIds ?? []}
+      detail={operations.detail}
       {...handlers}
     />,
   );

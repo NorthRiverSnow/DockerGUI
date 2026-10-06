@@ -6,6 +6,7 @@ import { portsTextOf } from "../model/messages";
 import { isOperationRunning, stoppingOf } from "../model/operations";
 import { shownTimeOf } from "../model/list-rows";
 import type { OperationFailure, RunningOperation } from "../model/model";
+import type { DetailProps } from "./detail-props";
 import { RowActions } from "./row-actions";
 import { ContainerTableHead } from "./container-table-head";
 import { allSelectionMarkOf } from "../model/selection";
@@ -46,7 +47,8 @@ export function ContainerTable(
     now: number;
     messages: ContainersMessages;
   } & RowOperationProps &
-    SelectionProps,
+    SelectionProps &
+    Pick<DetailProps, "onOpenDetail">,
 ) {
   const { messages } = props;
   const visibleIds = props.rows.map((row) => row.id);
@@ -73,6 +75,7 @@ export function ContainerTable(
           onDismissFailure={props.onDismissFailure}
           onToggleFailureExpansion={props.onToggleFailureExpansion}
           onRequestRemoval={props.onRequestRemoval}
+          onOpenDetail={props.onOpenDetail}
         />
       ))}
     </Table>
@@ -91,6 +94,7 @@ type ContainerTableRowsProps = {
   onDismissFailure: (id: string) => void;
   onToggleFailureExpansion: (id: string) => void;
   onRequestRemoval: (ids: string[]) => void;
+  onOpenDetail: (id: string, name: string) => void;
 };
 
 /** コンテナ 1 つの行と、行の知らせ（docs/spec/containers.md の「行の知らせ」）。 */
@@ -109,6 +113,7 @@ function ContainerTableRows(props: ContainerTableRowsProps) {
         messages={messages}
         onOperate={props.onOperate}
         onRequestRemoval={props.onRequestRemoval}
+        onOpenDetail={props.onOpenDetail}
       />
       {stopping && (
         <NoticeRow>
@@ -148,9 +153,10 @@ type ContainerMainRowProps = {
   messages: ContainersMessages;
   onOperate: (operation: ContainerOperation, ids: string[]) => void;
   onRequestRemoval: (ids: string[]) => void;
+  onOpenDetail: (id: string, name: string) => void;
 };
 
-/** コンテナ 1 つの行の 1 段目。停止処理中は、行の右端に操作のボタンを出さない（docs/spec/containers.md の「停止は待たされる」）。 */
+/** コンテナ 1 つの行の 1 段目。 */
 function ContainerMainRow(props: ContainerMainRowProps) {
   const { row, messages } = props;
   const shownTime = shownTimeOf(row);
@@ -186,15 +192,15 @@ function ContainerMainRow(props: ContainerMainRowProps) {
         {shownTime === undefined ? "" : messages.elapsedSince(shownTime, props.now)}
       </Table.Td>
       <Table.Td>
-        {!props.stopping && (
-          <RowActions
-            row={row}
-            running={props.running}
-            messages={messages}
-            onOperate={props.onOperate}
-            onRequestRemoval={props.onRequestRemoval}
-          />
-        )}
+        <RowActions
+          row={row}
+          running={props.running}
+          stopping={props.stopping}
+          messages={messages}
+          onOperate={props.onOperate}
+          onRequestRemoval={props.onRequestRemoval}
+          onOpenDetail={props.onOpenDetail}
+        />
       </Table.Td>
     </Table.Tr>
   );

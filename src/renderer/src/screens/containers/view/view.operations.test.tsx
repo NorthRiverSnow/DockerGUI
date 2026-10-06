@@ -23,32 +23,41 @@ function failureOf(engineMessage: string, expanded: boolean): OperationFailure {
 }
 
 describe("ContainersView の操作", () => {
+  const labelOf = (button: HTMLElement) => button.getAttribute("aria-label") ?? button.textContent;
+
   /** 行の中のボタンの名前を、並んでいる順に返す。 */
   const buttonNamesOf = (name: string) =>
     within(screen.getByRole("row", { name: new RegExp(name) }))
       .queryAllByRole("button")
-      .map((button) => button.getAttribute("aria-label") ?? button.textContent);
+      .map(labelOf);
 
   it.each<[string, ContainerState, string[]]>([
-    ["動作中", { kind: "running" }, ["一時停止", "停止", "再起動", "削除"]],
-    ["一時停止中", { kind: "paused" }, ["再開", "停止", "削除"]],
-    ["未起動", { kind: "created", exitCode: 0 }, ["起動", "削除"]],
-    ["正常終了", { kind: "exited", exitCode: 0 }, ["起動", "削除"]],
-    ["終了（コード 1）", { kind: "exited", exitCode: 1 }, ["起動", "削除"]],
-    ["起動失敗", { kind: "created", exitCode: 127, exitCause: "startFailed" }, ["起動", "削除"]],
+    ["動作中", { kind: "running" }, ["一時停止", "停止", "再起動", "削除", "詳細"]],
+    ["一時停止中", { kind: "paused" }, ["再開", "停止", "削除", "詳細"]],
+    ["未起動", { kind: "created", exitCode: 0 }, ["起動", "削除", "詳細"]],
+    ["正常終了", { kind: "exited", exitCode: 0 }, ["起動", "削除", "詳細"]],
+    ["終了（コード 1）", { kind: "exited", exitCode: 1 }, ["起動", "削除", "詳細"]],
+    [
+      "起動失敗",
+      { kind: "created", exitCode: 127, exitCause: "startFailed" },
+      ["起動", "削除", "詳細"],
+    ],
     [
       "強制終了（メモリ不足）",
       { kind: "exited", exitCode: 137, exitCause: "oomKilled" },
-      ["起動", "削除"],
+      ["起動", "削除", "詳細"],
     ],
-    ["再起動中", { kind: "restarting" }, ["削除"]],
-    ["削除中", { kind: "removing" }, ["削除"]],
-    ["削除失敗", { kind: "dead" }, []],
-  ])("%s の行には、その状態で押せる操作のボタンだけを出す", (_label, state, expected) => {
-    renderView({ kind: "loaded", rows: [rowOf("web-1", state)] });
+    ["再起動中", { kind: "restarting" }, ["削除", "詳細"]],
+    ["削除中", { kind: "removing" }, ["削除", "詳細"]],
+    ["削除失敗", { kind: "dead" }, ["詳細"]],
+  ])(
+    "%s の行には、その状態で押せる操作のボタンだけと、［詳細］を出す",
+    (_label, state, expected) => {
+      renderView({ kind: "loaded", rows: [rowOf("web-1", state)] });
 
-    expect(buttonNamesOf("web-1")).toEqual(expected);
-  });
+      expect(buttonNamesOf("web-1")).toEqual(expected);
+    },
+  );
 
   it("操作のボタンを押すと、操作と、行のコンテナの ID を onOperate に渡す", () => {
     const handlers = renderView({ kind: "loaded", rows: [rowOf("web-1", { kind: "running" })] });
@@ -73,7 +82,7 @@ describe("ContainersView の操作", () => {
     });
 
     const [row, notice] = screen.getAllByRole("row").slice(1);
-    expect(row && within(row).queryAllByRole("button")).toEqual([]);
+    expect(row && within(row).queryAllByRole("button").map(labelOf)).toEqual(["詳細"]);
     expect(notice?.textContent).toBe("web-1 を停止しています… 経過 00:04強制停止");
   });
 
@@ -107,7 +116,7 @@ describe("ContainersView の操作", () => {
     });
 
     const [row, notice] = screen.getAllByRole("row").slice(1);
-    expect(row && within(row).queryAllByRole("button")).toEqual([]);
+    expect(row && within(row).queryAllByRole("button").map(labelOf)).toEqual(["詳細"]);
     expect(notice?.textContent).toBe("web-1 を停止しています… 経過 00:04強制停止");
   });
 
@@ -121,7 +130,7 @@ describe("ContainersView の操作", () => {
     });
 
     const [row, notice] = screen.getAllByRole("row").slice(1);
-    expect(row && within(row).queryAllByRole("button")).toEqual([]);
+    expect(row && within(row).queryAllByRole("button").map(labelOf)).toEqual(["詳細"]);
     expect(notice?.textContent).toBe("web-1 を停止しています… 経過 00:04強制停止");
   });
 

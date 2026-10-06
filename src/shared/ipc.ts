@@ -1,7 +1,13 @@
 import { z } from "zod";
 import type { NotificationChannel, RequestChannel } from "./channels";
 import { colorSchemeSettingSchema } from "./color-scheme";
-import { containerIdsSchema, containerRowSchema, type ContainerRow } from "./containers";
+import {
+  containerIdSchema,
+  containerIdsSchema,
+  containerRowSchema,
+  type ContainerDetail,
+  type ContainerRow,
+} from "./containers";
 import { screenSettingChangeSchema, type ScreenSettings } from "./screen-settings";
 import { languageSettingSchema, type LanguageState } from "./language";
 import { connectionStateSchema, type ConnectionState } from "./connection";
@@ -23,6 +29,7 @@ export const REQUEST_DEFINITIONS = {
   "app:getScreenSettings": { argument: z.undefined(), changesState: false },
   "app:setScreenSetting": { argument: screenSettingChangeSchema, changesState: true },
   "containers:listContainers": { argument: z.undefined(), changesState: false },
+  "containers:getContainerDetail": { argument: containerIdSchema, changesState: false },
   "containers:startContainers": { argument: containerIdsSchema, changesState: true },
   "containers:pauseContainers": { argument: containerIdsSchema, changesState: true },
   "containers:unpauseContainers": { argument: containerIdsSchema, changesState: true },
@@ -60,6 +67,7 @@ export type RequestResponse = {
   /** 変えた後の、画面ごとのすべての設定。 */
   "app:setScreenSetting": Result<ScreenSettings>;
   "containers:listContainers": Result<ContainerRow[]>;
+  "containers:getContainerDetail": Result<ContainerDetail>;
   "containers:startContainers": ContainerOperationResponse;
   "containers:pauseContainers": ContainerOperationResponse;
   "containers:unpauseContainers": ContainerOperationResponse;

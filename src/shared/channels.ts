@@ -16,6 +16,7 @@ export const REQUEST_CHANNELS = [
   "app:getScreenSettings",
   "app:setScreenSetting",
   "containers:listContainers",
+  "containers:getContainerDetail",
   "containers:startContainers",
   "containers:pauseContainers",
   "containers:unpauseContainers",

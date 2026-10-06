@@ -1,41 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { fn } from "storybook/test";
-import type { Language } from "../../../../../shared/language";
 import type { OperationFailure } from "../model/model";
-import { CONTAINERS_MESSAGES } from "../model/messages";
 import { ContainersView } from "./view";
-import { NOW, ROWS, storyRowOf } from "./view.stories-helper";
+import { NOW, storyRowOf, VIEW_STORY_META } from "./view.stories-helper";
 
 const meta = {
   title: "コンテナ/一覧",
-  component: ContainersView,
-  args: {
-    list: { kind: "loaded", rows: ROWS },
-    now: NOW,
-    messages: CONTAINERS_MESSAGES.ja,
-    filter: { text: "", hideExited: false },
-    running: {},
-    failures: {},
-    removalConfirmation: undefined,
-    selectedIds: [],
-    onReload: fn(),
-    onOperate: fn(),
-    onDismissFailure: fn(),
-    onToggleFailureExpansion: fn(),
-    onRequestRemoval: fn(),
-    onCancelRemoval: fn(),
-    onConfirmRemoval: fn(),
-    onToggleSelection: fn(),
-    onToggleAllSelection: fn(),
-    onFilterTextChange: fn(),
-    onHideExitedChange: fn(),
-  },
-  // why: 画面の言語の文は、上の帯で選んだ言語で render が上書きする。Controls で書き換えても効かないので、欄に出さない。
-  argTypes: { messages: { table: { disable: true } } },
-  render: (args, { globals }) => {
-    const language: Language = globals["language"] === "en" ? "en" : "ja";
-    return <ContainersView {...args} messages={CONTAINERS_MESSAGES[language]} />;
-  },
+  ...VIEW_STORY_META,
 } satisfies Meta<typeof ContainersView>;
 
 export default meta;

@@ -42,6 +42,12 @@ export function ContainersScreen(props: {
       selectedIds={controller.state.selectedIds}
       onToggleSelection={controller.toggleSelection}
       onToggleAllSelection={controller.toggleAllSelection}
+      detail={controller.state.detail}
+      onOpenDetail={controller.openDetail}
+      onCloseDetail={controller.closeDetail}
+      onExpandDetail={controller.expandDetail}
+      onShrinkDetail={controller.shrinkDetail}
+      onToggleEnvValue={controller.toggleEnvValue}
       onFilterTextChange={props.onFilterTextChange}
       onHideExitedChange={props.onHideExitedChange}
     />

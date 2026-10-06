@@ -1,0 +1,29 @@
+/*
+ * why: 名前・値・ボタンを、環境変数をまたいで列にそろえる。名前の長さによって、伏せた値の始まる位置がずれないようにする。
+ * 名前の列は、値のマス（項目の表の右の列）の幅の 4 割までにして、長い値に残る幅を広げる。
+ */
+.grid {
+  display: grid;
+  grid-template-columns: fit-content(40%) minmax(0, 1fr) auto;
+  gap: 0 var(--mantine-spacing-sm);
+  align-items: start;
+}
+
+/*
+ * why: `.grid` と同じく列をそろえる。イメージの環境変数にはボタンが無いので、列は名前と値の 2 つにする。
+ * 3 列の `.grid` を使い回すと、1 行に 2 つしか要素が無いので、次の行の名前が空いた 3 列目に入り、列がずれる。
+ */
+.imageGrid {
+  display: grid;
+  grid-template-columns: fit-content(40%) minmax(0, 1fr);
+  gap: 0 var(--mantine-spacing-sm);
+  align-items: start;
+}
+
+/*
+ * why: `.row` の箱があると、1 行分の要素が `.grid` や `.imageGrid` の 1 マスに入り、列がそろわない。
+ * `.row` の箱を消して、1 行分の要素を外側の列に直接並べる。
+ */
+.row {
+  display: contents;
+}

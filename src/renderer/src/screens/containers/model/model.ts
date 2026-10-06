@@ -1,5 +1,6 @@
 import type { ContainerOperation, ContainerRow } from "../../../../../shared/containers";
 import type { BatchResult, Failure, Result } from "../../../../../shared/result";
+import { nextDetailState, type DetailEvent, type DetailState } from "./detail";
 import { nextSelectedIds, selectedIdsOfRows, type SelectionEvent } from "./selection";
 
 /** 一覧の場所の状態（docs/spec/common.md の「一覧の状態」）。 */
@@ -34,6 +35,8 @@ export type ContainersState = {
   removalConfirmation: RemovalConfirmation | undefined;
   /** 選択したコンテナの ID（docs/spec/containers.md の「まとめて操作する」）。 */
   selectedIds: string[];
+  /** 詳細（docs/spec/containers.md の「詳細」）。 */
+  detail: DetailState;
 };
 
 /** 一覧を読み込む出来事。 */
@@ -46,6 +49,7 @@ type ListEvent =
 export type ContainersEvent =
   | ListEvent
   | SelectionEvent
+  | DetailEvent
   | { kind: "operationStarted"; operation: ContainerOperation; ids: string[]; startedAt: number }
   | {
       kind: "operationFinished";
@@ -64,6 +68,7 @@ export const INITIAL_CONTAINERS_STATE: ContainersState = {
   failures: {},
   removalConfirmation: undefined,
   selectedIds: [],
+  detail: undefined,
 };
 
 export function nextContainersState(
@@ -80,6 +85,14 @@ export function nextContainersState(
     case "allSelectionToggled":
     case "visibleRowsChanged":
       return { ...state, selectedIds: nextSelectedIds(state.selectedIds, event) };
+    case "detailOpened":
+    case "detailLoaded":
+    case "detailLoadFailed":
+    case "detailClosed":
+    case "detailExpanded":
+    case "detailShrunk":
+    case "envValueToggled":
+      return { ...state, detail: nextDetailState(state.detail, event) };
     case "operationStarted":
       return startedState(state, event.operation, event.ids, event.startedAt);
     case "operationFinished":
@@ -115,13 +128,14 @@ function nextListState(state: ContainersState, event: ListEvent): ContainersStat
         removalConfirmation: closedConfirmationOf(state.removalConfirmation),
       };
     case "disconnected":
-      // why: 接続が切れたら、操作の失敗の知らせを消す（docs/spec/containers.md の「行の知らせ」）。
+      // why: 接続が切れたら、操作の失敗の知らせを消し（docs/spec/containers.md の「行の知らせ」）、詳細を閉じる（「詳細」）。
       return {
         ...state,
         list: { kind: "notConnected" },
         failures: {},
         removalConfirmation: undefined,
         selectedIds: [],
+        detail: nextDetailState(state.detail, { kind: "detailClosed" }),
       };
   }
 }

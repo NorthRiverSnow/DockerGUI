@@ -211,6 +211,26 @@ renderer は、アプリ全体の Controller の `useEffect` で知らせる。`
 | 詳細の状態が、Engine API の文書の 7 つ以外なら、一覧全体の失敗にする。健康状態（`State.Health.Status`）も、文書の 4 つ以外なら同じにする | 知らない状態を、別の状態の名前で出さない |
 | 健康状態の `none` と、`State.Health` の項目が無いことを、どちらも「ヘルスチェックが無い」と読む | Engine API の文書は、ヘルスチェックが無いことを `none` とも定めている。ヘルスチェックを書いていないコンテナでは、エンジンは項目そのものを返さない |
 
+### コンテナの詳細
+
+**`GET /containers/{id}/json` を送り、続けてコンテナのイメージ ID で `GET /images/{name}/json` を送って、2 つの応答を詳細の画面に出す値に直す**（`src/main/features/containers/detail.ts`、変換は `convert.ts` の `containerDetailOfInspect`）。
+出典は、断りが無ければ Engine API v1.54 の文書（`ContainerInspectResponse`）。
+
+| 詳細の項目 | 読む項目 | 決めたこと | why |
+| --- | --- | --- | --- |
+| 名前 | `Name` | 先頭の `/` を外す | 一覧の名前（`Names`）と同じく、エンジンは先頭に `/` を付けて返す |
+| イメージ | `Config.Image` と `Image` | 名前とタグは `Config.Image`、イメージ ID は `Image` から読む | 文書は、`Image` をイメージ ID（ダイジェスト）と定めている。名前は、作ったときの設定の `Config.Image` にだけある |
+| 状態 | `State` | 状態は、一覧の行と同じ関数で決める。`State.Error` が空でなければ、状態にかかわらず失敗の文として出す | 「コンテナの一覧」のとおり、`State.Error` に文が入るのは、起動の失敗と削除の失敗だけ。削除に失敗した `dead` のコンテナでも、失敗の文は削除に失敗したわけを表す |
+| コマンド | `Path` と `Args` | `Path` の後に `Args` を並べる | 文書は、`Path` を実行するファイル、`Args` を `Path` に渡す引数と定めている |
+| 作成した日時 | `Created` | 無い（`null`）ときは空にする | 文書は、`Created` を `null` になりうる項目と定めている |
+| ポート | `NetworkSettings.Ports` | 公開していないポート（値が `null`）と、`HostPort` が空文字の公開を外し、IPv4 と IPv6 の同じ公開を 1 つにまとめる | 文書は、`PortMap` の値を `null` になりうる一覧と定めている。`HostPort` が空文字になるのは、ネットワークがアドレス変換を使わない方式（gateway mode の `routed`）のときで、ホストのポートを使わない（Docker の文書の「Port publishing and mapping」の「Gateway modes」、moby（docker-v29.5.2）の `daemon/network.go` の `getEndpointPortMapInfo`）。まとめ方は、一覧のポートの列と同じ関数を使う（`docs/spec/containers.md` の「出す列」） |
+| マウント | `Mounts` と `HostConfig.Tmpfs` | ボリュームは `Name`、それ以外は `Source` を出す。`HostConfig.Tmpfs` のキー（コンテナの中のパス）も、マウント元の無い `tmpfs` として加える。コンテナの中のパスの順に並べる | 文書は、ボリュームの `Source` をエンジンの中の保存場所（`/var/lib/docker/volumes/` の下）と定めている。利用者が知っているのはボリュームの名前。`tmpfs` には `Source` が無いので、マウント元は空になる。文書は、`HostConfig.Tmpfs` を、tmpfs にするコンテナの中のパスと、tmpfs の設定の表と定めている。`--tmpfs` で作った tmpfs は `Mounts` に入らない。moby（docker-v29.5.2）は、コンテナごとのマウントの一覧（`MountPoints`）を持ち、`daemon/inspect.go` は `Mounts` を `MountPoints` だけから作る。`--tmpfs` の設定は `HostConfig.Tmpfs` にだけある（`daemon/container/container_unix.go` の `TmpfsMounts` が、`MountPoints` と `HostConfig.Tmpfs` を別々に集めている）。`MountPoints` は Go の map なので、`Mounts` の並び順は決まっていない（`daemon/container/container.go` の `GetMountPoints`） |
+| ネットワーク | `NetworkSettings.Networks` | ネットワークの名前の順に並べる。IPv4 アドレスが無ければ空の文を出す | JSON のオブジェクトのキーには順序が無い。moby（docker-v29.5.2）の `api/types/network/endpoint.go` は、`IPAddress` を `netip.Addr` で持ち、`omitempty` を付けていない。Go の `netip.Addr` は、アドレスが無いときに空の文として書き出す |
+| 再起動の設定 | `HostConfig.RestartPolicy` | 空文字を `no` にそろえる。文書の 5 つ以外の値なら、詳細の取得の失敗にする | 文書は、空文字を「再起動しない」と定めている。`no` と同じ意味。知らない設定を、別の設定の名前で出さない（「コンテナの一覧」の状態と同じ） |
+| 環境変数 | `Config.Env` | 最初の `=` で、名前と値に分ける。`=` が無ければ、値を空にする | 文書は、要素を `VAR=value` の形と定めている。値の中に `=` が入ることがある。`=` の無い要素が残るかは、文書に書いていない。残っていた場合に、名前を値と取り違えないようにする |
+| 環境変数の出どころ | `Config.Env` と、イメージの `Config.Env` | コンテナの `Config.Env` のうち、`VAR=value` の文字列がイメージの `Config.Env` にもあるものを、イメージの環境変数とする。残りを、作るときに指定した環境変数とする。イメージが無い（エンジンが断った）ときは、すべてを作るときに指定した環境変数とする。イメージの詳細が文書に無い形なら、詳細の取得の失敗にする | コンテナの `Config.Env` には、出どころを表す項目が無い。文書は、イメージの `Config`（`ImageConfig`）を、コンテナを起動するときの既定の値と定めている。moby（docker-v29.5.2）の `daemon/commit.go` の `merge` は、作るときに指定した環境変数を先に並べ、イメージの環境変数のうち同じ名前を指定していないものを後ろに足す。同じ名前を指定したときは、作るときに指定した値を使う。そのため、名前が同じで値が違えば、作るときに指定したものと分かる。名前と値の両方が同じなら出どころを区別できないが、値はイメージを持つ人なら誰でも読めるので、イメージの環境変数とする。イメージを読めないときに、すべてを作るときに指定した環境変数として扱うのは、作るときに指定した環境変数の値を伏せるため（`docs/spec/containers.md` の「環境変数は既定で隠す」） |
+| ラベル | `Config.Labels` | キーの順に並べる | JSON のオブジェクトのキーには順序が無い。毎回同じ順に出す |
+
 ### コンテナの一覧の自動更新
 
 **`connection` が切断の検知のために開いている `GET /events` の本文を 1 行ずつ読み、届いた出来事を `containers` に渡す**（`src/main/features/containers/refresh.ts`）。
@@ -289,7 +309,7 @@ renderer は、アプリ全体の Controller の `useEffect` で知らせる。`
 | Engine API | 使う仕様 | 確かめたか |
 | --- | --- | --- |
 | `GET /images/json` | イメージの一覧 | 確かめた |
-| `GET /images/{name}/json` | イメージの詳細 | 確かめた |
+| `GET /images/{name}/json` | イメージの詳細。コンテナの詳細の、イメージの環境変数（「コンテナの詳細」） | 確かめた |
 | `POST /images/create` | 取得 | 確かめた |
 | `DELETE /images/{name}` | 削除とタグを外す操作。タグが 2 つ以上あるイメージをタグの名前で指すと、タグだけが外れる | `docs/spec/images.md` で確かめた |
 

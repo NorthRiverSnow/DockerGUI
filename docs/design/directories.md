@@ -89,14 +89,15 @@ main と違い、renderer には層を越える読み込みの向きの決まり
 テストと Storybook は、対象のファイルと同じディレクトリに置く（「テストのファイルは、テストする対象の隣に置く」）。
 
 **why: 1 つの画面のファイルは、部品と Model の観点を足すたびに増える。** 1 つのディレクトリに並べると、直すファイルを探すのに時間がかかる。
-Controller は `controller.ts` とテストの 2 つだけなので、ディレクトリを作らない。
+Controller は `controller.ts` とテストだけなので、ディレクトリを作らない。
 
 ```
 screens/containers
 ├── screen.tsx                    Controller を呼び、View に props で渡す（renderer.md）
 ├── controller.ts                 Controller
 ├── controller.test.ts            Controller のテスト
-├── <名前>.test-helper.ts         model/ と view/ と controller.test.ts が使う準備（rows.test-helper.ts など）
+├── controller.*.test.ts          Controller のテストのうち、観点ごとに分けたもの（controller.detail.test.ts）
+├── <名前>.test-helper.ts         model/ と view/ と Controller のテストが使う準備（rows.test-helper.ts など）
 ├── model/                        Model の役のファイル（renderer.md）
 │   ├── model.ts                  状態の型と、出来事から次の状態を作る関数
 │   ├── model.test.ts             model.ts のテスト
@@ -104,6 +105,7 @@ screens/containers
 │   ├── <観点>.test.ts            <観点>.ts のテスト
 │   ├── messages.ts               画面に出す文を作る関数
 │   ├── <節>-messages.ts          仕様の節ごとに分けた、画面に出す文（removal-messages.ts など。renderer.md）
+│   ├── <節>-messages.test.ts     <節>-messages.ts のテスト
 │   └── messages.test.ts          画面に出す文のテスト
 └── view/                         View の役のファイル
     ├── view.tsx                  画面の状態ごとに、出す部品を選ぶ
@@ -114,7 +116,8 @@ screens/containers
     ├── view.module.css           View の見た目のうち、Mantine の props で書けないもの
     ├── <部品>.module.css         部品の見た目のうち、Mantine の props で書けないもの（container-table.module.css など）
     ├── view.stories.tsx          View の Storybook
-    └── <名前>.stories-helper.ts  Storybook が使う見本のデータ（view.stories-helper.ts）
+    ├── view.*.stories.tsx        View の Storybook のうち、観点ごとに分けたもの（view.detail.stories.tsx）
+    └── <名前>.stories-helper.tsx Storybook が使う見本のデータと、見本の共通の設定（view.stories-helper.tsx）
 ```
 
 **View の部品は、部品ごとに 1 つのファイルに分ける。** ファイルの名前は、部品の名前の単語を小文字にして `-` でつないだもの（`RowActions` なら `row-actions.tsx`）にする。
@@ -170,6 +173,6 @@ Vitest は、既定で `.test.ts` で終わるファイルを探すので、設�
 **1 つの対象のテストが、1 ファイルの行数の上限（Skill の `code-style` の「ファイルと関数の大きさ」）を超えるときは、仕様の観点ごとに `<対象>.<観点>.test.ts` に分ける**（例: `connection.reconnect.test.ts`、`view.operations.test.tsx`）。
 分けたファイルが共通して使う準備は、テスト用の関数の置き場所の決まりのとおり `.test-helper.ts` に置き、名前を `<対象>.test-helper.ts` にする（例: `connection.test-helper.ts`）。
 
-**Storybook のファイル（`*.stories.tsx`）が 1 ファイルの行数の上限を超えるときは、見本のデータを `<名前>.stories-helper.ts` に移す**（例: `view.stories-helper.ts`）。Storybook は `*.stories.tsx` だけを読むので、`.stories-helper.ts` はストーリーとして読まれない。
+**Storybook のファイル（`*.stories.tsx`）が 1 ファイルの行数の上限を超えるときと、2 つ以上の Storybook のファイルが同じ見本のデータや設定を使うときは、`<名前>.stories-helper.ts` に移す**（例: `view.stories-helper.tsx`。見本の設定が JSX を使うので `.tsx`）。Storybook は `*.stories.tsx` だけを読むので、`.stories-helper.ts(x)` はストーリーとして読まれない。
 
 **why: 名前の先頭を対象の名前にする。** 分けたテストのファイルは、ファイルの一覧で対象のファイルの隣に並ぶので、どの対象のテストかが分かる。

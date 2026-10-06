@@ -25,6 +25,28 @@ describe("registerContainersChannels", () => {
     expect(await invokeChannel("containers:listContainers")).toEqual({ ok: true, value: [] });
   });
 
+  it("containers:getContainerDetail は、届いた ID のコンテナの詳細を読む", async () => {
+    engine = await startFakeEngineWith(() => ({
+      status: 404,
+      body: '{"message":"No such container: web-9"}',
+    }));
+    const client = engineClientOf(socketAgentOf(engine.socketPath), "1.54");
+    registerContainersChannels({ client: () => client });
+
+    await invokeChannel("containers:getContainerDetail", "web-9");
+
+    expect(engine.requests).toEqual(["GET /v1.54/containers/web-9/json"]);
+  });
+
+  it("containers:getContainerDetail は、エンジンに繋がっていなければ、繋がらないことを返す", async () => {
+    registerContainersChannels({ client: () => undefined });
+
+    expect(await invokeChannel("containers:getContainerDetail", "a1")).toEqual({
+      ok: false,
+      failure: { kind: "expected", code: "engineUnreachable" },
+    });
+  });
+
   it("エンジンに繋がっていなければ、繋がらないことを返す", async () => {
     registerContainersChannels({ client: () => undefined });
 

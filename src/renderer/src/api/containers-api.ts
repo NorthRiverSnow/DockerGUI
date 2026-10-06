@@ -5,6 +5,9 @@ import { notificationSubscriberOf, requestSenderOf } from "./window-api";
 /** コンテナの口（docs/design/ipc.md の「口の一覧」の containers:）。 */
 export type ContainersApi = {
   list: () => Promise<RequestResponse["containers:listContainers"]>;
+  getDetail: (
+    id: RequestArgument<"containers:getContainerDetail">,
+  ) => Promise<RequestResponse["containers:getContainerDetail"]>;
   start: (
     ids: RequestArgument<"containers:startContainers">,
   ) => Promise<RequestResponse["containers:startContainers"]>;
@@ -35,6 +38,7 @@ export type ContainersApi = {
 export function containersApiOf(windowApi: WindowApi): ContainersApi {
   return {
     list: requestSenderOf(windowApi, "containers:listContainers"),
+    getDetail: requestSenderOf(windowApi, "containers:getContainerDetail"),
     start: requestSenderOf(windowApi, "containers:startContainers"),
     pause: requestSenderOf(windowApi, "containers:pauseContainers"),
     unpause: requestSenderOf(windowApi, "containers:unpauseContainers"),

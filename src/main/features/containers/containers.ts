@@ -36,6 +36,7 @@ export async function containerRowsOf(client: EngineClient): Promise<Result<Cont
   return { ok: true, value: rows };
 }
 
-function isRejectedByEngine(failure: Failure): boolean {
+/** エンジンに届き、エンジンが断った失敗か（コンテナやイメージが無い、など）。 */
+export function isRejectedByEngine(failure: Failure): boolean {
   return failure.kind === "expected" && failure.code === "engineRejected";
 }

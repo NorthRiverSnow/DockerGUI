@@ -1,0 +1,13 @@
+/* why: 値の右に並べるので、値が長いと、ボタンが縮められてアイコンが小さくなる。値の長さによらず、同じ大きさで出す。 */
+.button {
+  flex-shrink: 0;
+}
+
+/* why: 文の色は、枠の背景に対して 4.5:1 以上にする（docs/design/renderer.md の「色と背景のコントラスト」）。枠の背景は、ライトでは白、ダークでは dark.6。 */
+.failed {
+  color: var(--mantine-color-red-9);
+}
+
+:where([data-mantine-color-scheme="dark"]) .failed {
+  color: var(--mantine-color-red-5);
+}

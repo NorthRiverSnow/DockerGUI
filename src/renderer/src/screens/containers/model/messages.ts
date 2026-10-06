@@ -12,6 +12,7 @@ import {
   REMOVAL_CONFIRMATION_MESSAGES,
   type RemovalConfirmationMessages,
 } from "./removal-messages";
+import { DETAIL_MESSAGES, type DetailMessages } from "./detail-messages";
 import { STATE_NAMES } from "./state-names";
 
 export type ContainersMessages = {
@@ -54,6 +55,7 @@ export type ContainersMessages = {
     selectRow: (name: string) => string;
   };
   removalConfirmation: RemovalConfirmationMessages;
+  detail: DetailMessages;
 };
 
 /** 公開しているポートの対応。どの言語でも同じ形で出す（例: 8080 → 80）。 */
@@ -114,6 +116,7 @@ export const CONTAINERS_MESSAGES: Record<Language, ContainersMessages> = {
       selectRow: (name) => `${name} を選択`,
     },
     removalConfirmation: REMOVAL_CONFIRMATION_MESSAGES.ja,
+    detail: DETAIL_MESSAGES.ja,
   },
   en: {
     columns: { state: "State", name: "Name", image: "Image", ports: "Ports", time: "Time" },
@@ -147,6 +150,7 @@ export const CONTAINERS_MESSAGES: Record<Language, ContainersMessages> = {
       selectRow: (name) => `Select ${name}`,
     },
     removalConfirmation: REMOVAL_CONFIRMATION_MESSAGES.en,
+    detail: DETAIL_MESSAGES.en,
   },
 };
 

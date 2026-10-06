@@ -49,6 +49,15 @@ type ContainersController = {
   toggleSelection: (id: string) => void;
   /** 見出しのチェックボックスを押したときに呼ぶ（docs/spec/containers.md の「まとめて操作する」）。 */
   toggleAllSelection: (visibleIds: string[]) => void;
+  /** id のコンテナの詳細を開き、読み込む。name は、詳細の見出しに出す行の名前。 */
+  openDetail: (id: string, name: string) => void;
+  closeDetail: () => void;
+  /** 重ねた詳細を、広げた詳細にする（docs/spec/containers.md の「詳細」）。 */
+  expandDetail: () => void;
+  /** 広げた詳細を、重ねた詳細に戻す。 */
+  shrinkDetail: () => void;
+  /** key の環境変数の値を、伏せていれば出し、出していれば伏せる（docs/spec/containers.md の「環境変数は既定で隠す」）。 */
+  toggleEnvValue: (key: string) => void;
 };
 
 export function useContainersController(deps: {
@@ -81,6 +90,7 @@ export function useContainersController(deps: {
     ...useFailureActions(dispatch),
     ...useRemovalActions(operate, dispatch),
     ...useSelectionActions(dispatch),
+    ...useDetailActions(deps.api, dispatch),
   };
 }
 
@@ -223,4 +233,30 @@ function useSelectionActions(dispatch: Dispatch<ContainersEvent>) {
     [dispatch],
   );
   return { toggleSelection, toggleAllSelection };
+}
+
+function useDetailActions(api: ContainersApi, dispatch: Dispatch<ContainersEvent>) {
+  const openDetail = useCallback(
+    (id: string, name: string) => {
+      dispatch({ kind: "detailOpened", id, name });
+      void api
+        .getDetail(id)
+        .then((result) =>
+          dispatch(
+            result.ok
+              ? { kind: "detailLoaded", id, detail: result.value }
+              : { kind: "detailLoadFailed", id, failure: result.failure },
+          ),
+        );
+    },
+    [api, dispatch],
+  );
+  const closeDetail = useCallback(() => dispatch({ kind: "detailClosed" }), [dispatch]);
+  const expandDetail = useCallback(() => dispatch({ kind: "detailExpanded" }), [dispatch]);
+  const shrinkDetail = useCallback(() => dispatch({ kind: "detailShrunk" }), [dispatch]);
+  const toggleEnvValue = useCallback(
+    (key: string) => dispatch({ kind: "envValueToggled", key }),
+    [dispatch],
+  );
+  return { openDetail, closeDetail, expandDetail, shrinkDetail, toggleEnvValue };
 }

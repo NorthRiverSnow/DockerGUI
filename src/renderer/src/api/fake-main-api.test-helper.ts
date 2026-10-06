@@ -12,6 +12,8 @@ export type FakeMainApi = {
   calls: string[];
   /** いちばん古い、まだ応答していない containers.list に、result を返す。 */
   answerContainers: (result: Awaited<ReturnType<MainApi["containers"]["list"]>>) => void;
+  /** いちばん古い、まだ応答していない containers.getDetail に、result を返す。 */
+  answerDetail: (result: Awaited<ReturnType<MainApi["containers"]["getDetail"]>>) => void;
   /** いちばん古い、まだ応答していないコンテナの操作に、result を返す。 */
   answerOperation: (result: Result<BatchResult>) => void;
   /** containers:containersChanged の知らせを届ける。 */
@@ -36,6 +38,7 @@ const OK: Result<undefined> = { ok: true, value: undefined };
  * containers.onChanged は、calls に残さない。
  * app.setLanguage は、選んだ設定と、「自動」なら日本語、それ以外は選んだ言語を返す。
  * containers.list は、answerContainers を呼ぶまで終わらない。
+ * containers.getDetail は、呼ばれた窓口の名前と ID を `containers.getDetail:id-1` の形で calls に残し、answerDetail を呼ぶまで終わらない。
  * コンテナの操作は、呼ばれた窓口の名前と ID を `containers.stop:id-1,id-2` の形で calls に残し、answerOperation を呼ぶまで終わらない。
  * app.getScreenSettings は、すぐに既定の切り替えを返す。options.holdScreenSettings なら、answerScreenSettings を呼ぶまで終わらない。
  */
@@ -48,6 +51,9 @@ export function fakeMainApi(options: { holdScreenSettings?: boolean } = {}): Fak
   const connectionStateAnswers: ((state: ConnectionState) => void)[] = [];
   const containerAnswers: ((result: Awaited<ReturnType<MainApi["containers"]["list"]>>) => void)[] =
     [];
+  const detailAnswers: ((
+    result: Awaited<ReturnType<MainApi["containers"]["getDetail"]>>,
+  ) => void)[] = [];
   const operationAnswers: ((result: Result<BatchResult>) => void)[] = [];
   const operated = (name: string) => {
     calls.push(name);
@@ -113,6 +119,10 @@ export function fakeMainApi(options: { holdScreenSettings?: boolean } = {}): Fak
         calls.push("containers.list");
         return new Promise((resolve) => containerAnswers.push(resolve));
       },
+      getDetail: (id) => {
+        calls.push(`containers.getDetail:${id}`);
+        return new Promise((resolve) => detailAnswers.push(resolve));
+      },
       start: (ids) => operated(`containers.start:${ids.join(",")}`),
       pause: (ids) => operated(`containers.pause:${ids.join(",")}`),
       unpause: (ids) => operated(`containers.unpause:${ids.join(",")}`),
@@ -142,6 +152,7 @@ export function fakeMainApi(options: { holdScreenSettings?: boolean } = {}): Fak
     },
     answerScreenSettings: () => answerSettings(),
     answerContainers: (result) => containerAnswers.shift()?.(result),
+    answerDetail: (result) => detailAnswers.shift()?.(result),
     answerOperation: (result) => operationAnswers.shift()?.(result),
   };
 }

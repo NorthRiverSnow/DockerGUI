@@ -2,6 +2,7 @@ import type { ContainerOperation } from "../../shared/containers";
 import type { Result } from "../../shared/result";
 import type { EngineClient } from "../engine-api/client";
 import { containerRowsOf } from "../features/containers/containers";
+import { containerDetailOf } from "../features/containers/detail";
 import { operateContainers } from "../features/containers/operations";
 import { registerRequestHandler } from "./ipc";
 
@@ -12,6 +13,9 @@ export function registerContainersChannels(deps: {
 }): void {
   registerRequestHandler("containers:listContainers", () =>
     withClient(deps.client(), (client) => containerRowsOf(client)),
+  );
+  registerRequestHandler("containers:getContainerDetail", (id) =>
+    withClient(deps.client(), (client) => containerDetailOf(client, id)),
   );
   const operate = (operation: ContainerOperation) => (ids: string[]) =>
     withClient(deps.client(), (client) => operateContainers(client, operation, ids));

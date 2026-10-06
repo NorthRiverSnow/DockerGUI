@@ -253,6 +253,22 @@ Model を「状態 + 出来事 → 次の状態」の純関数にしてあるの
 **why: `Modal` を組み立て式で使う。** まとめた形の `Modal` は、渡した属性を外側の要素に付ける。`aria-label` は、`role="dialog"` の要素（`Modal.Content`）に付ける必要がある
 （Mantine 9.6.2 の `esm/components/ModalBase/ModalBaseContent.mjs` で確認。`role="dialog"` を付けた要素に、`Modal.Content` に渡した属性も渡す）。
 
+### コピーのボタン（`copy-value-button.tsx`）
+
+**ボタンは、押すと `navigator.clipboard.writeText` で書き込み、結果の文を Mantine の `Popover` でアイコンの上に重ねて 2 秒出す**（`common.md` の「コピーしたことを知らせる」）。
+今はコンテナの詳細だけが使うので、コンテナの画面の `view/` に置く（`directories.md` の「renderer は、画面ごとに分ける」の、2 つ目の画面で使うことになった時点で移す決めごと）。
+
+| 決めごと | 作り |
+| --- | --- |
+| 書き込み | 書き込みの成功と失敗を、両方とも結果として受け取る。`navigator.clipboard` が無い画面では、失敗として扱う |
+| 結果の文 | `Popover` を、結果があるときだけ開く。結果を出している間は、マウスを重ねたときのボタンの名前（`Tooltip`）を出さない。2 つの枠が同じ場所に重なるため |
+| 失敗の文の色 | ライトは `red.9`、ダークは `red.5`。`Popover` の枠の背景（ライトは白、ダークは `dark.6`。Mantine 9.6.2 の `styles/Popover.css`）に対して、文の基準の 4.5:1 を満たす（「色と背景のコントラスト」） |
+
+**why: Mantine の `CopyButton` を使わない。** `CopyButton` は、書き込めなかったことを知らせない（Mantine 9.6.2 の `esm/components/CopyButton/CopyButton.mjs` は、`useClipboard` の `error` を渡さない）。
+
+**why: 部品が状態を持つ例外にする。** 部品の状態は、部品を使う画面の Model が持つ（「2 つ以上の画面で使う部品」）。
+結果の文を出しているかは、2 秒で消える見た目だけの状態で、ほかの表示もボタンも変えない。Model に持たせると、値ごとに出来事とタイマーが要る。
+
 ## 2 つ以上の画面で使う文（`src/renderer/src/messages`）
 
 **画面ごとの `messages.ts` は、共通の形の文を作るときに、`src/renderer/src/messages` の関数を呼ぶ。**

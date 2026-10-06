@@ -5,6 +5,7 @@ import { useRef } from "react";
 import type { ContainerRow } from "../../../../../shared/containers";
 import { ConfirmDialog } from "../../../components/confirm-dialog";
 import { ContainerTable, type RowOperationProps, type SelectionProps } from "./container-table";
+import type { DetailProps } from "./detail-props";
 import { SelectionBar } from "./selection-bar";
 import type { ContainersMessages } from "../model/messages";
 import { visibleRowsOf, type ContainersFilter } from "../model/list-rows";
@@ -26,7 +27,8 @@ type LoadedListProps = {
   onHideExitedChange: (hide: boolean) => void;
 } & RowOperationProps &
   RemovalConfirmationProps &
-  SelectionProps;
+  SelectionProps &
+  Pick<DetailProps, "onOpenDetail">;
 
 /** 絞り込みの入力と切り替えと、選択の帯と、絞り込んだ一覧と、削除の確認の画面。 */
 export function LoadedList(props: LoadedListProps) {
@@ -63,6 +65,7 @@ export function LoadedList(props: LoadedListProps) {
           onDismissFailure={props.onDismissFailure}
           onToggleFailureExpansion={props.onToggleFailureExpansion}
           onRequestRemoval={props.onRequestRemoval}
+          onOpenDetail={props.onOpenDetail}
           selectedIds={props.selectedIds}
           onToggleSelection={props.onToggleSelection}
           onToggleAllSelection={props.onToggleAllSelection}

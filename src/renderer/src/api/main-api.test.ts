@@ -53,6 +53,7 @@ const REQUEST_CASES: [MethodPath, RequestChannel, unknown][] = [
   ["app.setScreenSetting", "app:setScreenSetting", { name: "hideExitedContainers", value: true }],
   ["app.notifyRendererPainted", "app:rendererPainted", undefined],
   ["containers.list", "containers:listContainers", undefined],
+  ["containers.getDetail", "containers:getContainerDetail", "id-web-1"],
   ["containers.start", "containers:startContainers", CONTAINER_IDS],
   ["containers.pause", "containers:pauseContainers", CONTAINER_IDS],
   ["containers.unpause", "containers:unpauseContainers", CONTAINER_IDS],

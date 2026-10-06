@@ -207,7 +207,7 @@ main は renderer を信用しない（原則 1）。main の側でも、届い�
 | 口 | 種類 | 何をするか | 仕様 |
 | --- | --- | --- | --- |
 | `containers:listContainers` | 要求 | 一覧の行を返す。エンジンに繋がっていなければ、繋がらないこと（`engineUnreachable`）を返す | `containers.md` の「一覧」、`main.md` の「コンテナの一覧」 |
-| `containers:getContainerDetail` | 要求 | 詳細を返す | 「詳細」 |
+| `containers:getContainerDetail` | 要求 | 届いた ID のコンテナの詳細を返す。コンテナが無ければ、エンジンが返した文を `engineRejected` で返す | 「詳細」、`main.md` の「コンテナの詳細」 |
 | `containers:startContainers` | 操作 | 起動する | 「操作」 |
 | `containers:pauseContainers` | 操作 | 一時停止する | 同じ |
 | `containers:unpauseContainers` | 操作 | 再開する | 同じ |

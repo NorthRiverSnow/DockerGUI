@@ -234,3 +234,12 @@ describe("stopping", () => {
     expect(CONTAINERS_MESSAGES.en.stopping("web-1")).toBe("Stopping web-1…");
   });
 });
+
+describe("copyName", () => {
+  it.each([
+    ["ja", "コンテナ web-1 の名前をコピー"],
+    ["en", "Copy the name of container web-1"],
+  ] as const)("%s の一覧のコピーのボタンの名前に、コンテナの名前を入れる", (language, expected) => {
+    expect(CONTAINERS_MESSAGES[language].copyName("web-1")).toBe(expected);
+  });
+});

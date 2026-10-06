@@ -56,6 +56,10 @@ export type ContainersMessages = {
   };
   removalConfirmation: RemovalConfirmationMessages;
   detail: DetailMessages;
+  /** 一覧の名前の右のコピーのボタンの名前（docs/spec/containers.md の「出す列」）。 */
+  copyName: (name: string) => string;
+  /** コピーした後に、コピーのボタンの上に出す文（docs/spec/common.md の「コピーしたことを知らせる」）。一覧と詳細で同じ文を使う。 */
+  copyResult: { copied: string; failed: string };
 };
 
 /** 公開しているポートの対応。どの言語でも同じ形で出す（例: 8080 → 80）。 */
@@ -117,6 +121,8 @@ export const CONTAINERS_MESSAGES: Record<Language, ContainersMessages> = {
     },
     removalConfirmation: REMOVAL_CONFIRMATION_MESSAGES.ja,
     detail: DETAIL_MESSAGES.ja,
+    copyName: (name) => `コンテナ ${name} の名前をコピー`,
+    copyResult: { copied: "コピーしました", failed: "コピーできませんでした" },
   },
   en: {
     columns: { state: "State", name: "Name", image: "Image", ports: "Ports", time: "Time" },
@@ -151,6 +157,8 @@ export const CONTAINERS_MESSAGES: Record<Language, ContainersMessages> = {
     },
     removalConfirmation: REMOVAL_CONFIRMATION_MESSAGES.en,
     detail: DETAIL_MESSAGES.en,
+    copyName: (name) => `Copy the name of container ${name}`,
+    copyResult: { copied: "Copied", failed: "Couldn't copy" },
   },
 };
 

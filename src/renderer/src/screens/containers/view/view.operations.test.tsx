@@ -25,11 +25,18 @@ function failureOf(engineMessage: string, expanded: boolean): OperationFailure {
 describe("ContainersView の操作", () => {
   const labelOf = (button: HTMLElement) => button.getAttribute("aria-label") ?? button.textContent;
 
-  /** 行の中のボタンの名前を、並んでいる順に返す。 */
-  const buttonNamesOf = (name: string) =>
-    within(screen.getByRole("row", { name: new RegExp(name) }))
-      .queryAllByRole("button")
-      .map(labelOf);
+  /** 行の右端の列（操作の列）のボタンの名前を、並んでいる順に返す。 */
+  function actionNamesOfRow(row: HTMLElement): (string | null)[] {
+    const actionsCell = within(row).getAllByRole("cell").at(-1);
+    if (!actionsCell) {
+      throw new Error("行にセルが無い");
+    }
+    return within(actionsCell).queryAllByRole("button").map(labelOf);
+  }
+
+  /** name のコンテナの行の、操作の列のボタンの名前を、並んでいる順に返す。 */
+  const actionNamesOfName = (name: string) =>
+    actionNamesOfRow(screen.getByRole("row", { name: new RegExp(name) }));
 
   it.each<[string, ContainerState, string[]]>([
     ["動作中", { kind: "running" }, ["一時停止", "停止", "再起動", "削除", "詳細"]],
@@ -55,7 +62,7 @@ describe("ContainersView の操作", () => {
     (_label, state, expected) => {
       renderView({ kind: "loaded", rows: [rowOf("web-1", state)] });
 
-      expect(buttonNamesOf("web-1")).toEqual(expected);
+      expect(actionNamesOfName("web-1")).toEqual(expected);
     },
   );
 
@@ -82,7 +89,7 @@ describe("ContainersView の操作", () => {
     });
 
     const [row, notice] = screen.getAllByRole("row").slice(1);
-    expect(row && within(row).queryAllByRole("button").map(labelOf)).toEqual(["詳細"]);
+    expect(row && actionNamesOfRow(row)).toEqual(["詳細"]);
     expect(notice?.textContent).toBe("web-1 を停止しています… 経過 00:04強制停止");
   });
 
@@ -116,7 +123,7 @@ describe("ContainersView の操作", () => {
     });
 
     const [row, notice] = screen.getAllByRole("row").slice(1);
-    expect(row && within(row).queryAllByRole("button").map(labelOf)).toEqual(["詳細"]);
+    expect(row && actionNamesOfRow(row)).toEqual(["詳細"]);
     expect(notice?.textContent).toBe("web-1 を停止しています… 経過 00:04強制停止");
   });
 
@@ -130,7 +137,7 @@ describe("ContainersView の操作", () => {
     });
 
     const [row, notice] = screen.getAllByRole("row").slice(1);
-    expect(row && within(row).queryAllByRole("button").map(labelOf)).toEqual(["詳細"]);
+    expect(row && actionNamesOfRow(row)).toEqual(["詳細"]);
     expect(notice?.textContent).toBe("web-1 を停止しています… 経過 00:04強制停止");
   });
 

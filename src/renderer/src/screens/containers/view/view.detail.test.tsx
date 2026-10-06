@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { act, fireEvent, screen, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vite-plus/test";
+import { describe, expect, it } from "vite-plus/test";
 import { setUpViewTests } from "../../../render.test-helper";
+import { setUpFakeClipboard } from "../clipboard.test-helper";
 import { detailOf } from "../detail.test-helper";
 import type { DetailContent } from "../model/detail";
 import type { ContainersList } from "../model/model";
@@ -9,6 +10,7 @@ import { rowOf } from "../rows.test-helper";
 import { renderView } from "./view.test-helper";
 
 setUpViewTests();
+const writeText = setUpFakeClipboard();
 
 const LIST: ContainersList = { kind: "loaded", rows: [rowOf("web-1", { kind: "running" })] };
 
@@ -170,9 +172,6 @@ describe("ContainersView の詳細", () => {
   ])(
     "「%s」を押すと、ボタンの左の値 %s をクリップボードに書き込み、ボタンの上に「コピーしました」を出す",
     async (label, value) => {
-      const writeText = vi.fn(async () => {});
-      // why: jsdom には navigator.clipboard が無い。Mantine の CopyButton は navigator.clipboard.writeText で書き込む（@mantine/hooks 9.6.2 の esm/use-clipboard/use-clipboard.mjs）。
-      Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
       renderDetail({
         kind: "loaded",
         id: "id-web-1",

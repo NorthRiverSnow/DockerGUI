@@ -1,4 +1,4 @@
-import { Box, Checkbox, Table, Text } from "@mantine/core";
+import { Box, Checkbox, Group, Table, Text } from "@mantine/core";
 import type { ReactNode } from "react";
 import type { ContainerOperation, ContainerRow } from "../../../../../shared/containers";
 import type { ContainersMessages } from "../model/messages";
@@ -9,6 +9,7 @@ import type { OperationFailure, RunningOperation } from "../model/model";
 import type { DetailProps } from "./detail-props";
 import { RowActions } from "./row-actions";
 import { ContainerTableHead } from "./container-table-head";
+import { CopyValueButton } from "./copy-value-button";
 import { allSelectionMarkOf } from "../model/selection";
 import { FailureNotice } from "./failure-notice";
 import { MiddleTruncatedText } from "./middle-truncated-text";
@@ -175,7 +176,7 @@ function ContainerMainRow(props: ContainerMainRowProps) {
       </Table.Td>
       <Table.Td>
         <Box className={classes.fill}>
-          <MiddleTruncatedText text={row.name} />
+          <NameWithCopy name={row.name} messages={messages} />
         </Box>
       </Table.Td>
       <Table.Td>
@@ -203,6 +204,24 @@ function ContainerMainRow(props: ContainerMainRowProps) {
         />
       </Table.Td>
     </Table.Tr>
+  );
+}
+
+/** コンテナの名前と、名前の右のコピーのボタン（docs/spec/containers.md の「出す列」）。 */
+function NameWithCopy(props: { name: string; messages: ContainersMessages }) {
+  const { messages } = props;
+  return (
+    <Group gap={4} wrap="nowrap">
+      <Box miw={0} flex={1}>
+        <MiddleTruncatedText text={props.name} />
+      </Box>
+      <CopyValueButton
+        value={props.name}
+        label={messages.copyName(props.name)}
+        copiedText={messages.copyResult.copied}
+        failedText={messages.copyResult.failed}
+      />
+    </Group>
   );
 }
 

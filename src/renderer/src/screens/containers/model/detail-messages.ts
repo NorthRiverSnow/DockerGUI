@@ -44,8 +44,6 @@ export type DetailMessages = {
     volumeName: (volume: string) => string;
     networkName: (network: string) => string;
     ipAddress: (network: string) => string;
-    copied: string;
-    failed: string;
   };
   loadFailed: (name: string, failure: Failure) => string;
   restartPolicy: (policy: ContainerDetail["restartPolicy"]) => string;
@@ -122,8 +120,6 @@ export const DETAIL_MESSAGES: Record<Language, DetailMessages> = {
       volumeName: (volume) => `ボリューム ${volume} の名前をコピー`,
       networkName: (network) => `ネットワーク ${network} の名前をコピー`,
       ipAddress: (network) => `ネットワーク ${network} の IP アドレスをコピー`,
-      copied: "コピーしました",
-      failed: "コピーできませんでした",
     },
     loadFailed: (name, failure) =>
       `コンテナ ${name} の詳細を読み込めませんでした。${FAILURE_CAUSES.ja(failure)}`,
@@ -171,8 +167,6 @@ export const DETAIL_MESSAGES: Record<Language, DetailMessages> = {
       volumeName: (volume) => `Copy the name of volume ${volume}`,
       networkName: (network) => `Copy the name of network ${network}`,
       ipAddress: (network) => `Copy the IP address on network ${network}`,
-      copied: "Copied",
-      failed: "Couldn't copy",
     },
     loadFailed: (name, failure) =>
       `Couldn't load the details of container ${name}. ${FAILURE_CAUSES.en(failure)}`,

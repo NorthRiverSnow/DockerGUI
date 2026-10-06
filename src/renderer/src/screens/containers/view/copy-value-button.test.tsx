@@ -2,21 +2,19 @@
 import { act, fireEvent, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { renderWithMantine, setUpViewTests } from "../../../render.test-helper";
+import { setUpFakeClipboard } from "../clipboard.test-helper";
 import { CopyValueButton } from "./copy-value-button";
 
 setUpViewTests();
 
-const writeText = vi.fn<(text: string) => Promise<void>>();
+const writeText = setUpFakeClipboard();
 
 beforeEach(() => {
-  // why: jsdom には navigator.clipboard が無い。CopyValueButton は navigator.clipboard.writeText で書き込む。
-  Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
   vi.useFakeTimers();
 });
 
 afterEach(() => {
   vi.useRealTimers();
-  writeText.mockReset();
 });
 
 function renderButton() {

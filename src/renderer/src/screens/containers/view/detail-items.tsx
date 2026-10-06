@@ -213,8 +213,8 @@ function CopyableValue(props: { value: string; label: string; messages: Containe
       <CopyValueButton
         value={props.value}
         label={props.label}
-        copiedText={props.messages.detail.copy.copied}
-        failedText={props.messages.detail.copy.failed}
+        copiedText={props.messages.copyResult.copied}
+        failedText={props.messages.copyResult.failed}
       />
     </Group>
   );

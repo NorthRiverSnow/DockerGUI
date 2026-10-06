@@ -18,17 +18,31 @@ async function refresherWith(options: { connected: boolean } = { connected: true
   const client = engineClientOf(socketAgentOf(engine.socketPath), "1.54");
   const timers: { callback: () => void; milliseconds: number }[] = [];
   const changes: ContainerRow[][] = [];
+  const changeWaiters: (() => void)[] = [];
   const refresher = createContainersRefresher({
     client: () => (options.connected ? client : undefined),
-    onRowsChanged: (rows) => changes.push(rows),
+    onRowsChanged: (rows) => {
+      changes.push(rows);
+      for (const resolve of changeWaiters.splice(0)) resolve();
+    },
     setTimer: (callback, milliseconds) => timers.push({ callback, milliseconds }),
   });
-  /** 頼まれている処理を実行し、読み直しが終わるのを待つ。 */
-  const runTimers = async () => {
+  /** 頼まれている処理を実行する。読み直しが終わるのは待たない。 */
+  const runTimers = () => {
     for (const timer of timers.splice(0)) timer.callback();
-    await new Promise((resolve) => setTimeout(resolve, 50));
   };
-  return { refresher, timers, changes, runTimers, listRequests: () => listRequestsOf(engine) };
+  // why: 読み直しはソケットで偽のエンジンと通信する。決まった時間だけ待つと、開発機が忙しいときに、読み直しが終わる前に確かめてしまう。
+  // 読み直しの終わりは、onRowsChanged が呼ばれたことで知る。
+  /** 次に onRowsChanged が呼ばれるまで待つ。runTimers より前に呼ぶ。 */
+  const nextChange = () => new Promise<void>((resolve) => changeWaiters.push(resolve));
+  return {
+    refresher,
+    timers,
+    changes,
+    runTimers,
+    nextChange,
+    listRequests: () => listRequestsOf(engine),
+  };
 }
 
 const listRequestsOf = (fakeEngine: FakeEngine | undefined) =>
@@ -39,24 +53,28 @@ const event = (Action: string, Type = "container") => ({ Type, Action, Actor: { 
 
 describe("createContainersRefresher", () => {
   it("コンテナの出来事が届いたら、200 ミリ秒待ってから一覧を読み直し、読み直した行を渡す", async () => {
-    const { refresher, timers, changes, runTimers } = await refresherWith();
+    const { refresher, timers, changes, runTimers, nextChange } = await refresherWith();
 
     refresher.handleEvent(event("start"));
     expect(timers.map((timer) => timer.milliseconds)).toEqual([200]);
     expect(changes).toEqual([]);
-    await runTimers();
+    const changed = nextChange();
+    runTimers();
+    await changed;
 
     expect(changes).toEqual([[]]);
   });
 
   it("待っている間に続けて届いた出来事は、1 回の読み直しにまとめる", async () => {
-    const { refresher, timers, runTimers, listRequests } = await refresherWith();
+    const { refresher, timers, runTimers, nextChange, listRequests } = await refresherWith();
 
     refresher.handleEvent(event("create"));
     refresher.handleEvent(event("start"));
     refresher.handleEvent(event("health_status: healthy"));
     expect(timers).toHaveLength(1);
-    await runTimers();
+    const changed = nextChange();
+    runTimers();
+    await changed;
 
     expect(listRequests()).toBe(1);
   });
@@ -81,15 +99,18 @@ describe("createContainersRefresher", () => {
   });
 
   it("読み直している間に届いた出来事があれば、読み直し終えてから、もう一度読み直す", async () => {
-    const { refresher, timers, runTimers, listRequests } = await refresherWith();
+    const { refresher, timers, runTimers, nextChange, listRequests } = await refresherWith();
     refresher.handleEvent(event("start"));
 
-    const pending = timers.splice(0);
-    for (const timer of pending) timer.callback();
+    const firstChanged = nextChange();
+    runTimers();
     refresher.handleEvent(event("die"));
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(timers).toEqual([]);
+    await firstChanged;
     expect(timers).toHaveLength(1);
-    await runTimers();
+    const secondChanged = nextChange();
+    runTimers();
+    await secondChanged;
 
     expect(listRequests()).toBe(2);
   });
@@ -100,7 +121,7 @@ describe("createContainersRefresher", () => {
     });
 
     refresher.handleEvent(event("start"));
-    await runTimers();
+    runTimers();
 
     expect(listRequests()).toBe(0);
     expect(changes).toEqual([]);

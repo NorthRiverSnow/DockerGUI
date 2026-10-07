@@ -110,7 +110,8 @@ screens/containers
 └── view/                         View の役のファイル
     ├── view.tsx                  画面の状態ごとに、出す部品を選ぶ
     ├── <部品>.tsx                View の部品（state-label.tsx、row-actions.tsx など）
-    ├── <名前>.ts                 画面の 2 つ以上の部品が使う値（operation-looks.ts。アイコンと色の表）
+    ├── <名前>.ts                 画面の 2 つ以上の部品が使う値（operation-looks.ts。アイコンと色の表）と、部品が使う、DOM を触らない計算の関数（middle-truncation.ts）
+    ├── <名前>.test.ts            DOM を触らない計算の関数のテスト（middle-truncation.test.ts）
     ├── view.*.test.tsx           View のテスト。観点ごとに分ける（view.list.test.tsx など。renderer.md の「View のテスト」）
     ├── <名前>.test-helper.tsx    View のテストが使う準備（view.test-helper.tsx）
     ├── view.module.css           View の見た目のうち、Mantine の props で書けないもの

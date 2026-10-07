@@ -126,7 +126,7 @@ main のテストは Node のまま実行する。
 | 準備 | why |
 | --- | --- |
 | `window.matchMedia` の代わりを置く | Mantine は、OS の配色を `window.matchMedia` で読む。jsdom には `window.matchMedia` が無い。代わりの関数は、どの条件にも当てはまらないと答える。OS の配色を変えて確かめるテストは、条件への答え方（`mediaMatches`）を渡す |
-| `ResizeObserver` の代わりを置く | 操作の失敗の知らせ（`failure-notice.tsx`）は、文が幅に収まるかを `ResizeObserver` で見張る。jsdom には `ResizeObserver` が無い |
+| `ResizeObserver` の代わりを置く | 操作の失敗の知らせ（`failure-notice.tsx`）と、中央を「…」にする名前（`middle-truncated-text.tsx`）は、描いた幅が変わったことを `ResizeObserver` で見張る。jsdom には `ResizeObserver` が無い |
 | テストごとに、描いた要素を片付ける | Testing Library は、テストの道具が `afterEach` を全体に置いているときだけ、描いた要素を自動で片付ける（Testing Library の文書の「API」の `cleanup`）。`vp test` は、Vitest の `globals` を使わないので、`afterEach` を全体に置かない |
 | Mantine に `env="test"` を渡す | Mantine は、開く・閉じる動きを止め、確認の画面などを `document.body` の下に移さずに、部品を描いた場所に描く（Mantine 9.6.2 の `esm/components/Transition/Transition.mjs` と `esm/components/Portal/OptionalPortal.mjs`）。Mantine の文書の「Testing with Vitest」が勧める形 |
 
@@ -463,6 +463,8 @@ Storybook には main が無いので、上の帯で選んだものを直接渡�
 **文が幅に収まるかどうかのように、画面に描いた要素の幅を測らないと分からない値だけは、View の部品が React の状態に持つ。**
 例: 操作の失敗の知らせの原因の文が 1 行に収まるか（`docs/spec/containers.md` の「行の知らせ」）。
 収まるかどうかで、全文を開くボタンを出すかを決める。知らせを開いているかどうかは、利用者の操作で変わる状態なので、Model に持たせる。
+
+例: 中央を「…」にした名前の、前半と後半に残す文字（`docs/spec/common.md` の「長い名前」。`middle-truncated-text.tsx`）。列の幅と字の形から、文字の切れ目で収まる文字数を決める。
 
 **why: Model は DOM を触らない**（`design-policy.md` の原則 14）。幅は、窓の大きさと文字の形で変わり、描いた後でしか分からない。
 Model に持たせるには、View が測った値を出来事として Controller に渡すことになり、窓の幅が変わるたびに出来事が届く。

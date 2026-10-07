@@ -1,27 +1,19 @@
 /*
  * 収まらない文の中央を「…」にして、先頭と末尾を残す（docs/spec/common.md の「長い名前」）。
- * why: CSS の text-overflow は、文の端しか切れない。文を前半と後半に分け、前半は末尾を「…」にし、後半は先頭を切る。
- * 前半と後半は、どちらも自分の文の幅に合わせて縮むので、先頭と末尾がほぼ同じだけ残る。
+ * 前半と後半の文字数は、描いた幅を測って決める（middle-truncated-text.tsx）。
  */
 
 .text {
-  display: flex;
-  min-width: 0;
+  overflow: hidden;
   white-space: nowrap;
 }
 
-.head,
-.tail {
-  min-width: 0;
-  overflow: hidden;
+/* why: 「…」は画面に描くためだけの文字で、名前の一部ではない。選択してコピーしたときに写らないようにする。 */
+.ellipsis {
+  user-select: none;
 }
 
-.head {
-  text-overflow: ellipsis;
-}
-
-/* why: 文の向きを右から左にすると、はみ出した分が先頭の側で切れる。「…」は前半に付くので、後半には付けない。 */
-.tail {
-  direction: rtl;
-  text-overflow: clip;
+/* why: 省略した中央の文字を、幅を取らずに残す。選択してコピーすると、前半と後半の間に写り、全文になる。 */
+.omitted {
+  font-size: 0;
 }

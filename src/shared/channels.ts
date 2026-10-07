@@ -13,8 +13,22 @@ export const REQUEST_CHANNELS = [
   "app:rendererPainted",
   "app:getLanguage",
   "app:setLanguage",
+  "app:getScreenSettings",
+  "app:setScreenSetting",
+  "containers:listContainers",
+  "containers:getContainerDetail",
+  "containers:startContainers",
+  "containers:pauseContainers",
+  "containers:unpauseContainers",
+  "containers:stopContainers",
+  "containers:killContainers",
+  "containers:restartContainers",
+  "containers:removeContainers",
 ] as const;
-export const NOTIFICATION_CHANNELS = ["connection:connectionStateChanged"] as const;
+export const NOTIFICATION_CHANNELS = [
+  "connection:connectionStateChanged",
+  "containers:containersChanged",
+] as const;
 
 export type RequestChannel = (typeof REQUEST_CHANNELS)[number];
 export type NotificationChannel = (typeof NOTIFICATION_CHANNELS)[number];

@@ -180,7 +180,7 @@ function changeToConnected(
   changeState(connectionContext, { kind: "connected", engineName: target.name });
   // why: エンジンが止まっても、DockerGUI から要求を送るまで、止まったことは分からない。
   // /events は、エンジンが動いている間は開いたままで、エンジンが止まると閉じるので、閉じたことで切断を知る。
-  void client.watch("/events").ended.then(() => {
+  void client.watch("/events", connectionContext.deps.onEngineEvent).ended.then(() => {
     connectionContext.client = undefined;
     agent.destroy();
     connectionContext.onDisconnected(target);

@@ -27,3 +27,6 @@ export type ExpectedFailure = z.infer<typeof expectedFailureSchema>;
 export type Failure = z.infer<typeof failureSchema>;
 
 export type Result<T> = { ok: true; value: T } | { ok: false; failure: Failure };
+
+/** まとめて操作する口の応答。実行した対象ごとに、対象の名前と結果を並べる（docs/design/ipc.md の「まとめて操作する口の応答」）。 */
+export type BatchResult = { target: string; result: Result<undefined> }[];

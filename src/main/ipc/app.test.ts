@@ -18,6 +18,13 @@ function registerWithFakes() {
         return { setting, language: "en" };
       },
     },
+    screenSettings: {
+      current: () => ({ hideExitedContainers: false }),
+      change: (change) => {
+        calls.push(`change:${change.name}=${change.value}`);
+        return { hideExitedContainers: change.value };
+      },
+    },
     windowReveal: { rendererPainted: () => calls.push("rendererPainted") },
   });
   return { calls };
@@ -61,5 +68,26 @@ describe("registerAppChannels", () => {
     await invokeChannel("app:rendererPainted");
 
     expect(calls).toEqual(["rendererPainted"]);
+  });
+
+  it("app:getScreenSettings は、いまの画面ごとの設定を返す", async () => {
+    registerWithFakes();
+
+    expect(await invokeChannel("app:getScreenSettings")).toEqual({
+      ok: true,
+      value: { hideExitedContainers: false },
+    });
+  });
+
+  it("app:setScreenSetting は、届いた切り替えで change を呼び、change が返した切り替えを返す", async () => {
+    const { calls } = registerWithFakes();
+
+    expect(
+      await invokeChannel("app:setScreenSetting", {
+        name: "hideExitedContainers",
+        value: true,
+      }),
+    ).toEqual({ ok: true, value: { hideExitedContainers: true } });
+    expect(calls).toEqual(["change:hideExitedContainers=true"]);
   });
 });

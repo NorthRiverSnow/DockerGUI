@@ -1,0 +1,19 @@
+/*
+ * 収まらない文の中央を「…」にして、先頭と末尾を残す（docs/spec/common.md の「長い名前」）。
+ * 前半と後半の文字数は、描いた幅を測って決める（middle-truncated-text.tsx）。
+ */
+
+.text {
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* why: 「…」は画面に描くためだけの文字で、名前の一部ではない。選択してコピーしたときに写らないようにする。 */
+.ellipsis {
+  user-select: none;
+}
+
+/* why: 省略した中央の文字を、幅を取らずに残す。選択してコピーすると、前半と後半の間に写り、全文になる。 */
+.omitted {
+  font-size: 0;
+}

@@ -79,14 +79,14 @@
 `2` と `1` の見出しが付いた 2 件が返った。
 **TTY のあるコンテナで見出しが付かないことは、確かめていない**（Engine API の文書に書いてある振る舞い）。
 
-## 変換層（`src/main/convert`）
+## 変換層（機能ごとの `convert.ts`）
 
-**Engine API の応答 1 つを、画面の型 1 つに直す純関数を並べる。**
+**Engine API の応答 1 つを、画面の型 1 つに直す純関数を並べる。** 関数は、使う機能のディレクトリの `convert.ts` に置く（`directories.md` の「main は、層ごとに分ける」）。
 関数の名前は `〜Of` の形にする（CLAUDE.md の「決まっている名前の形」。例: `containerRowOf(apiContainer)`）。
 
 | 直すもの | 例 |
 | --- | --- |
-| 状態の呼び方 | `exited` と終了コードから、「正常終了」か「異常終了（コード 137）」を決める（`docs/spec/containers.md` の「状態の呼び方」） |
+| 状態の呼び方 | `exited` と終了コード、`State.Error`、`State.OOMKilled` から、「正常終了」「終了（コード 143）」「起動失敗」などを決める（`docs/spec/containers.md` の「状態の呼び方」と「終了のわけは、確実に分かるときだけ出す」） |
 | 使っているコンテナ | コンテナの一覧から、イメージ・ボリューム・ネットワークごとに使っているコンテナを集める（`docs/spec/images.md` の「使っているコンテナの名前は、コンテナの一覧から組み立てる」） |
 | 失敗の文 | エンジンが返した文を、失敗の種類に分ける（`docs/spec/images.md` の「取得の失敗」） |
 
@@ -139,7 +139,7 @@
 | 別の名前（`settings.json.writing`）で書き終えてから、名前を変える | 書いている途中でアプリが終わっても、書きかけの `settings.json` を残さない |
 | JSON として読めないファイルは、`settings.json.broken` に名前を変えて残す | `docs/spec/settings.md` の「壊れた設定ファイルを、上書きする前に残す」 |
 
-**今読み書きする項目は、配色と画面の言語。** 配色は、一度も切り替えていなければ保存しない（`docs/spec/common.md` の「配色を選ぶ」）。 読めなかったことを状態バーで知らせる処理（`docs/spec/settings.md` の「設定ファイルを読めないとき」）は、設定の画面を作るときに作る。
+**今読み書きする項目は、配色と画面の言語と、画面ごとの設定。** 配色は、一度も切り替えていなければ保存しない（`docs/spec/common.md` の「配色を選ぶ」）。 読めなかったことを状態バーで知らせる処理（`docs/spec/settings.md` の「設定ファイルを読めないとき」）は、設定の画面を作るときに作る。
 
 **窓を開く前に、配色の設定を `nativeTheme.themeSource` に入れる**（`src/main/features/settings/color-scheme.ts` の `createColorScheme`）。
 窓を開いた後に入れると、OS の配色で一度描いてから、保存されている配色に切り替わる（開発機で確認。OS がダークで、保存した配色がライトのとき、ダークで 1 回描いてからライトに変わった）。
@@ -197,8 +197,88 @@ renderer は、アプリ全体の Controller の `useEffect` で知らせる。`
 | `DELETE /containers/{id}` | 削除 | 確かめた |
 | `GET /containers/{id}/logs` | ログ | 確かめた |
 
-**動作中のコンテナの削除は、`stop` を送ってから `DELETE` を送る。** `DELETE` に `force=true` を付けない。
+### コンテナの一覧
+
+**`GET /containers/json?all=1` で一覧を読み、コンテナごとに `GET /containers/{id}/json` を同時に送って詳細を読む**（`src/main/features/containers/containers.ts`）。
+一覧の API は、終了コードと、起動・終了した時刻を返さない（開発機の Docker 29.5.2 で確認。返すのは `State` と、Docker が作った英語の文の `Status`）。
+
+| 決めたこと | why |
+| --- | --- |
+| `Status` の英語の文（`Exited (255) 13 days ago`）を読まない | 形が Engine API の文書に無く、版で変わりうる。読んだ時点の「13 days ago」しか分からず、時間が経っても表示が進まない |
+| 詳細を読めなかったコンテナのうち、エンジンが断ったもの（削除されて無いなど）は、行に入れない | 一覧を読んでから詳細を読むまでの間に、コンテナが削除されることがある |
+| 繋がらないなど、エンジンそのものの失敗は、一覧全体の失敗にする | 一部の行だけが欠けた一覧を、欠けていると気づかせずに出さない |
+| 詳細の `State.Error` と `State.OOMKilled` を読み、起動の失敗とメモリ不足を行の状態に入れる | 一覧の API は、どちらも返さない。Engine API の文書は `State.Error` の意味を書いていない。エンジン（moby）のソースコードでは、`State.Error` に文を入れるのは、起動の失敗（`daemon/start.go`）と削除の失敗（`daemon/delete.go`）だけ。削除の失敗では、先に状態を `dead` にする。このため、`created` と `exited` の `State.Error` の文は、起動の失敗を表す。`daemon/start.go` は、`State.Error` に記録したのと同じ失敗を、起動の要求の応答として返す。起動に失敗したときの終了コードは `daemon/errors.go` と `daemon/start.go` が決める（`docs/spec/containers.md` の「終了のわけは、確実に分かるときだけ出す」） |
+| 詳細の状態が、Engine API の文書の 7 つ以外なら、一覧全体の失敗にする。健康状態（`State.Health.Status`）も、文書の 4 つ以外なら同じにする | 知らない状態を、別の状態の名前で出さない |
+| 健康状態の `none` と、`State.Health` の項目が無いことを、どちらも「ヘルスチェックが無い」と読む | Engine API の文書は、ヘルスチェックが無いことを `none` とも定めている。ヘルスチェックを書いていないコンテナでは、エンジンは項目そのものを返さない |
+
+### コンテナの詳細
+
+**`GET /containers/{id}/json` を送り、続けてコンテナのイメージ ID で `GET /images/{name}/json` を送って、2 つの応答を詳細の画面に出す値に直す**（`src/main/features/containers/detail.ts`、変換は `convert.ts` の `containerDetailOfInspect`）。
+出典は、断りが無ければ Engine API v1.54 の文書（`ContainerInspectResponse`）。
+
+| 詳細の項目 | 読む項目 | 決めたこと | why |
+| --- | --- | --- | --- |
+| 名前 | `Name` | 先頭の `/` を外す | 一覧の名前（`Names`）と同じく、エンジンは先頭に `/` を付けて返す |
+| イメージ | `Config.Image` と `Image` | 名前とタグは `Config.Image`、イメージ ID は `Image` から読む | 文書は、`Image` をイメージ ID（ダイジェスト）と定めている。名前は、作ったときの設定の `Config.Image` にだけある |
+| 状態 | `State` | 状態は、一覧の行と同じ関数で決める。`State.Error` が空でなければ、状態にかかわらず失敗の文として出す | 「コンテナの一覧」のとおり、`State.Error` に文が入るのは、起動の失敗と削除の失敗だけ。削除に失敗した `dead` のコンテナでも、失敗の文は削除に失敗したわけを表す |
+| コマンド | `Path` と `Args` | `Path` の後に `Args` を並べる | 文書は、`Path` を実行するファイル、`Args` を `Path` に渡す引数と定めている |
+| 作成した日時 | `Created` | 無い（`null`）ときは空にする | 文書は、`Created` を `null` になりうる項目と定めている |
+| ポート | `NetworkSettings.Ports` | 公開していないポート（値が `null`）と、`HostPort` が空文字の公開を外し、IPv4 と IPv6 の同じ公開を 1 つにまとめる | 文書は、`PortMap` の値を `null` になりうる一覧と定めている。`HostPort` が空文字になるのは、ネットワークがアドレス変換を使わない方式（gateway mode の `routed`）のときで、ホストのポートを使わない（Docker の文書の「Port publishing and mapping」の「Gateway modes」、moby（docker-v29.5.2）の `daemon/network.go` の `getEndpointPortMapInfo`）。まとめ方は、一覧のポートの列と同じ関数を使う（`docs/spec/containers.md` の「出す列」） |
+| マウント | `Mounts` と `HostConfig.Tmpfs` | ボリュームは `Name`、それ以外は `Source` を出す。`HostConfig.Tmpfs` のキー（コンテナの中のパス）も、マウント元の無い `tmpfs` として加える。コンテナの中のパスの順に並べる | 文書は、ボリュームの `Source` をエンジンの中の保存場所（`/var/lib/docker/volumes/` の下）と定めている。利用者が知っているのはボリュームの名前。`tmpfs` には `Source` が無いので、マウント元は空になる。文書は、`HostConfig.Tmpfs` を、tmpfs にするコンテナの中のパスと、tmpfs の設定の表と定めている。`--tmpfs` で作った tmpfs は `Mounts` に入らない。moby（docker-v29.5.2）は、コンテナごとのマウントの一覧（`MountPoints`）を持ち、`daemon/inspect.go` は `Mounts` を `MountPoints` だけから作る。`--tmpfs` の設定は `HostConfig.Tmpfs` にだけある（`daemon/container/container_unix.go` の `TmpfsMounts` が、`MountPoints` と `HostConfig.Tmpfs` を別々に集めている）。`MountPoints` は Go の map なので、`Mounts` の並び順は決まっていない（`daemon/container/container.go` の `GetMountPoints`） |
+| ネットワーク | `NetworkSettings.Networks` | ネットワークの名前の順に並べる。IPv4 アドレスが無ければ空の文を出す | JSON のオブジェクトのキーには順序が無い。moby（docker-v29.5.2）の `api/types/network/endpoint.go` は、`IPAddress` を `netip.Addr` で持ち、`omitempty` を付けていない。Go の `netip.Addr` は、アドレスが無いときに空の文として書き出す |
+| 再起動の設定 | `HostConfig.RestartPolicy` | 空文字を `no` にそろえる。文書の 5 つ以外の値なら、詳細の取得の失敗にする | 文書は、空文字を「再起動しない」と定めている。`no` と同じ意味。知らない設定を、別の設定の名前で出さない（「コンテナの一覧」の状態と同じ） |
+| 環境変数 | `Config.Env` | 最初の `=` で、名前と値に分ける。`=` が無ければ、値を空にする | 文書は、要素を `VAR=value` の形と定めている。値の中に `=` が入ることがある。`=` の無い要素が残るかは、文書に書いていない。残っていた場合に、名前を値と取り違えないようにする |
+| 環境変数の出どころ | `Config.Env` と、イメージの `Config.Env` | コンテナの `Config.Env` のうち、`VAR=value` の文字列がイメージの `Config.Env` にもあるものを、イメージの環境変数とする。残りを、作るときに指定した環境変数とする。イメージが無い（エンジンが断った）ときは、すべてを作るときに指定した環境変数とする。イメージの詳細が文書に無い形なら、詳細の取得の失敗にする | コンテナの `Config.Env` には、出どころを表す項目が無い。文書は、イメージの `Config`（`ImageConfig`）を、コンテナを起動するときの既定の値と定めている。moby（docker-v29.5.2）の `daemon/commit.go` の `merge` は、作るときに指定した環境変数を先に並べ、イメージの環境変数のうち同じ名前を指定していないものを後ろに足す。同じ名前を指定したときは、作るときに指定した値を使う。そのため、名前が同じで値が違えば、作るときに指定したものと分かる。名前と値の両方が同じなら出どころを区別できないが、値はイメージを持つ人なら誰でも読めるので、イメージの環境変数とする。イメージを読めないときに、すべてを作るときに指定した環境変数として扱うのは、作るときに指定した環境変数の値を伏せるため（`docs/spec/containers.md` の「環境変数は既定で隠す」） |
+| ラベル | `Config.Labels` | キーの順に並べる | JSON のオブジェクトのキーには順序が無い。毎回同じ順に出す |
+
+### コンテナの一覧の自動更新
+
+**`connection` が切断の検知のために開いている `GET /events` の本文を 1 行ずつ読み、届いた出来事を `containers` に渡す**（`src/main/features/containers/refresh.ts`）。
+`containers` は、一覧の行が変わる出来事のときだけ、一覧を読み直して `containers:containersChanged` で renderer に送る。
+
+| 決めたこと | why |
+| --- | --- |
+| 読み直す出来事は、作成・起動・再起動・停止・終了・強制終了・一時停止・再開・削除・名前の変更・健康状態の変化 | `exec_create` や `attach` のような、コンテナの中でコマンドを動かす出来事では、一覧の行は変わらない |
+| 出来事が届いてから 200 ミリ秒待ち、その間に届いた出来事を 1 回の読み直しにまとめる | Compose でまとめて起動すると、出来事が一度に何十件も届く。1 件ごとに読み直すと、同じ一覧を何十回も読むことになる |
+| 読み直している間に出来事が届いたら、読み直し終えてから、もう一度読み直す | 読み直している間に届いた出来事は、読み直した一覧に入っていないことがある |
+| 読み直せなかったときは、知らせを送らない | 画面は前の一覧を出したままにする。次の出来事で、もう一度読み直す |
+| `/events` を 1 本だけ開き、切断の検知と一覧の更新で共有する | 同じ出来事を 2 本の接続で受け取る理由が無い |
+
+**renderer は、知らせで届いた行で一覧を入れ替え、「読み込み中」に戻さない**（`docs/spec/common.md` の「一覧の状態」）。
+読み込みの途中で知らせが届いたときは、知らせの行のほうが新しいので、遅れて届いた読み込みの応答を捨てる。
+
+**並び順（起動しているコンテナを先に）は renderer が決める**（`src/renderer/src/screens/containers/model/list-rows.ts` の `sortedRowsOf`）。main は Engine API が返した順のまま返す。
+
+
+### コンテナの操作
+
+**操作の口は、コンテナの ID の一覧を受け取り、操作の直前に `GET /containers/json?all=1` で一覧を読み直して、操作できる状態のコンテナだけに送る**（`src/main/features/containers/operations.ts`）。
+操作できる状態は、`docs/spec/containers.md` の「操作」の表の「出す状態」のとおり。
+
+| 決めたこと | why |
+| --- | --- |
+| 操作できる状態を、画面が送った状態ではなく、直前に読み直した一覧で決める | 画面が一覧を読んでから操作を送るまでの間に、コンテナの状態が変わることがある |
+| 操作できない状態のコンテナと、見つからないコンテナは、実行せず、結果に入れない | `docs/spec/containers.md` の「まとめて操作する」——選んだコンテナのうち、操作できる状態のものだけを対象にする |
+| 選んだコンテナに、同時に送る | 停止は、1 件ごとに最大 10 秒待たされる。1 件ずつ順に送ると、件数の分だけ待ち時間が積み重なる |
+| 結果には、コンテナの ID ではなく名前を入れる | 画面に並べるのは名前（`ipc.md` の「まとめて操作する口の応答」） |
+| 強制停止は、動作中と一時停止中のコンテナに送る | 停止と削除の前の停止では、停止処理中のコンテナの状態は、停止が終わるまで動作中か一時停止中のまま。再起動では、停止が終わってから起動が始まるまで、状態が `exited` になる。この間に届いた強制停止は送らない（`docs/spec/containers.md` の「再起動は、停止してから起動する」） |
+| 304 の応答を、成功として扱う | エンジンは、動作中のコンテナの起動と、終了したコンテナの停止に 304 を返す。要求した状態にはなっている |
+
+**動作中・一時停止中・再起動中のコンテナの削除は、`stop` を送ってから `DELETE` を送る。** `DELETE` に `force=true` を付けない。
+エンジンは、動作中と一時停止中のコンテナの `DELETE` を 409 で断る（開発機で確認）。
 `force=true` は停止を待たずに強制終了するので、`docs/spec/containers.md` の「停止は待たされる」と食い違う。
+
+**開発機で確かめた、エンジンの応答**（ラベルを付けたテスト用のコンテナで確認）:
+
+| 要求 | コンテナの状態 | 応答 |
+| --- | --- | --- |
+| 起動 | 動作中 | 304 |
+| 停止 | 終了 | 304 |
+| 一時停止 | 一時停止中 | 409 |
+| 再開 | 動作中 | 500 |
+| 起動 | 一時停止中 | 409 |
+| 強制停止 | 終了 | 409 |
+| 停止、再起動、強制停止 | 一時停止中 | 204。停止は、10 秒待ってから終わった |
 
 ### ターミナル
 
@@ -229,7 +309,7 @@ renderer は、アプリ全体の Controller の `useEffect` で知らせる。`
 | Engine API | 使う仕様 | 確かめたか |
 | --- | --- | --- |
 | `GET /images/json` | イメージの一覧 | 確かめた |
-| `GET /images/{name}/json` | イメージの詳細 | 確かめた |
+| `GET /images/{name}/json` | イメージの詳細。コンテナの詳細の、イメージの環境変数（「コンテナの詳細」） | 確かめた |
 | `POST /images/create` | 取得 | 確かめた |
 | `DELETE /images/{name}` | 削除とタグを外す操作。タグが 2 つ以上あるイメージをタグの名前で指すと、タグだけが外れる | `docs/spec/images.md` で確かめた |
 

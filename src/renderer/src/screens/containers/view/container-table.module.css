@@ -1,0 +1,47 @@
+/*
+ * コンテナ 1 つの行と、行の下の知らせ（停止処理中、失敗）を、1 つの行に見せる。
+ * why: Mantine の表は、行（tr）ごとに下の線を引き、マウスを重ねた行（tr）だけに色を付ける。
+ * コンテナ 1 つを 1 つの tbody にまとめ、線と色を tbody の単位に付け直す。
+ */
+
+.container > tr {
+  border-bottom: none;
+}
+
+.container:not(:last-child) > tr:last-child {
+  border-bottom: calc(0.0625rem * var(--mantine-scale)) solid var(--table-border-color);
+}
+
+.container > tr + tr > td {
+  padding-top: 0;
+}
+
+@media (hover: hover) {
+  .container:hover {
+    background-color: var(--table-hover-color);
+  }
+}
+
+/*
+ * 列の幅（docs/spec/containers.md の「列の幅」）。
+ * fit の列は、中身の幅まで縮む。fill の中身は、列の幅を広げず、列の幅いっぱいに描く。
+ * why: 表の列は、中身の文の幅まで広がる。中身を幅 0 の箱に入れ、箱の最小の幅をセルの幅にすると、
+ * 中身の文の幅で列が広がらなくなる。表のセルに max-width を付けても、Chrome はセルの幅を決めるときに使わない。
+ */
+
+.fit {
+  width: 1px;
+  white-space: nowrap;
+}
+
+.fill {
+  width: 0;
+  min-width: 100%;
+}
+
+.widthSamples {
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  white-space: nowrap;
+}

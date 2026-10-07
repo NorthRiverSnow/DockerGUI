@@ -4,11 +4,14 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { app, BrowserWindow, nativeTheme } from "electron";
 import { createWindowReveal } from "./features/app/window-reveal";
 import { createConnection } from "./features/connection/connection";
+import { createContainersRefresher } from "./features/containers/refresh";
 import { createColorScheme } from "./features/settings/color-scheme";
 import { createScreenLanguage } from "./features/settings/language";
+import { createScreenSettingsStore } from "./features/settings/screen-settings";
 import { openSettingsStore } from "./features/settings/settings-store";
 import { registerAppChannels } from "./ipc/app";
 import { registerConnectionChannels } from "./ipc/connection";
+import { registerContainersChannels } from "./ipc/containers";
 import { sendNotificationToAllWindows } from "./ipc/ipc";
 import { runCommand, startCommand } from "./os/command";
 import { refreshPathFromLoginShell } from "./os/login-shell-path";
@@ -56,9 +59,21 @@ const connection = createConnection({
   },
   onStateChanged: (state) =>
     sendNotificationToAllWindows("connection:connectionStateChanged", state),
+  // why: containersRefresher は connection.client() を使うので、connection の後に作る。
+  // 出来事は接続した後にしか届かず、そのときには containersRefresher はできている。
+  onEngineEvent: (event) => containersRefresher.handleEvent(event),
+});
+
+const containersRefresher = createContainersRefresher({
+  client: () => connection.client(),
+  onRowsChanged: (rows) => sendNotificationToAllWindows("containers:containersChanged", rows),
+  setTimer: (callback, milliseconds) => {
+    setTimeout(callback, milliseconds);
+  },
 });
 
 registerConnectionChannels(connection);
+registerContainersChannels({ client: () => connection.client() });
 
 // why: 設定ファイルの場所は、Electron の app.getPath から決まる。settings-store.ts を Electron に依存させず、
 // テストでは一時フォルダの場所を渡せるように、場所はここで決めて渡す。
@@ -75,6 +90,8 @@ const screenLanguage = createScreenLanguage({
   systemLanguages: () => app.getPreferredSystemLanguages(),
 });
 
+const screenSettings = createScreenSettingsStore({ store: settingsStore });
+
 void app.whenReady().then(() => {
   const window = createMainWindow();
   const windowReveal = createWindowReveal({
@@ -83,7 +100,7 @@ void app.whenReady().then(() => {
       setTimeout(callback, milliseconds);
     },
   });
-  registerAppChannels({ colorScheme, screenLanguage, windowReveal });
+  registerAppChannels({ colorScheme, screenLanguage, screenSettings, windowReveal });
   void connection.connect();
 });
 

@@ -5,19 +5,20 @@ renderer を Model・View・Controller に分けることは、`design-policy.md
 
 ## 画面 1 つの組み立て
 
-**画面は機能ごとに 1 つ作り、画面 1 つを次のファイルで作る**（`directories.md` の「renderer は、画面ごとに分ける」）。`view.module.css` だけは、要るときに置く。
+**画面は機能ごとに 1 つ作り、画面 1 つを次のファイルで作る**（`directories.md` の「renderer は、画面ごとに分ける」。`model/` と `view/` の置き場所も）。`view.module.css` だけは、要るときに置く。
 
 **main を呼ぶのは Controller だけ。** Model と View は main を呼ばない。
 
 | ファイル | 役 | 持つもの | main を呼ぶか | React を使うか |
 | --- | --- | --- | --- | --- |
-| `model.ts` | Model | 画面の状態の型。状態と出来事を受け取って次の状態を返す純関数 | 呼ばない | 使わない |
-| `messages.ts` | Model | 状態から、画面に出す文を作る純関数。言語ごとに持つ | 呼ばない | 使わない |
+| `model/model.ts` | Model | 画面の状態の型。状態と出来事を受け取って次の状態を返す純関数 | 呼ばない | 使わない |
+| `model/<観点>.ts`（`operations.ts`、`list-rows.ts` など） | Model | 状態から、画面に出す値を導く純関数。仕様の節ごとに分ける（`operations.ts` は「操作」の行のボタンと停止処理中、`list-rows.ts` は「並び順」「絞り込み」と時間の列）。`model.ts` が 1 ファイルの行数の上限（Skill の `code-style` の「ファイルと関数の大きさ」）を超えないように、観点ごとに分ける | 呼ばない | 使わない |
+| `model/messages.ts` | Model | 状態から、画面に出す文を作る純関数。言語ごとに持つ | 呼ばない | 使わない |
 | `controller.ts` | Controller | 利用者の操作と、main から届いた知らせを受けて、Model に出来事を渡す React の hook。要素は返さない | **呼ぶ**（main の窓口を通して） | 使う |
 | `screen.tsx` | Controller と View をつなぐ | props で受け取った main の窓口とアプリ全体の状態を Controller に渡して呼び、Controller が返した状態と関数を View に props で渡す | 呼ばない（Controller が呼ぶ） | 使う |
-| `view.tsx` | View | screen から状態と関数を props で受け取り、要素を返す関数コンポーネント。自分の状態は持たない | 呼ばない | 使う |
-| `view.module.css` | View の見た目 | Mantine の props で書けない見た目（「部品と見た目」） | 呼ばない | 使わない |
-| `view.stories.tsx` | View の確認 | 状態ごとの View の見本（Storybook を入れた後） | 呼ばない | 使う |
+| `view/view.tsx` | View | screen から状態と関数を props で受け取り、要素を返す関数コンポーネント。自分の状態は持たない | 呼ばない | 使う |
+| `view/view.module.css` | View の見た目 | Mantine の props で書けない見た目（「部品と見た目」） | 呼ばない | 使わない |
+| `view/view.stories.tsx` | View の確認 | 状態ごとの View の見本 | 呼ばない | 使う |
 
 **値の流れ**
 
@@ -69,6 +70,9 @@ const LOGS_MESSAGES: Record<Language, LogsMessages> = {
 
 screen は、App から受け取った画面の言語で `LOGS_MESSAGES` から 1 つを選び、View に props で渡す（「画面の言語」）。
 
+**`messages.ts` が 1 ファイルの行数の上限（Skill の `code-style` の「ファイルと関数の大きさ」）を超えるときは、仕様の節ごとに `model/<節>-messages.ts` に分け、`messages.ts` の文の組に組み込む**（コンテナの画面の、削除の確認の画面の文の `removal-messages.ts`）。
+2 つ以上の文のファイルが使う値も、別のファイルに分ける（状態の呼び方の `state-names.ts`）。
+
 **why: 画面に出す文は、仕様で 1 文ずつ決めてある。** 文に対象の名前が入っているか
 （`docs/spec/common.md` の「失敗の見せ方」と各仕様の表示の例）を、
 画面を描かずにテストで確かめられる。View に文を組み立てる処理を置くと、Storybook で目で見るしかなくなる。
@@ -77,12 +81,11 @@ screen は、App から受け取った画面の言語で `LOGS_MESSAGES` から 
 
 ```ts
 function useContainersController(deps: {
-  api: MainApi;                 // main の窓口
+  api: ContainersApi;           // main の窓口のうち、コンテナの口
   connection: ConnectionState;  // アプリ全体の状態のうち、コンテナの画面が使うもの
-  filter: string;
 }): {
   state: ContainersState;
-  startContainers: (ids: string[]) => void;
+  operate: (operation: ContainerOperation, ids: string[]) => void;
   // …
 };
 ```
@@ -118,20 +121,46 @@ main の窓口の代わり（`src/renderer/src/api/fake-main-api.test-helper.ts`
 **テストのファイルの 1 行目に `// @vitest-environment jsdom` を書く。** 書いたファイルだけを、ブラウザの代わりの jsdom の中で実行する。
 main のテストは Node のまま実行する。
 
-**why: Mantine は、OS の配色を `window.matchMedia` で読む。** jsdom には `window.matchMedia` が無いので、テストの中で、どの条件にも当てはまらないと答える関数を置く。
+**テストの準備は、`src/renderer/src/render.test-helper.tsx` の関数で行う。** View のテストは `setUpViewTests` を呼び、`renderWithMantine` で描く。Controller のテストは `cleanUpAfterEachTest` を呼ぶ。
+
+| 準備 | why |
+| --- | --- |
+| `window.matchMedia` の代わりを置く | Mantine は、OS の配色を `window.matchMedia` で読む。jsdom には `window.matchMedia` が無い。代わりの関数は、どの条件にも当てはまらないと答える。OS の配色を変えて確かめるテストは、条件への答え方（`mediaMatches`）を渡す |
+| `ResizeObserver` の代わりを置く | 操作の失敗の知らせ（`failure-notice.tsx`）と、中央を「…」にする名前（`middle-truncated-text.tsx`）は、描いた幅が変わったことを `ResizeObserver` で見張る。jsdom には `ResizeObserver` が無い |
+| テストごとに、描いた要素を片付ける | Testing Library は、テストの道具が `afterEach` を全体に置いているときだけ、描いた要素を自動で片付ける（Testing Library の文書の「API」の `cleanup`）。`vp test` は、Vitest の `globals` を使わないので、`afterEach` を全体に置かない |
+| Mantine に `env="test"` を渡す | Mantine は、開く・閉じる動きを止め、確認の画面などを `document.body` の下に移さずに、部品を描いた場所に描く（Mantine 9.6.2 の `esm/components/Transition/Transition.mjs` と `esm/components/Portal/OptionalPortal.mjs`）。Mantine の文書の「Testing with Vitest」が勧める形 |
 
 ## main の窓口（`src/renderer/src/api`）
 
-**`window.api` を呼ぶ処理を、1 つのモジュールに集める**（`design-policy.md` の「Storybook を使う条件」）。
+**`window.api` を呼ぶ処理を、`src/renderer/src/api` に集める**（`design-policy.md` の「Storybook を使う条件」）。
+
+**口のまとまり（`design-policy.md` の原則 17。`ipc.md` の「口の一覧」の見出しの `connection`、`containers` など）ごとに、窓口のファイルを分ける**（`connection-api.ts`、`containers-api.ts` など）。
+`main-api.ts` の `MainApi` は、まとまりごとの窓口をまとめるだけにする（`api.containers.start(ids)` の形で呼ぶ）。
 
 | 持つもの | 中身 |
 | --- | --- |
-| 口ごとの関数 | `ipc.md` の「口の一覧」の口ごとに 1 つ。要求と応答の型は `src/shared` から読み込む |
+| 口ごとの関数 | `ipc.md` の「口の一覧」の要求の口ごとに 1 つ。要求と応答の型は `src/shared` から読み込む |
 | 知らせの受け取り | 知らせの口ごとに、受け取る関数を登録して、登録を外す関数を返す |
 | ストリームの受け取り | ストリームの識別子ごとに、受け取る関数を登録する。受け取ったら確認を返す（「ストリームの確認を返す時点」） |
 
+| 窓口の関数の名前 | 付け方 | 例 |
+| --- | --- | --- |
+| 要求の口 | 口の名前から、まとまりの言葉を除く。残りが動詞で始まらないときは、動詞を補う | `containers:startContainers` → `containers.start`、`connection:startEngine` → `connection.startEngine`、`app:rendererPainted` → `app.notifyRendererPainted` |
+| 知らせの口 | `on` に、口の名前からまとまりの言葉を除いたものを続ける | `containers:containersChanged` → `containers.onChanged` |
+
 **本物の窓口と、見せかけの窓口の 2 つを作る。** 本物は `window.api` を呼び、見せかけはテストと Storybook で使う。
 どちらも同じ型に従う。
+
+**画面の Controller には、画面が使うまとまりの窓口だけを渡す**（コンテナの画面には `ContainersApi`）。アプリ全体の Controller は、2 つ以上のまとまりを使うので `MainApi` を受け取る。
+
+**why: 口は、画面を作るたびに増える。** 1 つの型と 1 つの関数に並べると、口の数だけ長くなる。まとまりごとに分けると、直す場所が次の表のように限られる。
+
+| 足すもの | 直す場所 |
+| --- | --- |
+| 今あるまとまりの口 | そのまとまりの窓口のファイルと、見せかけの窓口（`fake-main-api.test-helper.ts`） |
+| 新しいまとまり | 新しいまとまりの窓口のファイル、`main-api.ts` の `MainApi` と `realMainApiOf`、見せかけの窓口 |
+
+**why: 画面に渡す窓口を絞る。** どの画面がどの口を使うかが、型で分かる。
 
 ### ストリームの確認を返す時点
 
@@ -150,7 +179,7 @@ main のテストは Node のまま実行する。
 | 左の一覧で選んでいる対象 | 左の一覧、右の領域 | `common.md` の「画面の構成」 |
 | 開いているタブと、選んでいるタブ | 右の領域 | `common.md` の「ログとターミナルのタブ」 |
 | 絞り込みの入力 | 一覧を出す各画面 | `common.md` の「並び順と絞り込み」（対象を切り替えても消さない） |
-| 画面の切り替えの状態（タグの無いイメージを出すかなど） | 切り替えを持つ画面 | `settings.md` の「設定の画面に出すもの」 |
+| 画面ごとの設定（タグの無いイメージを出すかなど） | 切り替えを持つ画面 | `settings.md` の「設定の画面に出すもの」 |
 | 画面の言語 | すべての画面 | `common.md` の「言語を選ぶ」 |
 
 アプリ全体の Controller も、Model（純関数）と Controller（hook）に分ける。
@@ -199,10 +228,46 @@ Model を「状態 + 出来事 → 次の状態」の純関数にしてあるの
 | 失敗の知らせ | すべての画面 | `common.md` の「失敗の見せ方」 |
 | コピーのボタン | 詳細、一覧、診断 | `common.md` の「利用者がコピーして使いたい値」 |
 | 待たせるときの表示 | 待たせる処理がある画面 | `common.md` の「待たせるときの表示」 |
+| 未接続の知らせ | コンテナ、イメージ、ボリューム、ネットワーク、Compose、ディスク | `common.md` の「一覧の状態」（6 つの画面で同じアイコンと文を出す） |
 | 状態バー | アプリ全体 | `connection.md` の「接続の状態」 |
 | タブ | 右の領域 | `common.md` の「ログとターミナルのタブ」 |
 
-**部品も View と同じく、props を受け取って要素を返すだけにする。** 部品の状態（一覧で選んでいる行など）は、部品を使う画面の Model が持つ。
+**部品も View と同じく、props を受け取って要素を返すだけにする。** 部品の状態（一覧で選択した行など）は、部品を使う画面の Model が持つ。
+
+### 確認の画面（`confirm-dialog.tsx`）
+
+**Mantine の `Modal` を、組み立て式の部品（`Modal.Root`、`Modal.Content` など）で使う。** 確認の画面を開いているかどうかと、確認する対象は、画面の Model が持つ。
+**確認の画面を閉じても、Model は確認する対象を残す。** 次に確認の画面を開くときに、新しい対象に入れ替える。
+
+| 決めごと | 作り |
+| --- | --- |
+| 見出しを付けない | `Modal.Title` を置かない。画面を読み上げる機能に渡す名前は、`Modal.Content` の `aria-label` で渡す |
+| 最初のフォーカスは ［やめる］ | ［やめる］ に `data-autofocus` を付ける。付けないと、`Modal` は中の最初のボタンにフォーカスを当てる（Mantine の文書の「Modal」） |
+| Esc と、確認の画面の外を押したとき | `Modal` の既定のまま、確認の画面を閉じる（`closeOnEscape`、`closeOnClickOutside`）。確認の画面が閉じたときは、［やめる］ と同じ `onCancel` を呼ぶ |
+| 実行のボタンの色 | 取り返しのつかない操作なので赤（`red.9`）。白い文との差は、文の基準の 4.5:1 を満たす（「色と背景のコントラスト」） |
+
+**why: 閉じても、確認する対象を残す。** `Modal` は、閉じる動き（既定で 0.2 秒）の間も、渡された文を描く
+（Mantine 9.6.2 の `esm/components/Modal/ModalRoot.mjs` の既定値と、`esm/components/ModalBase/ModalBaseContent.mjs` で確認）。
+対象を消すと、確認の画面に渡す文が閉じる途中で空になり、確認の画面が縮みながら消える。
+
+**why: `Modal` を組み立て式で使う。** まとめた形の `Modal` は、渡した属性を外側の要素に付ける。`aria-label` は、`role="dialog"` の要素（`Modal.Content`）に付ける必要がある
+（Mantine 9.6.2 の `esm/components/ModalBase/ModalBaseContent.mjs` で確認。`role="dialog"` を付けた要素に、`Modal.Content` に渡した属性も渡す）。
+
+### コピーのボタン（`copy-value-button.tsx`）
+
+**ボタンは、押すと `navigator.clipboard.writeText` で書き込み、結果の文を Mantine の `Popover` でアイコンの上に重ねて 2 秒出す**（`common.md` の「コピーしたことを知らせる」）。
+今はコンテナの画面（一覧と詳細）だけが使うので、コンテナの画面の `view/` に置く（`directories.md` の「renderer は、画面ごとに分ける」の、2 つ目の画面で使うことになった時点で移す決めごと）。
+
+| 決めごと | 作り |
+| --- | --- |
+| 書き込み | 書き込みの成功と失敗を、両方とも結果として受け取る。`navigator.clipboard` が無い画面では、失敗として扱う |
+| 結果の文 | `Popover` を、結果があるときだけ開く。結果を出している間は、マウスを重ねたときのボタンの名前（`Tooltip`）を出さない。2 つの枠が同じ場所に重なるため |
+| 失敗の文の色 | ライトは `red.9`、ダークは `red.5`。`Popover` の枠の背景（ライトは白、ダークは `dark.6`。Mantine 9.6.2 の `styles/Popover.css`）に対して、文の基準の 4.5:1 を満たす（「色と背景のコントラスト」） |
+
+**why: Mantine の `CopyButton` を使わない。** `CopyButton` は、書き込めなかったことを知らせない（Mantine 9.6.2 の `esm/components/CopyButton/CopyButton.mjs` は、`useClipboard` の `error` を渡さない）。
+
+**why: 部品が状態を持つ例外にする。** 部品の状態は、部品を使う画面の Model が持つ（「2 つ以上の画面で使う部品」）。
+結果の文を出しているかは、2 秒で消える見た目だけの状態で、ほかの表示もボタンも変えない。Model に持たせると、値ごとに出来事とタイマーが要る。
 
 ## 2 つ以上の画面で使う文（`src/renderer/src/messages`）
 
@@ -216,6 +281,7 @@ Model を「状態 + 出来事 → 次の状態」の純関数にしてあるの
 | 想定していない失敗の文 | `common.md` の「想定していない失敗」 |
 | 一覧の「未接続」の文 | `common.md` の「一覧の状態」 |
 | 時刻と大きさの表記（「3 分前」「6.9 GB」） | `common.md` の「表記」 |
+| 確認の画面の、どの操作でも同じ文（「やめる」） | `common.md` の「取り返しのつかない操作は、確認を挟む」 |
 
 **`components` と同じく、2 つ目の画面で使うことになった時点で移す**（`directories.md` の「renderer は、画面ごとに分ける」）。
 
@@ -238,8 +304,8 @@ App が画面の言語を props で各画面の screen に渡し、screen が画
 **言語を選んだ後の画面の言語は、`app:setLanguage` の応答で受け取る。** 「自動」を選んだときの言語は、main が OS の言語から決めるので、renderer は選んだ時点では分からない。
 知らせの口は置かない。画面の言語を変えるのは renderer だけで、起動したときの言語は、窓を見せる前に `app:getLanguage` で受け取っている。
 
-**画面の言語が届くまでは、窓を見せる知らせ（`app:rendererPainted`）を送らない**（`main.md` の「窓は、renderer が描き終えてから見せる」）。
-届く前に見せると、仮の言語（日本語）で描いた文が、届いた言語に変わるのが見える。
+**画面の言語と画面ごとの設定が届くまでは、窓を見せる知らせ（`app:rendererPainted`）を送らない**（`main.md` の「窓は、renderer が描き終えてから見せる」）。
+届く前に見せると、仮の値（日本語、画面ごとの設定の既定）で描いた画面が、届いた値に変わるのが見える。
 
 ### 言語のメニュー
 
@@ -319,9 +385,35 @@ DockerGUI のアプリの状態の渡し方の決まりで、ライブラリの�
 ### 見た目は、Mantine の props か `view.module.css` に書く
 
 1. Mantine の部品の props で書ける見た目（余白、並べ方）は、props で書く（`<Group gap="sm" ms="md">`）
-2. props で書けない見た目だけを、`view.module.css` に書く
+2. props で書けない見た目だけを、`view.module.css` に書く。View の部品を別のファイルに分けたときは、部品のファイルと同じ名前の `.module.css` に書く（`directories.md` の「renderer は、画面ごとに分ける」）
 
 **why: props で書くと、余白の大きさを Mantine の段階（`xs` から `xl`）から選ぶことになる。** 画面ごとに余白の大きさがばらつかない。
+
+### 色と背景のコントラスト
+
+**コントラスト比**は、2 つの色の明るさの差を 1:1（差が無い）から 21:1（白と黒）で表した値。
+Web の見やすさの基準（WCAG 2.1）が、計算の仕方と、満たす値を決めている。
+
+| 対象 | 背景とのコントラスト比 | WCAG 2.1 の達成基準 |
+| --- | --- | --- |
+| 文 | 4.5:1 以上 | 1.4.3「コントラスト（最低限）」 |
+| アイコンと、ボタンの形 | 3:1 以上 | 1.4.11「非テキストのコントラスト」 |
+
+**背景は、ページの背景と、マウスを重ねた行の背景の両方で満たす。** マウスを重ねた行の背景は、ページの背景より、ライトでは暗く、ダークでは明るい。
+
+**文の付いたボタンは、ボタンの形と背景の差を求めない。** 文とボタンの色の差が 4.5:1 を満たせば足りる。
+WCAG の解説（Understanding SC 1.4.11）が、文やアイコンのようにボタンがあると分かる中身があれば、ボタンの形の境目は要らないとしている。
+
+**状態と操作のアイコンの色は、`theme.ts` で、配色ごとに Mantine の色と濃さを選ぶ**（`CSS_VARIABLES_RESOLVER`）。部品は `components/icon-color.ts` の `iconColorOf` で受け取る。
+`theme.test.ts` が、どの色もどちらの配色でも 3:1 以上になることを確かめる。
+
+**why: Mantine の既定の濃さ（`-filled`）では、ライトの緑・黄・赤・橙と、ダークの赤・青が、マウスを重ねた行の背景に対して 3:1 に届かない。**
+配色ごとに、3:1 に届く濃さを選ぶ。
+
+**ライトの黄だけは、橙を使う。** Mantine の黄は、いちばん濃い 9 でも、白い背景に対して 3:1 に届かない。
+
+**薄い文（Mantine の `dimmed`）は、4.5:1 に届かない。** 薄い文は、読まなくても操作に困らない補足（状態バーの経過した時間など）にだけ使う。
+待たせるときの文と失敗の文のような、読まないと次にすることが分からない文には使わない。
 
 ### 配色のボタン
 
@@ -365,6 +457,17 @@ Storybook には main が無いので、上の帯で選んだものを直接渡�
 **why: Storybook は、既定では同じネットワークのほかの機械からも開ける。** 見本は開発中の画面で、ほかの人に見せる理由が無い。
 
 ## 例外になる画面
+
+### 描いた幅を測らないと分からない値は、View が持つ
+
+**文が幅に収まるかどうかのように、画面に描いた要素の幅を測らないと分からない値だけは、View の部品が React の状態に持つ。**
+例: 操作の失敗の知らせの原因の文が 1 行に収まるか（`docs/spec/containers.md` の「行の知らせ」）。
+収まるかどうかで、全文を開くボタンを出すかを決める。知らせを開いているかどうかは、利用者の操作で変わる状態なので、Model に持たせる。
+
+例: 中央を「…」にした名前の、前半と後半に残す文字（`docs/spec/common.md` の「長い名前」。`middle-truncated-text.tsx`）。列の幅と字の形から、文字の切れ目で収まる文字数を決める。
+
+**why: Model は DOM を触らない**（`design-policy.md` の原則 14）。幅は、窓の大きさと文字の形で変わり、描いた後でしか分からない。
+Model に持たせるには、View が測った値を出来事として Controller に渡すことになり、窓の幅が変わるたびに出来事が届く。
 
 ### ターミナルの本文は、Model に持たせない
 

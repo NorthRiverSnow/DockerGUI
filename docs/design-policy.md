@@ -126,7 +126,7 @@ Storybook は Electron ではなく**ブラウザ**で画面部品を描く。`w
 存在しないため、次の 2 つを守らないと描けない。
 
 - **View は `window.api` を直接呼ばない**（原則 14）。
-- **main を呼ぶ口を 1 つのモジュールに集める。** Storybook では main を呼ぶモジュールを差し替える。
+- **main を呼ぶ処理を `src/renderer/src/api` に集める**（`renderer.md` の「main の窓口」）。Storybook では main の窓口を差し替える。
 
 **Storybook はテストではなく、見た目を確認する手段として使う。** 動きは、画面のテスト（`renderer.md` の「View のテスト」）で確かめる。
 「振る舞いには書く。見た目には書かない」（`CLAUDE.md` の「テスト」）は変えない。

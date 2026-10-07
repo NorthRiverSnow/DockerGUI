@@ -3,12 +3,19 @@ import path from "node:path";
 import { z } from "zod";
 import { colorSchemeSettingSchema, type ColorSchemeSetting } from "../../../shared/color-scheme";
 import { languageSettingSchema, type LanguageSetting } from "../../../shared/language";
+import {
+  DEFAULT_SCREEN_SETTINGS,
+  screenSettingsSchema,
+  type ScreenSettings,
+} from "../../../shared/screen-settings";
 
 export type Settings = {
   /** 一度も配色を切り替えていなければ undefined。undefined の間は OS の配色に合わせる。 */
   colorScheme: ColorSchemeSetting | undefined;
   /** 保存されていなければ auto。 */
   language: LanguageSetting;
+  /** 画面ごとの設定は、1 つずつ、保存されていないか正しくなければ既定の値。 */
+  screenSettings: ScreenSettings;
 };
 
 export type SettingsStore = {
@@ -59,6 +66,17 @@ function readSettings(stored: Record<string, unknown>): Settings {
   return {
     colorScheme: colorScheme.success ? colorScheme.data : undefined,
     language: language.success ? language.data : "auto",
+    screenSettings: screenSettingsOf(stored["screenSettings"]),
+  };
+}
+
+/** 画面ごとの設定を 1 つずつ検査し、正しくない設定だけを既定の値にする。 */
+function screenSettingsOf(stored: unknown): ScreenSettings {
+  const parsed = screenSettingsSchema.partial().safeParse(stored);
+  const settings = parsed.success ? parsed.data : {};
+  return {
+    hideExitedContainers:
+      settings.hideExitedContainers ?? DEFAULT_SCREEN_SETTINGS.hideExitedContainers,
   };
 }
 

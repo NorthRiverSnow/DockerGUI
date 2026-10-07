@@ -29,6 +29,7 @@ describe("openSettingsStore", () => {
     expect(openSettingsStore(filePath).current()).toEqual({
       colorScheme: undefined,
       language: "auto",
+      screenSettings: { hideExitedContainers: false },
     });
   });
 
@@ -38,6 +39,7 @@ describe("openSettingsStore", () => {
     expect(openSettingsStore(filePath).current()).toEqual({
       colorScheme: "dark",
       language: "auto",
+      screenSettings: { hideExitedContainers: false },
     });
   });
 
@@ -46,7 +48,11 @@ describe("openSettingsStore", () => {
 
     store.update({ colorScheme: "light" });
 
-    expect(store.current()).toEqual({ colorScheme: "light", language: "auto" });
+    expect(store.current()).toEqual({
+      colorScheme: "light",
+      language: "auto",
+      screenSettings: { hideExitedContainers: false },
+    });
   });
 
   it("配色の値が正しくなければ、配色は保存されていないものとして扱う", () => {
@@ -55,6 +61,7 @@ describe("openSettingsStore", () => {
     expect(openSettingsStore(filePath).current()).toEqual({
       colorScheme: undefined,
       language: "auto",
+      screenSettings: { hideExitedContainers: false },
     });
   });
 
@@ -62,6 +69,22 @@ describe("openSettingsStore", () => {
     writeStored('{"language":"fr"}');
 
     expect(openSettingsStore(filePath).current().language).toBe("auto");
+  });
+
+  it("変えた画面ごとの設定を設定ファイルに書き、開き直しても同じ設定を読む", () => {
+    openSettingsStore(filePath).update({ screenSettings: { hideExitedContainers: true } });
+
+    expect(openSettingsStore(filePath).current().screenSettings).toEqual({
+      hideExitedContainers: true,
+    });
+  });
+
+  it("画面ごとの設定の値が正しくなければ、その設定だけを既定の値にする", () => {
+    writeStored('{"screenSettings":{"hideExitedContainers":"yes"}}');
+
+    expect(openSettingsStore(filePath).current().screenSettings).toEqual({
+      hideExitedContainers: false,
+    });
   });
 
   it("DockerGUI が知らない項目も、書き戻すときに残す", () => {
@@ -77,7 +100,11 @@ describe("openSettingsStore", () => {
 
     const store = openSettingsStore(filePath);
 
-    expect(store.current()).toEqual({ colorScheme: undefined, language: "auto" });
+    expect(store.current()).toEqual({
+      colorScheme: undefined,
+      language: "auto",
+      screenSettings: { hideExitedContainers: false },
+    });
     expect(readFileSync(`${filePath}.broken`, "utf8")).toBe("{ broken");
     expect(existsSync(filePath)).toBe(false);
   });

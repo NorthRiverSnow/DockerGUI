@@ -109,7 +109,7 @@ renderer は Model・View・Controller に分ける（原則 14）。
 | View | 画面の部品。props を受け取って要素を返す |
 | Controller | 利用者の操作を受けて main を呼び、結果を Model に渡す |
 | Model | 画面のデータと状態。状態を次の状態へ進める純関数 |
-| main の窓口 | `window.api` を呼ぶ処理を 1 つのモジュールに集めたもの |
+| main の窓口 | `window.api` を呼ぶ処理を `src/renderer/src/api` に集めたもの |
 
 **main を呼ぶのは、main の窓口だけ。** Controller は main の窓口を通して main を呼ぶ。
 Storybook では main の窓口を差し替える（`design-policy.md` の「Storybook を使う条件」）。

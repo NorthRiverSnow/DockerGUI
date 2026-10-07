@@ -6,6 +6,7 @@ import {
   type RequestArgument,
   type RequestResponse,
 } from "../../shared/ipc";
+import { unexpectedResultOf } from "../failures/unexpected";
 
 /**
  * 要求の口に、機能層の関数をつなぐ。届いた値を口のスキーマで検査してから handle を呼ぶ。
@@ -23,8 +24,8 @@ export function registerRequestHandler<C extends RequestChannel>(
     }
     try {
       return await handle(parsed.data as RequestArgument<C>);
-    } catch {
-      return { ok: false, failure: { kind: "unexpected" } };
+    } catch (error) {
+      return unexpectedResultOf(error);
     }
   });
 }

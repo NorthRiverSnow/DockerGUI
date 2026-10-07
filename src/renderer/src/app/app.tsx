@@ -1,8 +1,9 @@
 import { useEffect } from "react";
 import type { MainApi } from "../api/main-api";
 import { useAppController } from "./controller";
-import { APP_MESSAGES } from "./messages";
-import { AppView } from "./view";
+import { APP_MESSAGES } from "./model/messages";
+import { ContainersScreen } from "../screens/containers/screen";
+import { AppView } from "./view/view";
 
 export function App(props: { api: MainApi }) {
   const controller = useAppController({ api: props.api });
@@ -20,6 +21,23 @@ export function App(props: { api: MainApi }) {
       selectedTarget={controller.state.selectedTarget}
       connection={controller.state.connection}
       language={controller.state.language}
+      content={
+        controller.state.selectedTarget === "containers" ? (
+          <ContainersScreen
+            api={props.api.containers}
+            connection={controller.state.connection}
+            language={language}
+            filter={{
+              text: controller.state.filterText,
+              hideExited: controller.state.screenSettings?.hideExitedContainers ?? false,
+            }}
+            onFilterTextChange={controller.changeFilter}
+            onHideExitedChange={(hide) =>
+              controller.changeScreenSetting({ name: "hideExitedContainers", value: hide })
+            }
+          />
+        ) : undefined
+      }
       now={controller.now}
       messages={APP_MESSAGES[language]}
       onSelectTarget={controller.selectTarget}
